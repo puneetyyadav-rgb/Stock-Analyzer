@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import StockSearch from "../components/StockSearch";
 import StockChart from "../components/StockChart";
 import MacroPanel from "../components/MacroPanel";
+import MarketDepthPanel from "../components/MarketDepthPanel";
 import AIVerdict from "../components/AIVerdict";
 import StockDetails from "../components/StockDetails";
 import { Panel } from "../components/Panel";
@@ -165,14 +166,15 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Chart + Macro */}
+              {/* Chart + Depth + Macro */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                 <div className="lg:col-span-8">
                   <Panel title={`Price Chart · ${overview.symbol}`} testId="chart-panel" className="h-full">
                     <StockChart symbol={overview.symbol} />
                   </Panel>
                 </div>
-                <div className="lg:col-span-4 space-y-3">
+                <div className="lg:col-span-4 flex flex-col gap-3">
+                  <MarketDepthPanel symbol={overview.symbol} />
                   <MacroPanel />
                 </div>
               </div>

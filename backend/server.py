@@ -1,5 +1,7 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
 from dotenv import load_dotenv
+load_dotenv()
+
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -9,16 +11,17 @@ from datetime import datetime, timezone
 import asyncio
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
 
 import stock_service as ss
 import ai_service as ai
 import extra_service as ex
 import concall_service as cs
+import kotak_service as ks
 
-mongo_url = os.environ["MONGO_URL"]
+
+mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+db = client[os.environ.get("DB_NAME", "stock_sentinel")]
 
 app = FastAPI(title="StockSentinel India")
 api_router = APIRouter(prefix="/api")
@@ -69,6 +72,15 @@ async def overview(symbol: str):
     if not data.get("price"):
         raise HTTPException(status_code=404, detail="Stock not found or no data")
     _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/depth")
+async def depth(symbol: str):
+    # Live data, DO NOT cache
+    data = await ks.get_market_depth(symbol)
+    if data and "error" in data:
+        raise HTTPException(status_code=400, detail=data["error"])
     return data
 
 
@@ -284,7 +296,7 @@ async def options(symbol: str):
     cached = _cache_get(key)
     if cached:
         return cached
-    data = await asyncio.to_thread(ex.get_options_chain, symbol)
+    data = await ks.get_option_chain(symbol)
     _cache_set(key, data)
     return data
 

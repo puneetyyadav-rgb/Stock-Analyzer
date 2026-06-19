@@ -17,11 +17,18 @@ export default function OptionsPanel({ symbol }) {
   if (!data) return <Panel title="Options Chain & PCR (NSE)" testId="options-panel"><p className="text-xs text-zinc-500">Loading…</p></Panel>;
 
   if (!data.available) {
+    const isNotFO = data.error === "Not F&O" || (data.reason && data.reason.includes("not available"));
     return (
       <Panel title="Options Chain & PCR (NSE)" testId="options-panel">
         <div className="text-xs text-zinc-500 space-y-1">
-          <p className="text-amber-400 font-medium">Options chain temporarily unavailable</p>
-          <p className="text-zinc-600 leading-snug">{data.reason || data.error || "NSE rate limit / geo-block."} Direct options chain access requires India IP. Visit <a href={`https://www.nseindia.com/option-chain?symbol=${symbol.replace(".NS","")}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">NSE Option Chain</a> for live data.</p>
+          {isNotFO ? (
+            <p className="text-zinc-400 font-medium">{symbol} does not trade in the F&O segment.</p>
+          ) : (
+            <>
+              <p className="text-amber-400 font-medium">Options chain temporarily unavailable</p>
+              <p className="text-zinc-600 leading-snug">{data.reason || data.error}</p>
+            </>
+          )}
         </div>
       </Panel>
     );

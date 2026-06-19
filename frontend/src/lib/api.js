@@ -17,3 +17,4 @@ export const getScreener = (sym) => client.get(`/stock/${sym}/screener`).then((r
 export const getAIVerdict = (sym) => client.post(`/stock/${sym}/ai-verdict`).then((r) => r.data);
 export const getMacro = () => client.get(`/macro`).then((r) => r.data);
 export const getSectors = () => client.get(`/sectors`).then((r) => r.data);
+export const getMarketDepth = (sym) => client.get(`/stock/${sym}/depth`).then((r) => r.data);
