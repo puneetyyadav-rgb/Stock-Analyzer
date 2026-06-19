@@ -61,6 +61,15 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
+  // Remove deprecated wds v4 props injected by react-scripts (incompatible with wds v5)
+  delete devServerConfig.onBeforeSetupMiddleware;
+  delete devServerConfig.onAfterSetupMiddleware;
+  if (devServerConfig.https !== undefined) {
+    const useHttps = devServerConfig.https;
+    delete devServerConfig.https;
+    devServerConfig.server = useHttps ? "https" : "http";
+  }
+
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
