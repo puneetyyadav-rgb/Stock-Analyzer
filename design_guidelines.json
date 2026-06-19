@@ -1,0 +1,94 @@
+{
+  "theme": "dark",
+  "archetype": "Swiss & High-Contrast",
+  "domain": "Finance/Stock Analysis Terminal",
+  "typography": {
+    "headings": {
+      "fontFamily": "'IBM Plex Sans', sans-serif",
+      "import_url": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
+      "strategy": "Technical Sans for authority and clarity."
+    },
+    "body": {
+      "fontFamily": "'JetBrains Mono', monospace",
+      "import_url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+      "strategy": "Monospaced for data alignment, financial figures, and terminal density."
+    },
+    "scale": {
+      "h1": "text-3xl tracking-tight font-semibold",
+      "h2": "text-xl tracking-tight font-medium",
+      "h3": "text-lg tracking-tight font-medium",
+      "body": "text-sm",
+      "data_labels": "text-[10px] tracking-widest uppercase text-zinc-500",
+      "data_values": "text-sm font-medium tabular-nums"
+    }
+  },
+  "colors": {
+    "background": {
+      "base": "#09090b",
+      "container": "#18181b",
+      "elevated": "#27272a"
+    },
+    "text": {
+      "primary": "#f4f4f5",
+      "secondary": "#a1a1aa",
+      "muted": "#71717a"
+    },
+    "semantic": {
+      "positive": "#34C759",
+      "negative": "#FF3B30",
+      "warning": "#F59E0B",
+      "info": "#007AFF"
+    },
+    "borders": "#27272a"
+  },
+  "spacing_and_layout": {
+    "strategy": "MODE B: THE CONTROL ROOM GRID. Dense, data-heavy, grid borders strategy.",
+    "container_padding": "p-3 sm:p-4",
+    "grid_structure": "grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-px bg-zinc-800 border border-zinc-800",
+    "grid_item": "bg-zinc-950 p-4"
+  },
+  "components": {
+    "buttons": "rounded-sm px-3 py-1.5 text-xs font-medium uppercase tracking-widest bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors border border-zinc-700",
+    "cards": "rounded-none border border-zinc-800 bg-[#0c0c0e] flex flex-col",
+    "inputs": "rounded-none border-b border-zinc-800 bg-zinc-900/50 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-0",
+    "tables": "w-full text-left text-sm [&_th]:text-[10px] [&_th]:tracking-widest [&_th]:uppercase [&_th]:text-zinc-500 [&_th]:font-normal [&_th]:py-2 [&_th]:border-b [&_th]:border-zinc-800 [&_td]:py-2 [&_td]:border-b [&_td]:border-zinc-800/50",
+    "badges": "rounded-sm px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest border"
+  },
+  "media": {
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/10628030/pexels-photo-10628030.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "hero_background",
+        "description": "Stock market abstract background for the initial search/landing page before data is loaded."
+      },
+      {
+        "url": "https://images.pexels.com/photos/6770775/pexels-photo-6770775.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "texture_overlay",
+        "description": "Dark market texture to add depth to sidebars or empty states."
+      }
+    ]
+  },
+  "motion": {
+    "hover": "transition-colors duration-150 ease-in-out",
+    "active": "active:scale-[0.98]",
+    "strategy": "Instantaneous and functional. Avoid bouncy or slow animations. Everything must feel immediate like a real-time terminal."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "installation": "npm install lucide-react",
+    "strategy": "Use sparingly. Prefer text-based labels and tabular data over icons. When needed, keep them at 16px size."
+  },
+  "testing": {
+    "data_testid_rule": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case, representing the role. E.g., data-testid='stock-search-input'."
+  },
+  "instructions_to_main_agent": [
+    "Adopt a 'Bloomberg Terminal' aesthetic. Maximize data density by minimizing white space.",
+    "Use grid borders: wrap a container with bg-zinc-800 and gap-px, and let the children have bg-zinc-950 to create 1px crisp borders everywhere.",
+    "DO NOT use generic fonts like Inter, Roboto, or standard sans. You MUST use 'IBM Plex Sans' for UI and 'JetBrains Mono' for numbers and data cells.",
+    "Use tabular-nums class for all data outputs.",
+    "Remove heavy shadows and massive border radii. Use rounded-none or max rounded-sm.",
+    "Always apply data-testid attributes to key interactive elements.",
+    "Display all 9 requested categories in a tight dashboard layout, prioritizing the main chart, stock-specifics, and AI verdict.",
+    "Use Recharts with sharp line configurations (not curveMonotone) for the stock charts. Color them based on positive/negative trend."
+  ]
+}
