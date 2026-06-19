@@ -40,3 +40,27 @@ AI app for Indian stock market analysis (NSE/BSE). User enters a stock name and 
 - P2: Insider trading specifically (SEBI disclosures)
 - P2: Custom alerts (price/news triggers)
 - P2: Export AI report as PDF
+
+## Phase 2 Implementation (2026-02-19)
+### Added
+- **FII/DII Daily Flows** widget — Moneycontrol scrape via Next.js __NEXT_DATA__ JSON. 15-day chart + table.
+- **Concall Transcripts** — Screener.in scrape with Transcript/PPT/Recording links per quarter.
+- **AI Concall Summary** — Gemini-powered structured summary (sentiment, highlights, guidance, concerns, Q&A). Auto-fallback to "alternative" mode using news+screener+about when BSE PDF is geo-blocked.
+- **Peer Comparison** — Sector-based peer table (8 peers per sector) with click-to-navigate.
+- **Options Chain & PCR** — NSE API integration with cookie warming. Gracefully degrades when NSE blocks.
+- **Insider Transactions** — Improved labeling from yfinance Text field (Sale/Other/Purchase).
+- **Watchlist** — localStorage-based, no auth required. Star toggle in stock header, sidebar list with live prices (60s polling).
+- **Price Alerts** — localStorage-based threshold alerts, browser notifications + sonner toasts when triggered.
+- **PDF Export** — html2canvas + jsPDF client-side full-dashboard export.
+- **Sidebar Toggle** — Collapsible watchlist/alerts sidebar.
+
+### Bug Fixes
+- Technicals 500 ValueError: NaN/Inf float values now sanitized via `_safe_float`.
+- `majorHoldersBreakdown` parsed correctly: insidersPercentHeld %, institutionsPercentHeld %, institutionsCount.
+- Insider `Transaction` field — fallback to `Text` field-derived label.
+- Dividend yield no longer multiplied by 100 (yfinance returns it as percentage already).
+
+### Known Limitations
+- BSE PDF downloads geo-blocked from foreign server IPs → concall summary uses "alternative" fallback automatically.
+- NSE options chain API geo-blocks foreign IPs → panel shows graceful "unavailable" with NSE link.
+- Moneycontrol scraping intermittent 403 → FII/DII panel falls back to "Data unavailable".
