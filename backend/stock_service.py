@@ -29,7 +29,10 @@ def _safe_float(v):
     try:
         if v is None or (isinstance(v, float) and np.isnan(v)):
             return None
-        return float(v)
+        f = float(v)
+        if f != f or f == float("inf") or f == float("-inf"):
+            return None
+        return f
     except Exception:
         return None
 
@@ -176,7 +179,7 @@ def compute_technicals(symbol: str) -> dict:
             signal_text = "Oversold"
 
         return {
-            "currentPrice": cur,
+            "currentPrice": _safe_float(cur),
             "rsi": rsi_val,
             "rsiSignal": signal_text,
             "macd": _safe_float(macd.iloc[-1]),
@@ -184,8 +187,8 @@ def compute_technicals(symbol: str) -> dict:
             "macdHistogram": _safe_float(macd.iloc[-1] - signal.iloc[-1]),
             "sma50": _safe_float(sma50.iloc[-1]) if sma50 is not None else None,
             "sma200": _safe_float(sma200.iloc[-1]) if sma200 is not None and not sma200.empty else None,
-            "support": support,
-            "resistance": resistance,
+            "support": _safe_float(support),
+            "resistance": _safe_float(resistance),
             "trend": "Uptrend" if cur > (_safe_float(sma50.iloc[-1]) or 0) else "Downtrend",
         }
     except Exception as e:
@@ -297,12 +300,21 @@ def get_holders(symbol: str) -> dict:
     try:
         mh = t.major_holders
         if mh is not None and not mh.empty:
-            for _, row in mh.iterrows():
-                key = str(row.iloc[1]) if len(row) > 1 else str(row.index[0])
-                val = str(row.iloc[0])
-                out["majorHoldersBreakdown"][key] = val
-    except Exception:
-        pass
+            # New schema: index = breakdown label, column = "Value"
+            for idx, row in mh.iterrows():
+                key = str(idx)
+                val = row.get("Value")
+                if val is None:
+                    continue
+                # convert decimals to percent for *PercentHeld keys
+                if "Percent" in key:
+                    out["majorHoldersBreakdown"][key] = f"{float(val) * 100:.2f}%"
+                elif "Count" in key:
+                    out["majorHoldersBreakdown"][key] = f"{int(float(val))}"
+                else:
+                    out["majorHoldersBreakdown"][key] = str(val)
+    except Exception as e:
+        logger.error(f"major_holders parse: {e}")
     try:
         it = t.insider_transactions
         if it is not None and not it.empty:

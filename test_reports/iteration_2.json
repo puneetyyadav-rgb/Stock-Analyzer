@@ -1,0 +1,35 @@
+{
+  "summary": "Phase 2 E2E testing complete. Backend Phase 2 suite: 8 passed / 1 skipped (FII-DII Moneycontrol HTTP 403 — external scraping blocked, but UI degrades gracefully). All previously broken endpoints now fixed: TCS technicals NaN, holders majorHoldersBreakdown (insidersPercentHeld=51.18%, institutionsPercentHeld=28.67%, institutionsCount=393), insider transaction labels, overview dividendYield. Concall AI summary works via 'alternative' source (BSE PDF geo-blocked → Gemini synthesizes from news+screener — UI shows 'INDIRECT (NEWS+SCREENER)' badge). Frontend: sidebar shows MY WATCHLIST + PRICE ALERTS, RELIANCE click loads full dashboard, WATCHLIST star toggles + sidebar instantly updates with toast 'RELIANCE added to watchlist', Add Alert form creates TCS @ 3500 alert that persists across reload, EXPORT PDF button visible, all Phase 2 panels (Concalls, Peers, Options, Insider, FII/DII) render.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/fii-dii", "issue": "Moneycontrol returns HTTP 403 from server IP — rows=[], frontend shows 'Data unavailable'. Consider adding NSE/NSDL fallback or geo-routed proxy. Graceful in UI."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase2.py",
+    "/app/backend/tests/test_stocksentinel.py",
+    "/app/test_reports/pytest/phase2_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Add fallback FII/DII source (NSDL direct or NSE) since Moneycontrol 403s from server geo. UI already degrades to 'Data unavailable' so non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "Concall summary 'source' field flows correctly to UI badge; consider standardizing to lowercase enum across backend/frontend.",
+    "FII/DII endpoint silently swallows scraper errors into {rows:[], error:'HTTP 403'} — good for UX; consider exponential backoff + retry-with-different-UA to improve hit rate.",
+    "Frontend watchlist/alerts use localStorage + window events ('watchlist-changed'/'alerts-changed') — verified persistence across page reload."
+  ],
+  "updated_files": ["/app/backend/tests/test_phase2.py"],
+  "success_rate": {"backend": "8/9 (89%) + 14/14 regression (iteration_1)", "frontend": "100% of Phase 2 critical flows"},
+  "test_credentials": "N/A — no auth",
+  "seed_data_creation": "None — created TCS@3500 alert during test (verified persistence via reload).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_phase2.py /app/backend/tests/test_stocksentinel.py -v. Concall AI summary takes 15-25s (Gemini). BSE PDFs geo-blocked → expect source='alternative'. NSE options also geo-blocked → expect available=false. Moneycontrol FII/DII returns HTTP 403 — endpoint returns {rows:[], error} and UI shows 'Data unavailable' (acceptable graceful fail). Use RELIANCE for richest dashboard data.",
+  "rca of the issue": "Only remaining issue is external geo-blocking (Moneycontrol 403, BSE PDF, NSE options). All app-side functionality works. Mitigation: server already implements graceful fallbacks (alternative AI source, 'Data unavailable' UI, 'Options temporarily unavailable' UI)."
+}

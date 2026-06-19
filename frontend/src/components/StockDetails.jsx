@@ -36,7 +36,7 @@ export default function StockDetails({ symbol, overview }) {
           <KV label="P/B Ratio" value={fmtNum(overview?.pbRatio)} />
           <KV label="EPS (TTM)" value={fmtNum(overview?.eps)} />
           <KV label="Book Value" value={fmtNum(overview?.bookValue)} />
-          <KV label="Div Yield" value={overview?.dividendYield ? fmtPct(overview.dividendYield * 100) : "—"} />
+          <KV label="Div Yield" value={overview?.dividendYield ? fmtPct(overview.dividendYield) : "—"} />
           <KV label="Beta" value={fmtNum(overview?.beta)} />
         </Panel>
         <Panel title="Profitability & Health" testId="health-panel">
@@ -148,12 +148,15 @@ export default function StockDetails({ symbol, overview }) {
         <Panel title="Shareholding Pattern" testId="holders-panel">
           {holders?.majorHoldersBreakdown && Object.keys(holders.majorHoldersBreakdown).length > 0 ? (
             <ul className="text-xs space-y-1">
-              {Object.entries(holders.majorHoldersBreakdown).slice(0, 6).map(([k, v]) => (
-                <li key={k} className="flex justify-between border-b border-zinc-800/30 py-1">
-                  <span className="text-zinc-400 capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  <span className="font-mono tabular-nums text-zinc-200">{v}</span>
-                </li>
-              ))}
+              {Object.entries(holders.majorHoldersBreakdown).map(([k, v]) => {
+                const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim();
+                return (
+                  <li key={k} className="flex justify-between border-b border-zinc-800/30 py-1">
+                    <span className="text-zinc-400">{label}</span>
+                    <span className="font-mono tabular-nums text-zinc-200">{v}</span>
+                  </li>
+                );
+              })}
             </ul>
           ) : <p className="text-xs text-zinc-600">Data unavailable</p>}
         </Panel>

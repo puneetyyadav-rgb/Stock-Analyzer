@@ -13,6 +13,8 @@ load_dotenv(ROOT_DIR / ".env")
 
 import stock_service as ss
 import ai_service as ai
+import extra_service as ex
+import concall_service as cs
 
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -200,6 +202,102 @@ async def sectors():
     data = await asyncio.to_thread(ss.get_sector_performance)
     _cache_set(key, {"sectors": data})
     return {"sectors": data}
+
+
+@api_router.get("/fii-dii")
+async def fii_dii():
+    key = "fii_dii"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ex.get_fii_dii)
+    _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/concalls")
+async def concalls(symbol: str):
+    key = f"concalls:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ex.get_concalls, symbol)
+    _cache_set(key, {"items": data})
+    return {"items": data}
+
+
+@api_router.post("/stock/{symbol}/concall-summary")
+async def concall_summary(symbol: str, payload: dict):
+    pdf_url = payload.get("transcriptUrl")
+    date_str = payload.get("date", "")
+    if not pdf_url:
+        raise HTTPException(status_code=400, detail="transcriptUrl required")
+    cache_key = f"concall_sum:{pdf_url}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+    text = await asyncio.to_thread(ex.fetch_pdf_text, pdf_url, 30000)
+    if text and len(text) > 500:
+        summary = await cs.summarize_concall(symbol, text, date_str)
+    else:
+        # Fallback: use available news + screener + about data
+        full_data = await asyncio.to_thread(ss.get_full_analysis, symbol)
+        context = {
+            "about": (full_data.get("overview", {}).get("longBusinessSummary") or "")[:1500],
+            "screener_pros": full_data.get("screener", {}).get("pros", [])[:8],
+            "screener_cons": full_data.get("screener", {}).get("cons", [])[:8],
+            "recent_news": [{"title": n.get("title"), "source": n.get("source"), "summary": n.get("summary", "")[:200]}
+                            for n in full_data.get("news", [])[:15]],
+            "screener_ratios": full_data.get("screener", {}).get("ratios", {}),
+            "recent_quarterly": full_data.get("financials", {}).get("quarterly", [])[:4],
+            "note": "Transcript PDF unavailable from server location (BSE geo-block). Synthesizing from public news/Screener data.",
+        }
+        summary = await cs.summarize_alternative(symbol, date_str, context)
+    _cache_set(cache_key, summary)
+    try:
+        await db.concall_summaries.insert_one({
+            "symbol": symbol,
+            "date": date_str,
+            "transcriptUrl": pdf_url,
+            "summary": summary,
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.error(f"mongo concall insert error: {e}")
+    return summary
+
+
+@api_router.get("/stock/{symbol}/peers")
+async def peers(symbol: str):
+    key = f"peers:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ex.get_peers, symbol)
+    _cache_set(key, {"peers": data})
+    return {"peers": data}
+
+
+@api_router.get("/stock/{symbol}/options")
+async def options(symbol: str):
+    key = f"options:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ex.get_options_chain, symbol)
+    _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/insider")
+async def insider(symbol: str):
+    key = f"insider:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ex.get_insider_transactions, symbol)
+    _cache_set(key, {"items": data})
+    return {"items": data}
 
 
 app.include_router(api_router)
