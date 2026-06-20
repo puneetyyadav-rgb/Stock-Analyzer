@@ -18,3 +18,6 @@ export const getAIVerdict = (sym) => client.post(`/stock/${sym}/ai-verdict`).the
 export const getMacro = () => client.get(`/macro`).then((r) => r.data);
 export const getSectors = () => client.get(`/sectors`).then((r) => r.data);
 export const getMarketDepth = (sym) => client.get(`/stock/${sym}/depth`).then((r) => r.data);
+export const getMLPredict = (sym) => client.get(`/stock/${sym}/ml-predict`).then((r) => r.data);
+export const getRegime = (sym) => client.get(`/stock/${sym}/regime`).then((r) => r.data);
+export const getPatterns = (sym) => client.get(`/stock/${sym}/patterns`).then((r) => r.data);

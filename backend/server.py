@@ -20,6 +20,9 @@ import kotak_service as ks
 import social_service as sc
 import legal_service as ls
 import events_service as ev_mod
+import ml_service as mls
+import regime_service as rs
+import pattern_service as ps
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -462,6 +465,40 @@ async def red_flags(symbol: str):
     }
     _cache_set(key, result)
     return result
+
+
+@api_router.get("/stock/{symbol}/ml-predict")
+async def ml_predict(symbol: str):
+    key = f"ml:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(mls.generate_ml_prediction, symbol)
+    if "error" not in data:
+        _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/regime")
+async def regime(symbol: str):
+    key = f"regime:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(rs.classify_regime, symbol)
+    _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/patterns")
+async def patterns(symbol: str):
+    key = f"patterns:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ps.get_candlestick_patterns, symbol)
+    _cache_set(key, data)
+    return data
 
 
 app.include_router(api_router)

@@ -235,3 +235,4 @@ prawcore==4.0.0
 websocket-client==1.9.0
 defusedxml==0.7.1
 update_checker==1.0.0
+scikit-learn

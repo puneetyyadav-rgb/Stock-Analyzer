@@ -18,7 +18,9 @@ import RedFlagsPanel from "../components/RedFlagsPanel";
 import { DisclaimerNote } from "../components/Disclaimer";
 import WatchlistPanel from "../components/WatchlistPanel";
 import PdfExportButton from "../components/PdfExportButton";
-import { getOverview } from "../lib/api";
+import MLPredictor from "../components/MLPredictor";
+import PatternsPanel from "../components/PatternsPanel";
+import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { addToWatchlist, removeFromWatchlist, isInWatchlist } from "../lib/watchlist";
@@ -33,12 +35,14 @@ export default function Dashboard() {
   const [err, setErr] = useState(null);
   const [starred, setStarred] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [regime, setRegime] = useState(null);
 
   useEffect(() => {
     if (!symbol) return;
     setLoading(true);
     setErr(null);
     setOverview(null);
+    setRegime(null);
     getOverview(symbol)
       .then((d) => {
         setOverview(d);
@@ -46,6 +50,8 @@ export default function Dashboard() {
       })
       .catch((e) => setErr(e.response?.data?.detail || "Failed to load stock data"))
       .finally(() => setLoading(false));
+      
+    getRegime(symbol).then(setRegime).catch(() => {});
   }, [symbol]);
 
   const toggleStar = () => {
@@ -131,6 +137,16 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3 mb-1">
                     <h2 className="text-2xl font-semibold tracking-tight font-mono" data-testid="stock-symbol">{overview.symbol}</h2>
                     <span className="px-1.5 py-0.5 text-[10px] tracking-widest uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">{overview.exchange}</span>
+                    {regime && (
+                      <span className={`px-1.5 py-0.5 text-[10px] tracking-widest uppercase border ${
+                        regime.trend.includes("Uptrend") && regime.volatility_state !== "Expanding" ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/50" :
+                        regime.trend.includes("Downtrend") && regime.volatility_state === "Expanding" ? "bg-red-950/40 text-red-400 border-red-900/50" :
+                        regime.trend.includes("Unknown") ? "bg-zinc-900 text-zinc-400 border-zinc-800" :
+                        "bg-amber-950/30 text-amber-400 border-amber-900/50"
+                      }`} title={regime.note}>
+                        {regime.regime_label}
+                      </span>
+                    )}
                     <button
                       onClick={toggleStar}
                       data-testid="watchlist-star-btn"
@@ -171,18 +187,22 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Chart + Depth + Macro */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                <div className="lg:col-span-8">
-                  <Panel title={`Price Chart · ${overview.symbol}`} testId="chart-panel" className="h-full">
+              {/* Chart + Depth + Macro + Patterns */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-3">
+                <div className="lg:col-span-8 flex flex-col gap-3">
+                  <Panel title={`Price Chart · ${overview.symbol}`} testId="chart-panel" className="h-full min-h-[320px]">
                     <StockChart symbol={overview.symbol} />
                   </Panel>
                 </div>
                 <div className="lg:col-span-4 flex flex-col gap-3">
                   <MarketDepthPanel symbol={overview.symbol} />
+                  <PatternsPanel symbol={overview.symbol} />
                   <MacroPanel />
                 </div>
               </div>
+
+              {/* Mathematical Predictor */}
+              <MLPredictor symbol={overview.symbol} />
 
               {/* AI Verdict */}
               <AIVerdict symbol={overview.symbol} />
