@@ -64,3 +64,25 @@ AI app for Indian stock market analysis (NSE/BSE). User enters a stock name and 
 - BSE PDF downloads geo-blocked from foreign server IPs → concall summary uses "alternative" fallback automatically.
 - NSE options chain API geo-blocks foreign IPs → panel shows graceful "unavailable" with NSE link.
 - Moneycontrol scraping intermittent 403 → FII/DII panel falls back to "Data unavailable".
+
+## Phase 3 Implementation (2026-02-20) — Gap Closure per uploaded spec
+### Added
+- **P0-1 Social Sentiment** — Reddit (praw, 3 subreddits) + StockTwits + X/Twitter "not integrated" note. VADER scoring on post titles. Graceful degradation when REDDIT_CLIENT_ID/SECRET not set.
+- **P0-2 Legal & Regulatory** — NSE corporate-announcements scrape filtered by 14 legal keywords, then Gemini-classified into category + severity + factual summary.
+- **P0-3 News VADER Sentiment** — Every news item carries `sentimentScore`/`sentimentLabel` (Positive/Negative/Neutral). AI verdict prompt now passes news with sentiment instead of raw titles.
+- **P0-4 Disclaimer** — Shared `DISCLAIMER_TEXT` constant rendered: footer, under AI verdict badge, at top of PDF export.
+- **P1-1 Sector-Specific Factor Branching** — 10 sector buckets × 2-4 hints each. Gemini explicitly asked to address sector hints from existing data; new `sectorSpecific` array with `dataAvailable` flag per factor (UI shows "No data available" chip when AI honestly couldn't answer).
+- **P1-2 Events Calendar** — Combined yfinance earnings/dividend dates + NSE board-meeting regex extracts. De-duped + chronologically sorted.
+- **P1-3 Structured Red Flags** — Aggregator endpoint combining: Screener cons (Medium), promoter pledge % (severity by % bracket), Critical/High legal classified items, and special-event keyword news (succession/cybersecurity).
+- **P2 Special-event keywords** — Scans news for `succession`, `founder health`, `data breach`, `ransomware`, `cyberattack`, `phishing` and surfaces flagged items.
+
+### Honest limitations called out in UI
+- Reddit panel shows config instructions when keys missing
+- Twitter/X block explicitly says "Not Integrated — X discontinued free read tier Feb 2026"
+- Legal panel footer reads "Source: NSE scrape, not an official SEBI API"
+- Sector-specific items show "No data available" chip rather than fabricating
+
+### Files
+- New backend: `social_service.py`, `legal_service.py`, `events_service.py`
+- New frontend: `SocialPanel.jsx`, `LegalPanel.jsx`, `EventsPanel.jsx`, `RedFlagsPanel.jsx`, `Disclaimer.jsx`
+- Modified: `stock_service.py` (VADER + promoter pledge + special tags), `ai_service.py` (sector branching + sectorSpecific schema), `server.py` (4 new routes), `Dashboard.jsx`, `AIVerdict.jsx`, `PdfExportButton.jsx`
