@@ -10,6 +10,11 @@ import ConcallsPanel from "../components/ConcallsPanel";
 import PeersPanel from "../components/PeersPanel";
 import OptionsPanel from "../components/OptionsPanel";
 import InsiderPanel from "../components/InsiderPanel";
+import SocialPanel from "../components/SocialPanel";
+import LegalPanel from "../components/LegalPanel";
+import EventsPanel from "../components/EventsPanel";
+import RedFlagsPanel from "../components/RedFlagsPanel";
+import { DisclaimerNote } from "../components/Disclaimer";
 import WatchlistPanel from "../components/WatchlistPanel";
 import PdfExportButton from "../components/PdfExportButton";
 import { getOverview } from "../lib/api";
@@ -193,6 +198,26 @@ export default function Dashboard() {
               {/* Peer Comparison */}
               <PeersPanel symbol={overview.symbol} onSelect={setSymbol} />
 
+              {/* Red Flags + Events */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <div className="lg:col-span-7">
+                  <RedFlagsPanel symbol={overview.symbol} />
+                </div>
+                <div className="lg:col-span-5">
+                  <EventsPanel symbol={overview.symbol} />
+                </div>
+              </div>
+
+              {/* Social + Legal */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <div className="lg:col-span-6">
+                  <SocialPanel symbol={overview.symbol} />
+                </div>
+                <div className="lg:col-span-6">
+                  <LegalPanel symbol={overview.symbol} />
+                </div>
+              </div>
+
               {/* Options + Insider */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                 <div className="lg:col-span-7">
@@ -222,9 +247,12 @@ export default function Dashboard() {
       </div>
 
       <footer className="border-t border-zinc-800 mt-10 py-4 px-4">
-        <p className="text-[10px] tracking-widest uppercase text-zinc-600 text-center">
-          Stock Sentinel IN · Data: NSE/BSE via Yahoo · Screener.in · Moneycontrol · AI: Gemini 3 Flash · Not investment advice
-        </p>
+        <div className="max-w-3xl mx-auto text-center space-y-2">
+          <DisclaimerNote />
+          <p className="text-[10px] tracking-widest uppercase text-zinc-600">
+            Stock Sentinel IN · Data: NSE/BSE · Yahoo · Screener.in · Moneycontrol · Reddit · AI: Gemini 3 Flash
+          </p>
+        </div>
       </footer>
     </div>
   );
