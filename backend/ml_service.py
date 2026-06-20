@@ -1,80 +1,31 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import Ridge
 from datetime import timedelta
 import logging
 
 logger = logging.getLogger(__name__)
 
-def _compute_rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    delta = series.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    rs = gain / loss.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
-
-def _prepare_features(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    # Basic technical indicators
-    df['sma_5'] = df['Close'].rolling(window=5).mean()
-    df['sma_20'] = df['Close'].rolling(window=20).mean()
-    df['sma_50'] = df['Close'].rolling(window=50).mean()
-    df['rsi'] = _compute_rsi(df['Close'], 14)
+def _run_monte_carlo(current_price: float, mu: float, sigma: float, days: int, num_simulations: int = 1000) -> np.ndarray:
+    """
+    Returns a numpy array of shape (num_simulations, days)
+    Simulates Geometric Brownian Motion.
+    """
+    dt = 1 # 1 day step
+    # Precompute the drift term
+    drift = (mu - 0.5 * sigma**2) * dt
+    # Generate random shocks for all paths and all days at once
+    Z = np.random.normal(0, 1, (num_simulations, days))
+    # Daily returns multiplier
+    daily_returns = np.exp(drift + sigma * np.sqrt(dt) * Z)
     
-    # Lagged features to capture momentum
-    df['lag_1'] = df['Close'].shift(1)
-    df['lag_2'] = df['Close'].shift(2)
-    df['lag_3'] = df['Close'].shift(3)
-    df['lag_5'] = df['Close'].shift(5)
-    
-    # Rolling volatility (standard deviation of daily returns)
-    daily_returns = df['Close'].pct_change()
-    df['volatility_20'] = daily_returns.rolling(window=20).std()
-    
-    # Target: Tomorrow's close
-    df['target'] = df['Close'].shift(-1)
-    
-    return df
-
-def _recursive_predict(model, last_row: pd.Series, steps: int) -> list:
-    """Predict future steps recursively using a single trained model."""
-    predictions = []
-    current_features = last_row.copy()
-    
-    # History queues for moving averages & lags
-    # For a robust approach, we will simulate the lagged features over `steps` days.
-    # To keep it simple, we use a naive carry-forward for long-term indicators (SMA50)
-    # and update short-term lags directly.
-    history_close = [current_features['lag_5'], current_features['lag_3'], current_features['lag_2'], current_features['lag_1'], current_features['Close']]
-    
-    for i in range(steps):
-        # Prepare feature vector for prediction
-        # Feature columns must match training exactly:
-        features = ['sma_5', 'sma_20', 'sma_50', 'rsi', 'lag_1', 'lag_2', 'lag_3', 'lag_5', 'volatility_20']
-        x = current_features[features].to_frame().T
+    # Cumulative product to get price paths
+    price_paths = np.zeros_like(daily_returns)
+    price_paths[:, 0] = current_price * daily_returns[:, 0]
+    for t in range(1, days):
+        price_paths[:, t] = price_paths[:, t-1] * daily_returns[:, t]
         
-        # Predict tomorrow
-        next_close = float(model.predict(x)[0])
-        predictions.append(next_close)
-        
-        # Update history
-        history_close.append(next_close)
-        history_close.pop(0) # Keep 5 elements
-        
-        # Update current_features for the next step
-        current_features['lag_5'] = history_close[0]
-        current_features['lag_3'] = history_close[2]
-        current_features['lag_2'] = history_close[3]
-        current_features['lag_1'] = history_close[4]
-        current_features['Close'] = next_close
-        
-        # Naive update of SMAs (just blending new value slightly)
-        current_features['sma_5'] = (current_features['sma_5'] * 4 + next_close) / 5
-        current_features['sma_20'] = (current_features['sma_20'] * 19 + next_close) / 20
-        # keep sma_50, rsi, and volatility relatively constant to avoid wild extrapolations
-        
-    return predictions
+    return price_paths
 
 def generate_ml_prediction(symbol: str) -> dict:
     try:
@@ -85,74 +36,104 @@ def generate_ml_prediction(symbol: str) -> dict:
             return {"error": "Not enough historical data for ML prediction."}
         
         df = df.reset_index()
-        # Ensure column names are standard
         date_col = 'Datetime' if 'Datetime' in df.columns else 'Date'
         df = df.rename(columns={date_col: 'date'})
         df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
         
-        # 2. Feature Engineering
-        df_feat = _prepare_features(df)
-        df_clean = df_feat.dropna().copy()
+        # Calculate daily log returns for the Monte Carlo model
+        df['log_return'] = np.log(df['Close'] / df['Close'].shift(1))
+        df_clean = df.dropna().copy()
         
         if len(df_clean) < 50:
-            return {"error": "Not enough data after feature engineering."}
+            return {"error": "Not enough data."}
             
-        features = ['sma_5', 'sma_20', 'sma_50', 'rsi', 'lag_1', 'lag_2', 'lag_3', 'lag_5', 'volatility_20']
-        
-        # 3. Backtesting (Hold out last 30 days)
+        # 2. Robust Backtesting across 10 rolling windows
         test_days = 30
-        train_df = df_clean.iloc[:-test_days]
-        test_df = df_clean.iloc[-test_days:]
+        num_windows = min(10, (len(df_clean) - 60) // test_days)
+        if num_windows < 1:
+            num_windows = 1
+            
+        mapes = []
+        coverages = []
         
-        model_bt = Ridge(alpha=1.0)
-        model_bt.fit(train_df[features], train_df['target'])
+        # Loop over historical windows from oldest to newest
+        for i in range(num_windows):
+            # Window slicing
+            end_idx = len(df_clean) - (test_days * i)
+            start_idx = end_idx - test_days
+            
+            # Data strictly before the test window to prevent lookahead bias
+            train_df = df_clean.iloc[:start_idx]
+            test_df = df_clean.iloc[start_idx:end_idx]
+            
+            if len(train_df) < 30:
+                continue
+                
+            train_mu = train_df['log_return'].mean()
+            train_sigma = train_df['log_return'].std()
+            bt_start_price = train_df.iloc[-1]['Close']
+            
+            bt_sims = _run_monte_carlo(bt_start_price, train_mu, train_sigma, test_days, num_simulations=1000)
+            bt_median_path = np.median(bt_sims, axis=0)
+            bt_lower_bound = np.percentile(bt_sims, 10, axis=0)
+            bt_upper_bound = np.percentile(bt_sims, 90, axis=0)
+            
+            actuals = test_df['Close'].values
+            
+            # Metric 1: Median accuracy (MAPE)
+            window_mape = np.mean(np.abs((actuals - bt_median_path) / actuals)) * 100
+            mapes.append(window_mape)
+            
+            # Metric 2: Coverage (How often did reality land inside the 80% band?)
+            inside_band = (actuals >= bt_lower_bound) & (actuals <= bt_upper_bound)
+            window_coverage = np.mean(inside_band) * 100
+            coverages.append(window_coverage)
+            
+        avg_mape = np.mean(mapes) if mapes else 0.0
+        avg_coverage = np.mean(coverages) if coverages else 0.0
+        backtest_accuracy = max(0, 100 - avg_mape)
         
-        # Predict the 30-day test set recursively
-        bt_last_row = train_df.iloc[-1]
-        bt_predictions = _recursive_predict(model_bt, bt_last_row, test_days)
+        # 3. Final Future Forecast (Train on ALL data)
+        full_mu = df_clean['log_return'].mean()
+        full_sigma = df_clean['log_return'].std()
+        current_price = df_clean.iloc[-1]['Close']
+        last_date = pd.to_datetime(df_clean.iloc[-1]['date'])
         
-        actuals = test_df['Close'].values
-        # Calculate MAPE (Mean Absolute Percentage Error)
-        mape = np.mean(np.abs((actuals - bt_predictions) / actuals)) * 100
-        backtest_accuracy = max(0, 100 - mape)
+        # Scenario A: Historical Drift
+        future_sims = _run_monte_carlo(current_price, full_mu, full_sigma, 30, num_simulations=1000)
+        median_path = np.median(future_sims, axis=0)
+        lower_bound = np.percentile(future_sims, 10, axis=0)
+        upper_bound = np.percentile(future_sims, 90, axis=0)
         
-        # 4. Final Future Forecast (Train on ALL data)
-        model_final = Ridge(alpha=1.0)
-        model_final.fit(df_clean[features], df_clean['target'])
+        # Scenario B: Zero Drift (Pure Volatility)
+        future_sims_zero = _run_monte_carlo(current_price, 0.0, full_sigma, 30, num_simulations=1000)
+        median_path_zero = np.median(future_sims_zero, axis=0)
         
-        last_row = df_clean.iloc[-1]
-        future_predictions = _recursive_predict(model_final, last_row, 30)
+        # Pick 5 random paths from the primary simulation for visual texture
+        random_indices = np.random.choice(1000, 5, replace=False)
+        sample_paths_array = future_sims[random_indices] # shape (5, 30)
         
-        # Calculate daily volatility for the confidence cone
-        daily_returns = df_clean['Close'].pct_change().dropna()
-        std_dev = daily_returns.std()
-        
-        # 5. Format Output
-        last_date = pd.to_datetime(last_row['date'])
-        
-        # Historical slice (last 60 days for charting)
+        # 4. Format Output
         hist_slice = df.tail(60)[['date', 'Close']].rename(columns={'Close': 'close'})
         historical_data = hist_slice.to_dict(orient='records')
         
         forecast_data = []
-        current_price = last_row['Close']
-        
-        for i, pred_price in enumerate(future_predictions):
-            # Calendar days forward
+        for i in range(30):
             future_date = last_date + timedelta(days=i + 1)
-            # Confidence cone widens over time (sqrt(t))
-            # Z = 1.645 for 90% confidence interval
-            cone_width = current_price * (1.645 * std_dev * np.sqrt(i + 1))
-            
-            forecast_data.append({
+            day_data = {
                 "date": future_date.strftime('%Y-%m-%d'),
-                "forecast": round(pred_price, 2),
-                "lowerBound": round(pred_price - cone_width, 2),
-                "upperBound": round(pred_price + cone_width, 2)
-            })
+                "forecast": round(median_path[i], 2),
+                "forecastZeroDrift": round(median_path_zero[i], 2),
+                "lowerBound": round(lower_bound[i], 2),
+                "upperBound": round(upper_bound[i], 2)
+            }
+            # Add sample paths (path1, path2... path5)
+            for j in range(5):
+                day_data[f"path{j+1}"] = round(sample_paths_array[j][i], 2)
+                
+            forecast_data.append(day_data)
             
-        # Determine trend signal
-        price_7d = forecast_data[6]['forecast']
+        # Determine trend signal based on historical drift model
         price_30d = forecast_data[-1]['forecast']
         pct_change_30d = ((price_30d - current_price) / current_price) * 100
         
@@ -165,12 +146,13 @@ def generate_ml_prediction(symbol: str) -> dict:
 
         return {
             "backtestAccuracy": round(backtest_accuracy, 1),
-            "mape": round(mape, 2),
+            "mape": round(avg_mape, 2),
+            "bandCoverage": round(avg_coverage, 1),
             "historical": historical_data,
             "forecast": forecast_data,
             "trendSignal": trend_signal,
             "currentPrice": round(current_price, 2),
-            "projected7D": round(price_7d, 2),
+            "projected7D": round(forecast_data[6]['forecast'], 2),
             "projected30D": round(price_30d, 2)
         }
         

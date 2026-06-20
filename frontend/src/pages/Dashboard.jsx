@@ -4,6 +4,7 @@ import StockChart from "../components/StockChart";
 import MacroPanel from "../components/MacroPanel";
 import MarketDepthPanel from "../components/MarketDepthPanel";
 import AIVerdict from "../components/AIVerdict";
+import AITechnicalAnalysis from "../components/AITechnicalAnalysis";
 import StockDetails from "../components/StockDetails";
 import { Panel } from "../components/Panel";
 import FiiDiiPanel from "../components/FiiDiiPanel";
@@ -204,8 +205,11 @@ export default function Dashboard() {
               {/* Mathematical Predictor */}
               <MLPredictor symbol={overview.symbol} />
 
-              {/* AI Verdict */}
-              <AIVerdict symbol={overview.symbol} />
+              {/* AI Analysis Suite */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+                <AIVerdict symbol={overview.symbol} />
+                <AITechnicalAnalysis symbol={overview.symbol} />
+              </div>
 
               {/* FII/DII + Concalls */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">

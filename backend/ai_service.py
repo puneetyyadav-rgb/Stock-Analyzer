@@ -108,7 +108,7 @@ You analyze stocks using a 9-factor framework:
 1. Macroeconomic factors (rates, inflation, GDP, currency, commodities, geopolitics)
 2. Sector/Industry dynamics
 3. Company financials & corporate actions
-4. Market/Technical factors (FII/DII, charts, RSI, MACD)
+4. Market/Technical factors (FII/DII, charts, RSI, MACD, Patterns, Regime)
 5. News & sentiment
 6. Global shocks
 7. Government/Regulatory policy
@@ -144,6 +144,19 @@ Schema:
     "management": "1-2 sentences"
   },
   "sectorSpecific": [{"factor": "...", "assessment": "...", "dataAvailable": true}]
+}"""
+
+
+TECHNICAL_SYSTEM_PROMPT = """You are a Chartered Market Technician (CMT) analyzing Indian stocks.
+You specialize in price action, support/resistance, candlestick patterns, and volatility (Monte Carlo) analysis.
+Output STRICT JSON only. No markdown fences, no commentary outside JSON.
+Schema:
+{
+  "trend_summary": "2-3 sentences describing the overall technical posture",
+  "support_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "string"} ],
+  "resistance_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "string"} ],
+  "setup_recommendation": "1-2 sentences on how to trade this setup",
+  "monte_carlo_insight": "1 sentence interpreting the 80% confidence band and volatility"
 }"""
 
 
@@ -185,6 +198,42 @@ Option Chain Data:
         return json.loads(text.strip())
     except Exception as e:
         logger.error(f"Options analysis error: {e}")
+        return {"error": str(e)}
+
+
+def sync_generate_technical_analysis(prompt: str) -> str:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return ""
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+    )
+    return response.text
+
+async def generate_technical_analysis(tech_data: dict) -> dict:
+    client = get_gemini_client()
+    if not client:
+        return {"error": "GEMINI_API_KEY not configured"}
+
+    prompt = (
+        f"{TECHNICAL_SYSTEM_PROMPT}\n\n"
+        f"Analyze this technical data and provide the JSON response:\n"
+        f"```json\n{json.dumps(tech_data, default=str)}\n```"
+    )
+
+    try:
+        text = await asyncio.to_thread(sync_generate_technical_analysis, prompt)
+        text = text.strip()
+        result = json.loads(text)
+        result["disclaimer"] = DISCLAIMER_TEXT
+        return result
+    except Exception as e:
+        logger.error(f"AI technical error: {e}")
         return {"error": str(e)}
 
 
@@ -283,6 +332,9 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         "red_flags": stock_data.get("red_flags", {}).get("items", [])[:5],
         "macro_snapshot": macro_data.get("indicators", []),
         "sector_bucket": bucket,
+        "ml_forecast": stock_data.get("ml_forecast", {}),
+        "regime": stock_data.get("regime", {}),
+        "patterns": stock_data.get("patterns", {}),
     }
 
     sector_instruction = ""

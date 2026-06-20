@@ -190,20 +190,29 @@ async def ai_verdict(symbol: str):
         legal_data,
         events_data,
         red_flags_data,
-        macro
+        macro,
+        ml_forecast,
+        regime,
+        patterns
     ) = await asyncio.gather(
         asyncio.to_thread(ss.get_full_analysis, symbol),
         social(symbol),
         legal(symbol),
         events(symbol),
         red_flags(symbol),
-        asyncio.to_thread(ss.get_macro_snapshot)
+        asyncio.to_thread(ss.get_macro_snapshot),
+        asyncio.to_thread(mls.generate_ml_prediction, symbol),
+        asyncio.to_thread(rs.classify_regime, symbol),
+        asyncio.to_thread(ps.get_candlestick_patterns, symbol)
     )
     
     stock_data["social"] = social_data
     stock_data["legal"] = legal_data
     stock_data["events"] = events_data
     stock_data["red_flags"] = red_flags_data
+    stock_data["ml_forecast"] = ml_forecast
+    stock_data["regime"] = regime
+    stock_data["patterns"] = patterns
     
     verdict = await ai.generate_verdict(stock_data, macro)
     _cache_set(cache_key, verdict)
@@ -216,6 +225,36 @@ async def ai_verdict(symbol: str):
         })
     except Exception as e:
         logger.error(f"mongo insert error: {e}")
+    return verdict
+
+
+@api_router.post("/stock/{symbol}/ai-technical")
+async def ai_technical(symbol: str):
+    cache_key = f"ai_tech:{symbol}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+    (
+        stock_data,
+        ml_forecast,
+        regime,
+        patterns
+    ) = await asyncio.gather(
+        asyncio.to_thread(ss.get_full_analysis, symbol),
+        asyncio.to_thread(mls.generate_ml_prediction, symbol),
+        asyncio.to_thread(rs.classify_regime, symbol),
+        asyncio.to_thread(ps.get_candlestick_patterns, symbol)
+    )
+    
+    tech_data = {
+        "technicals": stock_data.get("technicals", {}),
+        "ml_forecast": ml_forecast,
+        "regime": regime,
+        "patterns": patterns,
+    }
+    
+    verdict = await ai.generate_technical_analysis(tech_data)
+    _cache_set(cache_key, verdict)
     return verdict
 
 
@@ -381,7 +420,7 @@ async def social(symbol: str):
 
 @api_router.get("/stock/{symbol}/legal")
 async def legal(symbol: str):
-
+    key = f"legal:{symbol}"
     cached = _cache_get(key)
     if cached:
         return cached
