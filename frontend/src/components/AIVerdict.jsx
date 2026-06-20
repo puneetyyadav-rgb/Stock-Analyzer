@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Panel } from "./Panel";
 import { Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { getAIVerdict } from "../lib/api";
+import { DisclaimerNote } from "./Disclaimer";
 
 const verdictColors = {
   "STRONG BUY": "bg-emerald-500 text-emerald-950",
@@ -83,7 +84,14 @@ export default function AIVerdict({ symbol }) {
                 Target: <span className="text-emerald-400 font-mono">₹{Number(verdict.targetPrice).toFixed(2)}</span>
               </div>
             )}
+            {verdict.sectorBucket && verdict.sectorBucket !== "Other" && (
+              <div className="text-[10px] tracking-widest uppercase text-zinc-500">
+                Sector lens: <span className="text-blue-400">{verdict.sectorBucket}</span>
+              </div>
+            )}
           </div>
+
+          <DisclaimerNote className="bg-amber-950/30 border border-amber-900/40 px-2 py-1" />
 
           <p className="text-sm text-zinc-300 leading-relaxed">{verdict.summary}</p>
 
@@ -133,6 +141,25 @@ export default function AIVerdict({ symbol }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {verdict.sectorSpecific && verdict.sectorSpecific.length > 0 && (
+            <div className="border-t border-zinc-800 pt-3" data-testid="sector-specific-section">
+              <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-2">
+                Sector-Specific Factors ({verdict.sectorBucket})
+              </h4>
+              <ul className="space-y-1.5">
+                {verdict.sectorSpecific.map((s, i) => (
+                  <li key={i} className={`border-l-2 ${s.dataAvailable ? "border-blue-700/60" : "border-zinc-700"} pl-2 py-1 bg-zinc-900/30`}>
+                    <div className="text-[11px] font-medium text-zinc-200">{s.factor}</div>
+                    <div className="text-[11px] text-zinc-400 leading-snug">{s.assessment}</div>
+                    {!s.dataAvailable && (
+                      <span className="text-[9px] tracking-widest uppercase text-amber-400">No data available</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

@@ -229,3 +229,9 @@ yarl==1.24.2
 yfinance==1.4.1
 zipp==4.1.0
 pyotp==2.9.0
+vaderSentiment==3.3.2
+praw==8.0.1
+prawcore==4.0.0
+websocket-client==1.9.0
+defusedxml==0.7.1
+update_checker==1.0.0

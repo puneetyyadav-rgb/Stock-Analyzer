@@ -6,10 +6,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import re
 import logging
 
 logger = logging.getLogger(__name__)
+
+_vader = SentimentIntensityAnalyzer()
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -387,14 +390,27 @@ def get_news(symbol: str) -> list:
     except Exception as e:
         logger.error(f"moneycontrol news error: {e}")
 
-    return news_items[:25]
+    return _score_news(news_items[:25])
+
+
+def _score_news(items: list) -> list:
+    """Add VADER sentiment to each news item in place."""
+    for it in items:
+        title = it.get("title", "")
+        try:
+            score = _vader.polarity_scores(title)["compound"]
+        except Exception:
+            score = 0.0
+        it["sentimentScore"] = round(score, 3)
+        it["sentimentLabel"] = "Positive" if score > 0.15 else "Negative" if score < -0.15 else "Neutral"
+    return items
 
 
 def get_screener_data(symbol: str) -> dict:
     """Scrape additional ratios + management commentary from Screener.in."""
     sym = normalize_symbol(symbol)
     clean = sym.replace(".NS", "").replace(".BO", "")
-    out = {"ratios": {}, "pros": [], "cons": [], "about": ""}
+    out = {"ratios": {}, "pros": [], "cons": [], "about": "", "promoterPledge": None}
     try:
         url = f"https://www.screener.in/company/{clean}/consolidated/"
         r = requests.get(url, headers=HEADERS, timeout=10)
@@ -420,9 +436,49 @@ def get_screener_data(symbol: str) -> dict:
             about = soup.select_one(".company-profile .about")
             if about:
                 out["about"] = about.get_text(" ", strip=True)[:1000]
+            # Promoter pledge — look in the shareholding table for "Pledged" row
+            txt = soup.get_text(" ", strip=True)
+            m = re.search(r"Pledged[^\d%]*([\d.]+)\s*%", txt, re.I)
+            if m:
+                try:
+                    out["promoterPledge"] = float(m.group(1))
+                except Exception:
+                    pass
     except Exception as e:
         logger.error(f"screener error: {e}")
     return out
+
+
+SPECIAL_KEYWORDS = {
+    "succession": "Succession/Leadership",
+    "founder health": "Founder Health",
+    "ceo health": "Founder Health",
+    "data breach": "Cybersecurity",
+    "ransomware": "Cybersecurity",
+    "cyberattack": "Cybersecurity",
+    "cyber attack": "Cybersecurity",
+    "phishing": "Cybersecurity",
+}
+
+
+def get_special_news_tags(news_items: list) -> list:
+    """Surface news headlines matching special-event keywords (succession / cybersecurity etc.)."""
+    flagged = []
+    for n in news_items:
+        title = (n.get("title") or "").lower()
+        summary = (n.get("summary") or "").lower()
+        blob = f"{title} {summary}"
+        for kw, tag in SPECIAL_KEYWORDS.items():
+            if kw in blob:
+                flagged.append({
+                    "tag": tag,
+                    "keyword": kw,
+                    "title": n.get("title"),
+                    "url": n.get("url"),
+                    "source": n.get("source"),
+                })
+                break
+    return flagged
 
 
 def get_macro_snapshot() -> dict:

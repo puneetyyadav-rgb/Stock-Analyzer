@@ -9,6 +9,76 @@ logger = logging.getLogger(__name__)
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
 
+DISCLAIMER_TEXT = (
+    "AI-generated analysis from public data sources. Not investment advice. "
+    "Confidence and target-price figures reflect qualitative AI reasoning, not "
+    "statistical or regulatory-grade forecasts. Verify independently before any financial decision."
+)
+
+
+SECTOR_MAP = {
+    "Financial Services": "Banking/NBFC",
+    "Healthcare": "Pharma",
+    "Technology": "IT Services",
+    "Communication Services": "Telecom",
+    "Consumer Cyclical": "Auto",
+    "Basic Materials": "Cement/Metals",
+    "Real Estate": "Real Estate",
+    "Energy": "Oil & Gas",
+    "Industrials": "Conglomerate",
+}
+
+SECTOR_FACTOR_HINTS = {
+    "Banking/NBFC": [
+        "gross/net NPA trend",
+        "CASA ratio & deposit growth",
+        "credit cost & provisioning",
+        "any RBI regulatory action",
+    ],
+    "Pharma": [
+        "USFDA inspection/warning-letter status if mentioned in news/screener",
+        "US generics pricing pressure",
+        "plant compliance history",
+    ],
+    "IT Services": [
+        "client concentration & attrition",
+        "deal pipeline/TCV commentary",
+        "US/Europe BFSI demand",
+    ],
+    "Telecom": [
+        "ARPU trend",
+        "AGR dues/spectrum payment status",
+        "subscriber net adds",
+    ],
+    "Auto": [
+        "monthly dispatch/volume trend",
+        "EV transition capex",
+        "semiconductor supply commentary",
+    ],
+    "Cement/Metals": [
+        "capacity utilization & realization",
+        "input cost trend (coal/limestone/ore)",
+        "anti-dumping duty exposure",
+    ],
+    "Real Estate": [
+        "launch pipeline & pre-sales momentum",
+        "RERA compliance status",
+    ],
+    "Oil & Gas": [
+        "refining/marketing margin (GRM)",
+        "windfall tax exposure",
+    ],
+    "Conglomerate": [
+        "sum-of-parts vs. current valuation (holding-company discount)",
+        "subsidiary listing/demerger catalysts",
+    ],
+}
+
+
+def map_sector(yahoo_sector: str) -> str:
+    return SECTOR_MAP.get(yahoo_sector or "", "Other")
+
+
 SYSTEM_PROMPT = """You are a senior Indian equity research analyst with deep expertise in NSE/BSE markets.
 You analyze stocks using a 9-factor framework:
 1. Macroeconomic factors (rates, inflation, GDP, currency, commodities, geopolitics)
@@ -42,7 +112,8 @@ Schema:
     "sentiment": "1-2 sentences",
     "regulatory": "1-2 sentences",
     "management": "1-2 sentences"
-  }
+  },
+  "sectorSpecific": [{"factor": "...", "assessment": "...", "dataAvailable": true}]
 }"""
 
 
@@ -51,6 +122,9 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         return {"error": "EMERGENT_LLM_KEY not configured"}
 
     overview = stock_data.get("overview", {})
+    bucket = map_sector(overview.get("sector"))
+    hints = SECTOR_FACTOR_HINTS.get(bucket, [])
+
     payload = {
         "stock": {
             "symbol": overview.get("symbol"),
@@ -81,9 +155,23 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         "screener_pros": stock_data.get("screener", {}).get("pros", [])[:5],
         "screener_cons": stock_data.get("screener", {}).get("cons", [])[:5],
         "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
-        "recent_news_headlines": [n.get("title") for n in stock_data.get("news", [])[:10]],
+        "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
+        "recent_news_with_sentiment": [
+            {"title": n.get("title"), "sentiment": n.get("sentimentLabel")}
+            for n in stock_data.get("news", [])[:10]
+        ],
         "macro_snapshot": macro_data.get("indicators", []),
+        "sector_bucket": bucket,
     }
+
+    sector_instruction = ""
+    if hints:
+        sector_instruction = (
+            f"\n\nFor this stock's sector ({bucket}), specifically address: {hints}, "
+            f"using only the financials/screener/news data already provided above. "
+            f"If a hint can't be addressed from the given data, say so explicitly rather than "
+            f"guessing a number. Populate 'sectorSpecific' array with one object per hint above."
+        )
 
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
@@ -92,25 +180,29 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
     ).with_model("gemini", "gemini-3-flash-preview")
 
     user_msg = UserMessage(
-        text=f"Analyze this Indian stock and provide a verdict. Data:\n```json\n{json.dumps(payload, default=str)[:8000]}\n```"
+        text=(
+            f"Analyze this Indian stock and provide a verdict. Data:\n"
+            f"```json\n{json.dumps(payload, default=str)[:8000]}\n```{sector_instruction}"
+        )
     )
 
     try:
         resp = await chat.send_message(user_msg)
         text = resp if isinstance(resp, str) else str(resp)
-        # strip markdown fences if any
         text = text.strip()
         if text.startswith("```"):
             text = text.split("```", 2)[1] if "```" in text else text
             if text.lower().startswith("json"):
                 text = text[4:].strip()
             text = text.rstrip("`").strip()
-        # find first { and last }
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1:
             text = text[start:end + 1]
-        return json.loads(text)
+        result = json.loads(text)
+        result["disclaimer"] = DISCLAIMER_TEXT
+        result["sectorBucket"] = bucket
+        return result
     except Exception as e:
         logger.error(f"AI verdict error: {e}")
         return {"error": str(e)}

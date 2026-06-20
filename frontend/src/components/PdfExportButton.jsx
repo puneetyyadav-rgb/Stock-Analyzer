@@ -3,6 +3,7 @@ import { Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { DISCLAIMER_TEXT } from "./Disclaimer";
 
 export default function PdfExportButton({ targetId = "dashboard-main", filename }) {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,13 @@ export default function PdfExportButton({ targetId = "dashboard-main", filename 
       return;
     }
     setLoading(true);
+    // Temporarily prepend a visible disclaimer banner inside the target so it lands on page 1
+    const disclaimer = document.createElement("div");
+    disclaimer.id = "__pdf_disclaimer__";
+    disclaimer.style.cssText =
+      "padding:14px 18px;margin-bottom:12px;border:1px solid #b45309;background:#451a03;color:#fde68a;font-size:11px;line-height:1.5;letter-spacing:0.04em;";
+    disclaimer.textContent = "DISCLAIMER · " + DISCLAIMER_TEXT;
+    el.prepend(disclaimer);
     try {
       const canvas = await html2canvas(el, {
         backgroundColor: "#09090b",
@@ -44,6 +52,8 @@ export default function PdfExportButton({ targetId = "dashboard-main", filename 
     } catch (e) {
       toast.error("PDF export failed: " + (e.message || ""));
     } finally {
+      const node = document.getElementById("__pdf_disclaimer__");
+      if (node) node.remove();
       setLoading(false);
     }
   };

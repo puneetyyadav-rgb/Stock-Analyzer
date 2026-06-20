@@ -17,6 +17,9 @@ import ai_service as ai
 import extra_service as ex
 import concall_service as cs
 import kotak_service as ks
+import social_service as sc
+import legal_service as ls
+import events_service as ev_mod
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -310,6 +313,120 @@ async def insider(symbol: str):
     data = await asyncio.to_thread(ex.get_insider_transactions, symbol)
     _cache_set(key, {"items": data})
     return {"items": data}
+
+
+@api_router.get("/stock/{symbol}/social")
+async def social(symbol: str):
+    key = f"social:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    ov = await asyncio.to_thread(ss.get_overview, symbol)
+    company_name = ov.get("name") or symbol
+    reddit_data = await asyncio.to_thread(sc.get_reddit_sentiment, company_name)
+    stocktwits_data = await asyncio.to_thread(sc.get_stocktwits_sentiment, symbol)
+    result = {
+        "reddit": reddit_data,
+        "stocktwits": stocktwits_data,
+        "twitter_x": {
+            "available": False,
+            "reason": (
+                "X discontinued its free read tier in Feb 2026 (pay-per-use only, ~$0.005/read). "
+                "Not integrated — Reddit is the primary retail-sentiment source here."
+            ),
+        },
+    }
+    _cache_set(key, result)
+    return result
+
+
+@api_router.get("/stock/{symbol}/legal")
+async def legal(symbol: str):
+    key = f"legal:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    raw = await asyncio.to_thread(ls.get_nse_announcements, symbol)
+    relevant = ls.filter_legal_relevant(raw)
+    classified = await ls.classify_legal_announcements(relevant)
+    result = {
+        "items": classified,
+        "source": "NSE corporate-announcements (scraped — not an official SEBI or NSE API)",
+        "announcements_scanned": len(raw),
+        "note": (
+            "Empty results are expected for most stocks most of the time — litigation/SEBI-action "
+            "disclosures are rare events, not a constant feed. NSE may also geo-block from server "
+            "location; in that case scanned=0."
+        ),
+    }
+    _cache_set(key, result)
+    return result
+
+
+@api_router.get("/stock/{symbol}/events")
+async def events(symbol: str):
+    key = f"events:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    data = await asyncio.to_thread(ev_mod.get_events, symbol)
+    _cache_set(key, {"items": data})
+    return {"items": data}
+
+
+@api_router.get("/stock/{symbol}/red-flags")
+async def red_flags(symbol: str):
+    key = f"redflags:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    screener = await asyncio.to_thread(ss.get_screener_data, symbol)
+    news_items = await asyncio.to_thread(ss.get_news, symbol)
+    raw_ann = await asyncio.to_thread(ls.get_nse_announcements, symbol)
+    relevant = ls.filter_legal_relevant(raw_ann)
+    classified = await ls.classify_legal_announcements(relevant)
+    special = ss.get_special_news_tags(news_items)
+
+    flags = []
+    for c in screener.get("cons", []) or []:
+        flags.append({"category": "Business Concern", "severity": "Medium", "summary": c, "source": "Screener.in cons"})
+    pledge = screener.get("promoterPledge")
+    if pledge is not None:
+        sev = "Critical" if pledge >= 50 else "High" if pledge >= 25 else "Medium" if pledge >= 10 else "Low"
+        flags.append({
+            "category": "Promoter Pledge",
+            "severity": sev,
+            "summary": f"Promoter shareholding pledged: {pledge}%",
+            "source": "Screener.in shareholding",
+        })
+    for item in classified or []:
+        sev = item.get("severity") or "Medium"
+        if sev in ("Critical", "High"):
+            flags.append({
+                "category": item.get("category", "Regulatory"),
+                "severity": sev,
+                "summary": item.get("summary") or item.get("announcement") or "",
+                "source": "NSE announcement",
+            })
+    for s in special or []:
+        flags.append({
+            "category": s.get("tag", "Special Event"),
+            "severity": "High",
+            "summary": s.get("title") or "",
+            "source": s.get("source"),
+            "url": s.get("url"),
+        })
+
+    sev_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
+    flags.sort(key=lambda f: sev_order.get(f.get("severity"), 4))
+
+    result = {
+        "items": flags,
+        "promoterPledge": pledge,
+        "specialEvents": special,
+    }
+    _cache_set(key, result)
+    return result
 
 
 app.include_router(api_router)
