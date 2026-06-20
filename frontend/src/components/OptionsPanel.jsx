@@ -7,12 +7,28 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function OptionsPanel({ symbol }) {
   const [data, setData] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     if (!symbol) return;
     setData(null);
+    setAnalysis(null);
     axios.get(`${API}/stock/${symbol}/options`).then((r) => setData(r.data)).catch(() => setData({ available: false }));
   }, [symbol]);
+
+  const handleAnalyze = async () => {
+    if (!data || !data.rows) return;
+    setAnalyzing(true);
+    setAnalysis(null);
+    try {
+      const res = await axios.post(`${API}/stock/${symbol}/analyze-options`, data);
+      setAnalysis(res.data);
+    } catch (e) {
+      setAnalysis({ error: "Analysis failed" });
+    }
+    setAnalyzing(false);
+  };
 
   if (!data) return <Panel title="Options Chain & PCR (NSE)" testId="options-panel"><p className="text-xs text-zinc-500">Loading…</p></Panel>;
 
@@ -36,24 +52,63 @@ export default function OptionsPanel({ symbol }) {
 
   return (
     <Panel title={`Options Chain · ${data.expiry || ""}`} testId="options-panel">
-      <div className="flex items-center gap-4 mb-2 flex-wrap">
-        <div>
-          <div className="text-[9px] tracking-widest uppercase text-zinc-500">Underlying</div>
-          <div className="text-sm font-mono tabular-nums">₹{fmtNum(data.underlying)}</div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+        <div className="flex gap-4 flex-wrap">
+          <div>
+            <div className="text-[9px] tracking-widest uppercase text-zinc-500">Underlying</div>
+            <div className="text-sm font-mono tabular-nums">₹{fmtNum(data.underlying)}</div>
+          </div>
+          <div>
+            <div className="text-[9px] tracking-widest uppercase text-zinc-500">PCR</div>
+            <div className={`text-sm font-mono tabular-nums ${data.pcr > 1 ? "text-emerald-400" : "text-red-400"}`}>{fmtNum(data.pcr, 2)}</div>
+          </div>
+          <div>
+            <div className="text-[9px] tracking-widest uppercase text-zinc-500">CE Tot OI</div>
+            <div className="text-sm font-mono tabular-nums">{fmtBigNum(data.ceTotalOI)}</div>
+          </div>
+          <div>
+            <div className="text-[9px] tracking-widest uppercase text-zinc-500">PE Tot OI</div>
+            <div className="text-sm font-mono tabular-nums">{fmtBigNum(data.peTotalOI)}</div>
+          </div>
         </div>
-        <div>
-          <div className="text-[9px] tracking-widest uppercase text-zinc-500">PCR</div>
-          <div className={`text-sm font-mono tabular-nums ${data.pcr > 1 ? "text-emerald-400" : "text-red-400"}`}>{fmtNum(data.pcr, 2)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] tracking-widest uppercase text-zinc-500">CE Tot OI</div>
-          <div className="text-sm font-mono tabular-nums">{fmtBigNum(data.ceTotalOI)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] tracking-widest uppercase text-zinc-500">PE Tot OI</div>
-          <div className="text-sm font-mono tabular-nums">{fmtBigNum(data.peTotalOI)}</div>
-        </div>
+        <button
+          onClick={handleAnalyze}
+          disabled={analyzing}
+          className="px-3 py-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded text-xs font-medium hover:bg-blue-600/30 transition-colors disabled:opacity-50"
+        >
+          {analyzing ? "Analyzing..." : "Analyze Options"}
+        </button>
       </div>
+
+      {analysis && (
+        <div className="mb-4 p-3 rounded bg-zinc-800/40 border border-zinc-700/50">
+          {analysis.error ? (
+            <p className="text-xs text-red-400">{analysis.error}</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-4">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                  analysis.trend === "Bullish" ? "bg-emerald-500/20 text-emerald-400" :
+                  analysis.trend === "Bearish" ? "bg-red-500/20 text-red-400" :
+                  "bg-amber-500/20 text-amber-400"
+                }`}>
+                  {analysis.trend}
+                </span>
+                <div className="text-xs text-zinc-300">
+                  <span className="text-zinc-500">Support:</span> <span className="font-mono">₹{fmtNum(analysis.support)}</span>
+                </div>
+                <div className="text-xs text-zinc-300">
+                  <span className="text-zinc-500">Resistance:</span> <span className="font-mono">₹{fmtNum(analysis.resistance)}</span>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                {analysis.conclusion}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <table className="w-full text-xs">
         <thead>
           <tr className="text-[9px] tracking-widest uppercase text-zinc-500">

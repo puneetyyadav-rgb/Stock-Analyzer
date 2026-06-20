@@ -148,9 +148,9 @@ async def news(symbol: str):
     cached = _cache_get(key)
     if cached:
         return cached
-    data = await asyncio.to_thread(ss.get_news, symbol)
+    data = {"items": await asyncio.to_thread(ss.get_news, symbol)}
     _cache_set(key, data)
-    return {"items": data}
+    return data
 
 
 @api_router.get("/stock/{symbol}/screener")
@@ -323,6 +323,23 @@ async def options(symbol: str):
     return data
 
 
+@api_router.post("/stock/{symbol}/analyze-options")
+async def analyze_options(symbol: str, payload: dict):
+    if not payload or not payload.get("rows"):
+        raise HTTPException(status_code=400, detail="Invalid options data provided")
+    
+    cache_key = f"ai_options:{symbol}:{payload.get('expiry', '0')}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+        
+    analysis = await ai.analyze_options(payload)
+    if analysis and "error" not in analysis:
+        _cache_set(cache_key, analysis)
+        
+    return analysis
+
+
 @api_router.get("/stock/{symbol}/insider")
 async def insider(symbol: str):
     key = f"insider:{symbol}"
@@ -361,7 +378,7 @@ async def social(symbol: str):
 
 @api_router.get("/stock/{symbol}/legal")
 async def legal(symbol: str):
-    key = f"legal:{symbol}"
+
     cached = _cache_get(key)
     if cached:
         return cached

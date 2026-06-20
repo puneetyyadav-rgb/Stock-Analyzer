@@ -9,6 +9,10 @@ from typing import Optional
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import re
 import logging
+from email.utils import parsedate_to_datetime
+from urllib.parse import quote_plus
+from dateutil import parser as date_parser
+from defusedxml import ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
@@ -334,14 +338,121 @@ def get_holders(symbol: str) -> dict:
     return out
 
 
+NEWS_PUBLISHER_DOMAINS = (
+    "economictimes.indiatimes.com",
+    "timesofindia.indiatimes.com",
+    "livemint.com",
+    "business-standard.com",
+    "businesstoday.in",
+    "cnbctv18.com",
+    "ndtvprofit.com",
+    "reuters.com",
+)
+
+
+def _parse_news_datetime(value):
+    """Return a timezone-aware publication time, or None for unknown dates."""
+    if not value:
+        return None
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, tz=timezone.utc)
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        try:
+            dt = parsedate_to_datetime(text)
+        except (TypeError, ValueError, OverflowError):
+            try:
+                dt = date_parser.parse(text)
+            except (TypeError, ValueError, OverflowError):
+                return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _is_relevant_headline(title: str, terms: list[str]) -> bool:
+    lowered = title.lower()
+    return any(
+        re.search(rf"(?<![a-z0-9]){re.escape(term.lower())}(?![a-z0-9])", lowered)
+        for term in terms if term
+    )
+
+
+def _google_news_items(query: str, limit: int = 30, relevance_terms=None) -> list:
+    """Fetch Google News RSS results for an India-focused stock query."""
+    url = (
+        "https://news.google.com/rss/search?q=" + quote_plus(query) +
+        "&hl=en-IN&gl=IN&ceid=IN:en"
+    )
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        items = []
+        for node in root.findall("./channel/item")[:limit]:
+            title = (node.findtext("title") or "").strip()
+            link = (node.findtext("link") or "").strip()
+            source_node = node.find("source")
+            source = (source_node.text or "Google News").strip() if source_node is not None else "Google News"
+            if title.endswith(f" - {source}"):
+                title = title[:-(len(source) + 3)].strip()
+            if not title or not link:
+                continue
+            if relevance_terms and not _is_relevant_headline(title, relevance_terms):
+                continue
+            items.append({
+                "title": title,
+                "url": link,
+                "source": source,
+                "publishedAt": (node.findtext("pubDate") or "").strip(),
+                "summary": "",
+            })
+        return items
+    except Exception as exc:
+        logger.warning("Google News RSS error for %r: %s", query, exc)
+        return []
+
+
+def _finalize_news(items: list, limit: int = 60) -> list:
+    """Normalize dates, remove duplicate headlines, and sort newest first."""
+    unique = []
+    seen = set()
+    for item in items:
+        title = re.sub(r"\s+", " ", str(item.get("title") or "")).strip()
+        if not title:
+            continue
+        dedupe_key = re.sub(r"[^a-z0-9]+", "", title.lower())
+        if not dedupe_key or dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        normalized = dict(item)
+        normalized["title"] = title
+        published = _parse_news_datetime(normalized.get("publishedAt"))
+        normalized["publishedAt"] = published.isoformat() if published else ""
+        normalized["_publishedTs"] = published.timestamp() if published else 0
+        unique.append(normalized)
+    unique.sort(key=lambda item: item["_publishedTs"], reverse=True)
+    for item in unique:
+        item.pop("_publishedTs", None)
+    return _score_news(unique[:limit])
+
+
 def get_news(symbol: str) -> list:
-    """Scrape news from Yahoo Finance + Moneycontrol search."""
+    """Aggregate stock news from Yahoo, Moneycontrol, and Indian publishers."""
     sym = normalize_symbol(symbol)
     news_items = []
+    clean_symbol = sym.replace(".NS", "").replace(".BO", "")
+    company_name = clean_symbol
 
     # Yahoo Finance news via yfinance
     try:
         t = yf.Ticker(sym)
+        try:
+            company_name = (t.info or {}).get("shortName") or company_name
+        except Exception:
+            pass
         for n in (t.news or [])[:15]:
             content = n.get("content", n)
             title = content.get("title") or n.get("title")
@@ -350,8 +461,6 @@ def get_news(symbol: str) -> list:
             link = (content.get("canonicalUrl") or {}).get("url") if isinstance(content.get("canonicalUrl"), dict) else content.get("clickThroughUrl", {}).get("url") if isinstance(content.get("clickThroughUrl"), dict) else n.get("link")
             provider = content.get("provider", {}).get("displayName") if isinstance(content.get("provider"), dict) else n.get("publisher", "")
             pub_date = content.get("pubDate") or n.get("providerPublishTime")
-            if isinstance(pub_date, int):
-                pub_date = datetime.fromtimestamp(pub_date, tz=timezone.utc).isoformat()
             news_items.append({
                 "title": title,
                 "url": link or "",
@@ -361,6 +470,17 @@ def get_news(symbol: str) -> list:
             })
     except Exception as e:
         logger.error(f"yahoo news error: {e}")
+
+    # Yahoo's quote search is a reliable fallback when ticker.info has no name.
+    if company_name == clean_symbol:
+        try:
+            quotes = yf.Search(clean_symbol, max_results=8).quotes
+            exact = next((q for q in quotes if q.get("symbol") == sym), None)
+            match = exact or next((q for q in quotes if q.get("symbol") == clean_symbol), None)
+            if match:
+                company_name = match.get("longname") or match.get("shortname") or company_name
+        except Exception as exc:
+            logger.warning("Yahoo company-name lookup error for %s: %s", clean_symbol, exc)
 
     # Moneycontrol scraping
     try:
@@ -390,7 +510,21 @@ def get_news(symbol: str) -> list:
     except Exception as e:
         logger.error(f"moneycontrol news error: {e}")
 
-    return _score_news(news_items[:25])
+    legal_suffixes = {"limited", "ltd", "plc", "inc", "corporation", "corp", "company"}
+    company_terms = [
+        token for token in re.findall(r"[A-Za-z0-9&]+", company_name)
+        if len(token) >= 3 and token.lower() not in legal_suffixes
+    ]
+    relevance_terms = list(dict.fromkeys([clean_symbol, *company_terms]))
+    primary_name = " ".join(company_terms) or company_name
+    stock_query = f'("{primary_name}" OR "{clean_symbol}") stock when:30d'
+    news_items.extend(_google_news_items(stock_query, 40, relevance_terms))
+
+    publisher_filter = " OR ".join(f"site:{domain}" for domain in NEWS_PUBLISHER_DOMAINS)
+    publisher_query = f'("{primary_name}" OR "{clean_symbol}") ({publisher_filter}) when:60d'
+    news_items.extend(_google_news_items(publisher_query, 40, relevance_terms))
+
+    return _finalize_news(news_items)
 
 
 def _score_news(items: list) -> list:

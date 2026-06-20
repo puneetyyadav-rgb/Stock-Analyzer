@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { getAIVerdict } from "../lib/api";
@@ -16,6 +16,11 @@ export default function AIVerdict({ symbol }) {
   const [verdict, setVerdict] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    setVerdict(null);
+    setErr(null);
+  }, [symbol]);
 
   const run = async () => {
     setLoading(true);
@@ -79,6 +84,11 @@ export default function AIVerdict({ symbol }) {
             <div className="text-[10px] tracking-widest uppercase text-zinc-500">
               Horizon: <span className="text-zinc-200">{verdict.timeHorizon}</span>
             </div>
+            {verdict.analysisAsOf && (
+              <div className="text-[10px] tracking-widest uppercase text-zinc-500">
+                Analysis as of: <span className="text-blue-300 font-mono">{verdict.analysisAsOf}</span>
+              </div>
+            )}
             {verdict.targetPrice && (
               <div className="text-[10px] tracking-widest uppercase text-zinc-500">
                 Target: <span className="text-emerald-400 font-mono">₹{Number(verdict.targetPrice).toFixed(2)}</span>

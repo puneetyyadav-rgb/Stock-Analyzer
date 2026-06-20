@@ -3,10 +3,15 @@ import os
 import json
 import logging
 import asyncio
+import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from dateutil import parser as date_parser
 from google import genai
 from google.genai import types
 
 logger = logging.getLogger(__name__)
+INDIA_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
@@ -111,6 +116,12 @@ You analyze stocks using a 9-factor framework:
 9. Management commentary, big orders, court cases
 
 Provide a structured, terse, data-driven verdict. Use Indian context (Rs/Cr, NSE, SEBI, RBI).
+The supplied analysisAsOf date is authoritative. Base the conclusion on information available as of that date.
+Use publication/period dates to distinguish current evidence from historical context. Never describe an event
+before analysisAsOf as upcoming or as a catalyst. Do not invent board, earnings, dividend, policy, or macro dates.
+Only list a dated catalyst when an explicit future date exists in upcoming_events or recent news; otherwise label
+it as conditional and undated. Past events may be cited only in past tense as evidence. When data is missing or
+stale, say so instead of filling the gap from memory.
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:
 {
@@ -136,16 +147,97 @@ Schema:
 }"""
 
 
+def sync_analyze_options(prompt: str) -> str:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return ""
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+    )
+    return response.text
+
+async def analyze_options(options_data: dict) -> dict:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return {"error": "GEMINI_API_KEY not configured"}
+
+    prompt = f"""You are an Indian F&O analyst. Analyze this Option Chain data.
+Identify immediate Support (highest PE OI), immediate Resistance (highest CE OI), trend (based on PCR and LTP), and draw a clear, concise conclusion (Bullish, Bearish, or Neutral).
+Output STRICT JSON. No markdown fences.
+Schema:
+{{
+  "support": number,
+  "resistance": number,
+  "trend": "Bullish" | "Bearish" | "Neutral",
+  "conclusion": "2-3 sentences"
+}}
+
+Option Chain Data:
+{json.dumps(options_data, default=str)[:15000]}
+"""
+    try:
+        text = await asyncio.to_thread(sync_analyze_options, prompt)
+        return json.loads(text.strip())
+    except Exception as e:
+        logger.error(f"Options analysis error: {e}")
+        return {"error": str(e)}
+
+
+def _remove_past_catalysts(catalysts: list, analysis_date) -> list:
+    """Drop model-produced catalysts that contain an explicit past date."""
+    month = (
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+        r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    )
+    patterns = (
+        rf"\b{month}\s+\d{{1,2}},?\s+\d{{4}}\b",
+        rf"\b\d{{1,2}}\s+{month}\s+\d{{4}}\b",
+        r"\b\d{4}-\d{1,2}-\d{1,2}\b",
+        r"\b\d{1,2}/\d{1,2}/\d{4}\b",
+    )
+    current = []
+    for catalyst in catalysts or []:
+        text = str(catalyst)
+        dated_past = False
+        for pattern in patterns:
+            for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                try:
+                    matched_date = match.group(0)
+                    if re.match(r"^\d{4}-", matched_date):
+                        event_date = datetime.strptime(matched_date, "%Y-%m-%d").date()
+                    else:
+                        event_date = date_parser.parse(matched_date, dayfirst=True).date()
+                    dated_past = dated_past or event_date < analysis_date
+                except (TypeError, ValueError, OverflowError):
+                    pass
+        if not dated_past:
+            current.append(catalyst)
+    return current
+
+
 async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
     client = get_gemini_client()
     if not client:
         return {"error": "GEMINI_API_KEY not configured"}
 
     overview = stock_data.get("overview", {})
+    analysis_as_of = datetime.now(INDIA_TIMEZONE).date()
+    news_items = stock_data.get("news", [])
     bucket = map_sector(overview.get("sector"))
     hints = SECTOR_FACTOR_HINTS.get(bucket, [])
 
     payload = {
+        "analysisAsOf": analysis_as_of.isoformat(),
+        "dataFreshness": {
+            "latestNewsPublishedAt": news_items[0].get("publishedAt") if news_items else None,
+            "macroUpdatedAt": macro_data.get("updatedAt"),
+            "eventsFilteredAsOf": analysis_as_of.isoformat(),
+        },
         "stock": {
             "symbol": overview.get("symbol"),
             "name": overview.get("name"),
@@ -177,8 +269,13 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
         "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
         "recent_news_with_sentiment": [
-            {"title": n.get("title"), "sentiment": n.get("sentimentLabel")}
-            for n in stock_data.get("news", [])[:10]
+            {
+                "title": n.get("title"),
+                "source": n.get("source"),
+                "publishedAt": n.get("publishedAt"),
+                "sentiment": n.get("sentimentLabel"),
+            }
+            for n in news_items[:20]
         ],
         "social_sentiment": stock_data.get("social", {}),
         "legal_announcements": stock_data.get("legal", {}).get("items", [])[:5],
@@ -199,14 +296,16 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
 
     prompt = (
         f"{SYSTEM_PROMPT}\n\n"
-        f"Analyze this Indian stock and provide a verdict. Data:\n"
-        f"```json\n{json.dumps(payload, default=str)[:15000]}\n```{sector_instruction}"
+        f"Analyze this Indian stock as of {analysis_as_of.isoformat()} and provide a verdict. Data:\n"
+        f"```json\n{json.dumps(payload, default=str)}\n```{sector_instruction}"
     )
 
     try:
         text = await asyncio.to_thread(sync_generate_verdict, prompt)
         text = text.strip()
         result = json.loads(text)
+        result["catalysts"] = _remove_past_catalysts(result.get("catalysts", []), analysis_as_of)
+        result["analysisAsOf"] = analysis_as_of.isoformat()
         result["disclaimer"] = DISCLAIMER_TEXT
         result["sectorBucket"] = bucket
         return result
