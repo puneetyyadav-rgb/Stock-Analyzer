@@ -17,6 +17,7 @@ charset-normalizer==3.4.7
 click==8.4.1
 cryptography==49.0.0
 curl_cffi==0.15.0
+defusedxml==0.7.1
 distro==1.9.0
 dnspython==2.8.0
 ecdsa==0.19.2
@@ -77,6 +78,8 @@ peewee==4.1.0
 pillow==12.2.0
 platformdirs==4.10.0
 pluggy==1.6.0
+praw==8.0.1
+prawcore==4.0.0
 propcache==0.5.2
 proto-plus==1.28.0
 protobuf==5.29.6
@@ -123,10 +126,13 @@ typer==0.25.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2026.2
+update_checker==1.0.0
 uritemplate==4.2.0
 urllib3==2.7.0
 uvicorn==0.25.0
+vaderSentiment==3.3.2
 watchfiles==1.2.0
+websocket-client==1.9.0
 websockets==16.0
 yarl==1.24.2
 yfinance==1.4.1
