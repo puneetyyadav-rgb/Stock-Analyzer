@@ -1,13 +1,32 @@
-"""AI verdict generator using Gemini 3 Flash via Emergent Universal Key."""
+"""AI verdict generator using Gemini 3.5 Flash."""
 import os
 import json
 import logging
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import asyncio
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+def get_gemini_client():
+    key = os.environ.get("GEMINI_API_KEY")
+    return genai.Client(api_key=key) if key else None
+
+def sync_generate_verdict(prompt: str) -> str:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return ""
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+    )
+    return response.text
 
 DISCLAIMER_TEXT = (
     "AI-generated analysis from public data sources. Not investment advice. "
@@ -118,8 +137,9 @@ Schema:
 
 
 async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
-    if not EMERGENT_LLM_KEY:
-        return {"error": "EMERGENT_LLM_KEY not configured"}
+    client = get_gemini_client()
+    if not client:
+        return {"error": "GEMINI_API_KEY not configured"}
 
     overview = stock_data.get("overview", {})
     bucket = map_sector(overview.get("sector"))
@@ -160,6 +180,10 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
             {"title": n.get("title"), "sentiment": n.get("sentimentLabel")}
             for n in stock_data.get("news", [])[:10]
         ],
+        "social_sentiment": stock_data.get("social", {}),
+        "legal_announcements": stock_data.get("legal", {}).get("items", [])[:5],
+        "upcoming_events": stock_data.get("events", {}).get("items", [])[:5],
+        "red_flags": stock_data.get("red_flags", {}).get("items", [])[:5],
         "macro_snapshot": macro_data.get("indicators", []),
         "sector_bucket": bucket,
     }
@@ -173,32 +197,15 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
             f"guessing a number. Populate 'sectorSpecific' array with one object per hint above."
         )
 
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"stock-{overview.get('symbol', 'unknown')}",
-        system_message=SYSTEM_PROMPT,
-    ).with_model("gemini", "gemini-3-flash-preview")
-
-    user_msg = UserMessage(
-        text=(
-            f"Analyze this Indian stock and provide a verdict. Data:\n"
-            f"```json\n{json.dumps(payload, default=str)[:8000]}\n```{sector_instruction}"
-        )
+    prompt = (
+        f"{SYSTEM_PROMPT}\n\n"
+        f"Analyze this Indian stock and provide a verdict. Data:\n"
+        f"```json\n{json.dumps(payload, default=str)[:15000]}\n```{sector_instruction}"
     )
 
     try:
-        resp = await chat.send_message(user_msg)
-        text = resp if isinstance(resp, str) else str(resp)
+        text = await asyncio.to_thread(sync_generate_verdict, prompt)
         text = text.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1] if "```" in text else text
-            if text.lower().startswith("json"):
-                text = text[4:].strip()
-            text = text.rstrip("`").strip()
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1:
-            text = text[start:end + 1]
         result = json.loads(text)
         result["disclaimer"] = DISCLAIMER_TEXT
         result["sectorBucket"] = bucket

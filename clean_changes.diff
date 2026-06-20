@@ -1,0 +1,718 @@
+﻿diff --git a/backend/ai_service.py b/backend/ai_service.py
+index 909a582..f669e78 100644
+--- a/backend/ai_service.py
++++ b/backend/ai_service.py
+@@ -9,6 +9,76 @@ logger = logging.getLogger(__name__)
+ EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
+ 
+ 
++DISCLAIMER_TEXT = (
++    "AI-generated analysis from public data sources. Not investment advice. "
++    "Confidence and target-price figures reflect qualitative AI reasoning, not "
++    "statistical or regulatory-grade forecasts. Verify independently before any financial decision."
++)
++
++
++SECTOR_MAP = {
++    "Financial Services": "Banking/NBFC",
++    "Healthcare": "Pharma",
++    "Technology": "IT Services",
++    "Communication Services": "Telecom",
++    "Consumer Cyclical": "Auto",
++    "Basic Materials": "Cement/Metals",
++    "Real Estate": "Real Estate",
++    "Energy": "Oil & Gas",
++    "Industrials": "Conglomerate",
++}
++
++SECTOR_FACTOR_HINTS = {
++    "Banking/NBFC": [
++        "gross/net NPA trend",
++        "CASA ratio & deposit growth",
++        "credit cost & provisioning",
++        "any RBI regulatory action",
++    ],
++    "Pharma": [
++        "USFDA inspection/warning-letter status if mentioned in news/screener",
++        "US generics pricing pressure",
++        "plant compliance history",
++    ],
++    "IT Services": [
++        "client concentration & attrition",
++        "deal pipeline/TCV commentary",
++        "US/Europe BFSI demand",
++    ],
++    "Telecom": [
++        "ARPU trend",
++        "AGR dues/spectrum payment status",
++        "subscriber net adds",
++    ],
++    "Auto": [
++        "monthly dispatch/volume trend",
++        "EV transition capex",
++        "semiconductor supply commentary",
++    ],
++    "Cement/Metals": [
++        "capacity utilization & realization",
++        "input cost trend (coal/limestone/ore)",
++        "anti-dumping duty exposure",
++    ],
++    "Real Estate": [
++        "launch pipeline & pre-sales momentum",
++        "RERA compliance status",
++    ],
++    "Oil & Gas": [
++        "refining/marketing margin (GRM)",
++        "windfall tax exposure",
++    ],
++    "Conglomerate": [
++        "sum-of-parts vs. current valuation (holding-company discount)",
++        "subsidiary listing/demerger catalysts",
++    ],
++}
++
++
++def map_sector(yahoo_sector: str) -> str:
++    return SECTOR_MAP.get(yahoo_sector or "", "Other")
++
++
+ SYSTEM_PROMPT = """You are a senior Indian equity research analyst with deep expertise in NSE/BSE markets.
+ You analyze stocks using a 9-factor framework:
+ 1. Macroeconomic factors (rates, inflation, GDP, currency, commodities, geopolitics)
+@@ -42,7 +112,8 @@ Schema:
+     "sentiment": "1-2 sentences",
+     "regulatory": "1-2 sentences",
+     "management": "1-2 sentences"
+-  }
++  },
++  "sectorSpecific": [{"factor": "...", "assessment": "...", "dataAvailable": true}]
+ }"""
+ 
+ 
+@@ -51,6 +122,9 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
+         return {"error": "EMERGENT_LLM_KEY not configured"}
+ 
+     overview = stock_data.get("overview", {})
++    bucket = map_sector(overview.get("sector"))
++    hints = SECTOR_FACTOR_HINTS.get(bucket, [])
++
+     payload = {
+         "stock": {
+             "symbol": overview.get("symbol"),
+@@ -81,10 +155,24 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
+         "screener_pros": stock_data.get("screener", {}).get("pros", [])[:5],
+         "screener_cons": stock_data.get("screener", {}).get("cons", [])[:5],
+         "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
+-        "recent_news_headlines": [n.get("title") for n in stock_data.get("news", [])[:10]],
++        "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
++        "recent_news_with_sentiment": [
++            {"title": n.get("title"), "sentiment": n.get("sentimentLabel")}
++            for n in stock_data.get("news", [])[:10]
++        ],
+         "macro_snapshot": macro_data.get("indicators", []),
++        "sector_bucket": bucket,
+     }
+ 
++    sector_instruction = ""
++    if hints:
++        sector_instruction = (
++            f"\n\nFor this stock's sector ({bucket}), specifically address: {hints}, "
++            f"using only the financials/screener/news data already provided above. "
++            f"If a hint can't be addressed from the given data, say so explicitly rather than "
++            f"guessing a number. Populate 'sectorSpecific' array with one object per hint above."
++        )
++
+     chat = LlmChat(
+         api_key=EMERGENT_LLM_KEY,
+         session_id=f"stock-{overview.get('symbol', 'unknown')}",
+@@ -92,25 +180,29 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
+     ).with_model("gemini", "gemini-3-flash-preview")
+ 
+     user_msg = UserMessage(
+-        text=f"Analyze this Indian stock and provide a verdict. Data:\n```json\n{json.dumps(payload, default=str)[:8000]}\n```"
++        text=(
++            f"Analyze this Indian stock and provide a verdict. Data:\n"
++            f"```json\n{json.dumps(payload, default=str)[:8000]}\n```{sector_instruction}"
++        )
+     )
+ 
+     try:
+         resp = await chat.send_message(user_msg)
+         text = resp if isinstance(resp, str) else str(resp)
+-        # strip markdown fences if any
+         text = text.strip()
+         if text.startswith("```"):
+             text = text.split("```", 2)[1] if "```" in text else text
+             if text.lower().startswith("json"):
+                 text = text[4:].strip()
+             text = text.rstrip("`").strip()
+-        # find first { and last }
+         start = text.find("{")
+         end = text.rfind("}")
+         if start != -1 and end != -1:
+             text = text[start:end + 1]
+-        return json.loads(text)
++        result = json.loads(text)
++        result["disclaimer"] = DISCLAIMER_TEXT
++        result["sectorBucket"] = bucket
++        return result
+     except Exception as e:
+         logger.error(f"AI verdict error: {e}")
+         return {"error": str(e)}
+diff --git a/backend/requirements.txt b/backend/requirements.txt
+index 80ce6d7..683b80f 100644
+--- a/backend/requirements.txt
++++ b/backend/requirements.txt
+@@ -17,10 +17,12 @@ charset-normalizer==3.4.7
+ click==8.4.1
+ cryptography==49.0.0
+ curl_cffi==0.15.0
++defusedxml==0.7.1
+ distro==1.9.0
+ dnspython==2.8.0
+ ecdsa==0.19.2
+ email-validator==2.3.0
++emergentintegrations==0.2.0
+ fastapi==0.110.1
+ fastuuid==0.14.0
+ filelock==3.29.4
+@@ -76,6 +78,8 @@ peewee==4.1.0
+ pillow==12.2.0
+ platformdirs==4.10.0
+ pluggy==1.6.0
++praw==8.0.1
++prawcore==4.0.0
+ propcache==0.5.2
+ proto-plus==1.28.0
+ protobuf==5.29.6
+@@ -122,110 +126,14 @@ typer==0.25.1
+ typing-inspection==0.4.2
+ typing_extensions==4.15.0
+ tzdata==2026.2
+-uritemplate==4.2.0
+-urllib3==2.7.0
+-fsspec==2026.6.0
+-google-ai-generativelanguage==0.6.15
+-google-api-core==2.31.0
+-google-api-python-client==2.197.0
+-google-auth==2.55.0
+-google-auth-httplib2==0.4.0
+-google-genai==2.8.0
+-google-generativeai==0.8.6
+-googleapis-common-protos==1.75.0
+-grpcio==1.81.1
+-grpcio-status==1.71.2
+-h11==0.16.0
+-hf-xet==1.5.1
+-httpcore==1.0.9
+-httplib2==0.31.2
+-httpx==0.28.1
+-huggingface_hub==1.19.0
+-idna==3.18
+-importlib_metadata==9.0.0
+-iniconfig==2.3.0
+-isort==8.0.1
+-Jinja2==3.1.6
+-jiter==0.15.0
+-jmespath==1.1.0
+-jq==1.11.0
+-jsonschema==4.26.0
+-jsonschema-specifications==2025.9.1
+-librt==0.11.0
+-litellm @ https://customer-assets.emergentagent.com/internal-asset/library/litellm-1.80.0-py3-none-any.whl#sha256=adf398c513273de9341f61822296c6b2145f7f2dc4a69daf3ac04829f5bde3f8
+-lxml==6.1.1
+-markdown-it-py==4.2.0
+-MarkupSafe==3.0.3
+-mccabe==0.7.0
+-mdurl==0.1.2
+-motor==3.3.1
+-multidict==6.7.1
+-multitasking==0.0.13
+-mypy==2.1.0
+-mypy_extensions==1.1.0
+-numpy==2.4.6
+-oauthlib==3.3.1
+-openai==1.99.9
+-packaging==26.2
+-pandas==3.0.3
+-passlib==1.7.4
+-pathspec==1.1.1
+-peewee==4.1.0
+-pillow==12.2.0
+-platformdirs==4.10.0
+-pluggy==1.6.0
+-propcache==0.5.2
+-proto-plus==1.28.0
+-protobuf==5.29.6
+-pyasn1==0.6.3
+-pyasn1_modules==0.4.2
+-pycodestyle==2.14.0
+-pycparser==3.0
+-pydantic==2.13.4
+-pydantic_core==2.46.4
+-pyflakes==3.4.0
+-Pygments==2.20.0
+-PyJWT==2.13.0
+-pymongo==4.6.3
+-pyparsing==3.3.2
+-pypdf==6.13.3
+-pytest==9.1.0
+-python-dateutil==2.9.0.post0
+-python-dotenv==1.2.2
+-python-jose==3.5.0
+-python-multipart==0.0.32
+-pytokens==0.4.1
+-pytz==2026.2
+-PyYAML==6.0.3
+-referencing==0.37.0
+-regex==2026.5.9
+-requests==2.34.2
+-requests-oauthlib==2.0.0
+-rich==15.0.0
+-rpds-py==2026.5.1
+-rsa==4.9.1
+-s3transfer==0.19.0
+-s5cmd==0.2.0
+-shellingham==1.5.4
+-six==1.17.0
+-sniffio==1.3.1
+-soupsieve==2.8.4
+-starlette==0.37.2
+-stripe==14.4.1
+-tenacity==9.1.4
+-tiktoken==0.13.0
+-tokenizers==0.23.1
+-tqdm==4.68.3
+-typer==0.25.1
+-typing-inspection==0.4.2
+-typing_extensions==4.15.0
+-tzdata==2026.2
++update_checker==1.0.0
+ uritemplate==4.2.0
+ urllib3==2.7.0
+ uvicorn==0.25.0
++vaderSentiment==3.3.2
+ watchfiles==1.2.0
++websocket-client==1.9.0
+ websockets==16.0
+ yarl==1.24.2
+ yfinance==1.4.1
+ zipp==4.1.0
+-pyotp==2.9.0
+diff --git a/backend/server.py b/backend/server.py
+index 8a47869..af05add 100644
+--- a/backend/server.py
++++ b/backend/server.py
+@@ -1,7 +1,5 @@
+-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
++from fastapi import FastAPI, APIRouter, HTTPException
+ from dotenv import load_dotenv
+-load_dotenv()
+-
+ from starlette.middleware.cors import CORSMiddleware
+ from motor.motor_asyncio import AsyncIOMotorClient
+ import os
+@@ -11,17 +9,19 @@ from datetime import datetime, timezone
+ import asyncio
+ 
+ ROOT_DIR = Path(__file__).parent
++load_dotenv(ROOT_DIR / ".env")
+ 
+ import stock_service as ss
+ import ai_service as ai
+ import extra_service as ex
+ import concall_service as cs
+-import kotak_service as ks
+-
++import social_service as sc
++import legal_service as ls
++import events_service as ev_mod
+ 
+-mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
++mongo_url = os.environ["MONGO_URL"]
+ client = AsyncIOMotorClient(mongo_url)
+-db = client[os.environ.get("DB_NAME", "stock_sentinel")]
++db = client[os.environ["DB_NAME"]]
+ 
+ app = FastAPI(title="StockSentinel India")
+ api_router = APIRouter(prefix="/api")
+@@ -75,15 +75,6 @@ async def overview(symbol: str):
+     return data
+ 
+ 
+-@api_router.get("/stock/{symbol}/depth")
+-async def depth(symbol: str):
+-    # Live data, DO NOT cache
+-    data = await ks.get_market_depth(symbol)
+-    if data and "error" in data:
+-        raise HTTPException(status_code=400, detail=data["error"])
+-    return data
+-
+-
+ @api_router.get("/stock/{symbol}/chart")
+ async def chart(symbol: str, period: str = "1y"):
+     key = f"ch:{symbol}:{period}"
+@@ -296,7 +287,7 @@ async def options(symbol: str):
+     cached = _cache_get(key)
+     if cached:
+         return cached
+-    data = await ks.get_option_chain(symbol)
++    data = await asyncio.to_thread(ex.get_options_chain, symbol)
+     _cache_set(key, data)
+     return data
+ 
+@@ -312,6 +303,120 @@ async def insider(symbol: str):
+     return {"items": data}
+ 
+ 
++@api_router.get("/stock/{symbol}/social")
++async def social(symbol: str):
++    key = f"social:{symbol}"
++    cached = _cache_get(key)
++    if cached:
++        return cached
++    ov = await asyncio.to_thread(ss.get_overview, symbol)
++    company_name = ov.get("name") or symbol
++    reddit_data = await asyncio.to_thread(sc.get_reddit_sentiment, company_name)
++    stocktwits_data = await asyncio.to_thread(sc.get_stocktwits_sentiment, symbol)
++    result = {
++        "reddit": reddit_data,
++        "stocktwits": stocktwits_data,
++        "twitter_x": {
++            "available": False,
++            "reason": (
++                "X discontinued its free read tier in Feb 2026 (pay-per-use only, ~$0.005/read). "
++                "Not integrated ΓÇö Reddit is the primary retail-sentiment source here."
++            ),
++        },
++    }
++    _cache_set(key, result)
++    return result
++
++
++@api_router.get("/stock/{symbol}/legal")
++async def legal(symbol: str):
++    key = f"legal:{symbol}"
++    cached = _cache_get(key)
++    if cached:
++        return cached
++    raw = await asyncio.to_thread(ls.get_nse_announcements, symbol)
++    relevant = ls.filter_legal_relevant(raw)
++    classified = await ls.classify_legal_announcements(relevant)
++    result = {
++        "items": classified,
++        "source": "NSE corporate-announcements (scraped ΓÇö not an official SEBI or NSE API)",
++        "announcements_scanned": len(raw),
++        "note": (
++            "Empty results are expected for most stocks most of the time ΓÇö litigation/SEBI-action "
++            "disclosures are rare events, not a constant feed. NSE may also geo-block from server "
++            "location; in that case scanned=0."
++        ),
++    }
++    _cache_set(key, result)
++    return result
++
++
++@api_router.get("/stock/{symbol}/events")
++async def events(symbol: str):
++    key = f"events:{symbol}"
++    cached = _cache_get(key)
++    if cached:
++        return cached
++    data = await asyncio.to_thread(ev_mod.get_events, symbol)
++    _cache_set(key, {"items": data})
++    return {"items": data}
++
++
++@api_router.get("/stock/{symbol}/red-flags")
++async def red_flags(symbol: str):
++    key = f"redflags:{symbol}"
++    cached = _cache_get(key)
++    if cached:
++        return cached
++    screener = await asyncio.to_thread(ss.get_screener_data, symbol)
++    news_items = await asyncio.to_thread(ss.get_news, symbol)
++    raw_ann = await asyncio.to_thread(ls.get_nse_announcements, symbol)
++    relevant = ls.filter_legal_relevant(raw_ann)
++    classified = await ls.classify_legal_announcements(relevant)
++    special = ss.get_special_news_tags(news_items)
++
++    flags = []
++    for c in screener.get("cons", []) or []:
++        flags.append({"category": "Business Concern", "severity": "Medium", "summary": c, "source": "Screener.in cons"})
++    pledge = screener.get("promoterPledge")
++    if pledge is not None:
++        sev = "Critical" if pledge >= 50 else "High" if pledge >= 25 else "Medium" if pledge >= 10 else "Low"
++        flags.append({
++            "category": "Promoter Pledge",
++            "severity": sev,
++            "summary": f"Promoter shareholding pledged: {pledge}%",
++            "source": "Screener.in shareholding",
++        })
++    for item in classified or []:
++        sev = item.get("severity") or "Medium"
++        if sev in ("Critical", "High"):
++            flags.append({
++                "category": item.get("category", "Regulatory"),
++                "severity": sev,
++                "summary": item.get("summary") or item.get("announcement") or "",
++                "source": "NSE announcement",
++            })
++    for s in special or []:
++        flags.append({
++            "category": s.get("tag", "Special Event"),
++            "severity": "High",
++            "summary": s.get("title") or "",
++            "source": s.get("source"),
++            "url": s.get("url"),
++        })
++
++    sev_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
++    flags.sort(key=lambda f: sev_order.get(f.get("severity"), 4))
++
++    result = {
++        "items": flags,
++        "promoterPledge": pledge,
++        "specialEvents": special,
++    }
++    _cache_set(key, result)
++    return result
++
++
+ app.include_router(api_router)
+ 
+ app.add_middleware(
+diff --git a/backend/stock_service.py b/backend/stock_service.py
+index 85ddb23..5e1e01d 100644
+--- a/backend/stock_service.py
++++ b/backend/stock_service.py
+@@ -6,11 +6,14 @@ import pandas as pd
+ import numpy as np
+ from datetime import datetime, timezone, timedelta
+ from typing import Optional
++from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+ import re
+ import logging
+ 
+ logger = logging.getLogger(__name__)
+ 
++_vader = SentimentIntensityAnalyzer()
++
+ HEADERS = {
+     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+@@ -387,14 +390,50 @@ def get_news(symbol: str) -> list:
+     except Exception as e:
+         logger.error(f"moneycontrol news error: {e}")
+ 
+-    return news_items[:25]
++    return _score_news(news_items[:25])
++
++
++def _score_news(items: list) -> list:
++    """Add VADER sentiment to each news item in place."""
++    for it in items:
++        title = it.get("title", "")
++        try:
++            score = _vader.polarity_scores(title)["compound"]
++        except Exception:
++            score = 0.0
++        it["sentimentScore"] = round(score, 3)
++        it["sentimentLabel"] = "Positive" if score > 0.15 else "Negative" if score < -0.15 else "Neutral"
++    return items
++
++
++def _score_news(items: list) -> list:
++    """Add VADER sentiment to each news item in place."""
++    for it in items:
++        title = it.get("title", "")
++        try:
++            score = _vader.polarity_scores(title)["compound"]
++        except Exception:
++            score = 0.0
++        it["sentimentScore"] = round(score, 3)
++        it["sentimentLabel"] = "Positive" if score > 0.15 else "Negative" if score < -0.15 else "Neutral"
++    return items
++    """Add VADER sentiment to each news item in place."""
++    for it in items:
++        title = it.get("title", "")
++        try:
++            score = _vader.polarity_scores(title)["compound"]
++        except Exception:
++            score = 0.0
++        it["sentimentScore"] = round(score, 3)
++        it["sentimentLabel"] = "Positive" if score > 0.15 else "Negative" if score < -0.15 else "Neutral"
++    return items
+ 
+ 
+ def get_screener_data(symbol: str) -> dict:
+     """Scrape additional ratios + management commentary from Screener.in."""
+     sym = normalize_symbol(symbol)
+     clean = sym.replace(".NS", "").replace(".BO", "")
+-    out = {"ratios": {}, "pros": [], "cons": [], "about": ""}
++    out = {"ratios": {}, "pros": [], "cons": [], "about": "", "promoterPledge": None}
+     try:
+         url = f"https://www.screener.in/company/{clean}/consolidated/"
+         r = requests.get(url, headers=HEADERS, timeout=10)
+@@ -420,11 +459,51 @@ def get_screener_data(symbol: str) -> dict:
+             about = soup.select_one(".company-profile .about")
+             if about:
+                 out["about"] = about.get_text(" ", strip=True)[:1000]
++            # Promoter pledge ΓÇö look in the shareholding table for "Pledged" row
++            txt = soup.get_text(" ", strip=True)
++            m = re.search(r"Pledged[^\d%]*([\d.]+)\s*%", txt, re.I)
++            if m:
++                try:
++                    out["promoterPledge"] = float(m.group(1))
++                except Exception:
++                    pass
+     except Exception as e:
+         logger.error(f"screener error: {e}")
+     return out
+ 
+ 
++SPECIAL_KEYWORDS = {
++    "succession": "Succession/Leadership",
++    "founder health": "Founder Health",
++    "ceo health": "Founder Health",
++    "data breach": "Cybersecurity",
++    "ransomware": "Cybersecurity",
++    "cyberattack": "Cybersecurity",
++    "cyber attack": "Cybersecurity",
++    "phishing": "Cybersecurity",
++}
++
++
++def get_special_news_tags(news_items: list) -> list:
++    """Surface news headlines matching special-event keywords (succession / cybersecurity etc.)."""
++    flagged = []
++    for n in news_items:
++        title = (n.get("title") or "").lower()
++        summary = (n.get("summary") or "").lower()
++        blob = f"{title} {summary}"
++        for kw, tag in SPECIAL_KEYWORDS.items():
++            if kw in blob:
++                flagged.append({
++                    "tag": tag,
++                    "keyword": kw,
++                    "title": n.get("title"),
++                    "url": n.get("url"),
++                    "source": n.get("source"),
++                })
++                break
++    return flagged
++
++
+ def get_macro_snapshot() -> dict:
+     """Macro indicators relevant to Indian markets."""
+     tickers = {
+diff --git a/frontend/src/components/OptionsPanel.jsx b/frontend/src/components/OptionsPanel.jsx
+index 9da457a..a1eccbf 100644
+--- a/frontend/src/components/OptionsPanel.jsx
++++ b/frontend/src/components/OptionsPanel.jsx
+@@ -17,18 +17,11 @@ export default function OptionsPanel({ symbol }) {
+   if (!data) return <Panel title="Options Chain & PCR (NSE)" testId="options-panel"><p className="text-xs text-zinc-500">LoadingΓÇª</p></Panel>;
+ 
+   if (!data.available) {
+-    const isNotFO = data.error === "Not F&O" || (data.reason && data.reason.includes("not available"));
+     return (
+       <Panel title="Options Chain & PCR (NSE)" testId="options-panel">
+         <div className="text-xs text-zinc-500 space-y-1">
+-          {isNotFO ? (
+-            <p className="text-zinc-400 font-medium">{symbol} does not trade in the F&O segment.</p>
+-          ) : (
+-            <>
+-              <p className="text-amber-400 font-medium">Options chain temporarily unavailable</p>
+-              <p className="text-zinc-600 leading-snug">{data.reason || data.error}</p>
+-            </>
+-          )}
++          <p className="text-amber-400 font-medium">Options chain temporarily unavailable</p>
++          <p className="text-zinc-600 leading-snug">{data.reason || data.error || "NSE rate limit / geo-block."} Direct options chain access requires India IP. Visit <a href={`https://www.nseindia.com/option-chain?symbol=${symbol.replace(".NS","")}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">NSE Option Chain</a> for live data.</p>
+         </div>
+       </Panel>
+     );
+diff --git a/frontend/src/pages/Dashboard.jsx b/frontend/src/pages/Dashboard.jsx
+index 0ab718c..cad378e 100644
+--- a/frontend/src/pages/Dashboard.jsx
++++ b/frontend/src/pages/Dashboard.jsx
+@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
+ import StockSearch from "../components/StockSearch";
+ import StockChart from "../components/StockChart";
+ import MacroPanel from "../components/MacroPanel";
+-import MarketDepthPanel from "../components/MarketDepthPanel";
+ import AIVerdict from "../components/AIVerdict";
+ import StockDetails from "../components/StockDetails";
+ import { Panel } from "../components/Panel";
+@@ -11,6 +10,11 @@ import ConcallsPanel from "../components/ConcallsPanel";
+ import PeersPanel from "../components/PeersPanel";
+ import OptionsPanel from "../components/OptionsPanel";
+ import InsiderPanel from "../components/InsiderPanel";
++import SocialPanel from "../components/SocialPanel";
++import LegalPanel from "../components/LegalPanel";
++import EventsPanel from "../components/EventsPanel";
++import RedFlagsPanel from "../components/RedFlagsPanel";
++import { DisclaimerNote } from "../components/Disclaimer";
+ import WatchlistPanel from "../components/WatchlistPanel";
+ import PdfExportButton from "../components/PdfExportButton";
+ import { getOverview } from "../lib/api";
+@@ -166,15 +170,14 @@ export default function Dashboard() {
+                 </div>
+               </div>
+ 
+-              {/* Chart + Depth + Macro */}
++              {/* Chart + Macro */}
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                 <div className="lg:col-span-8">
+                   <Panel title={`Price Chart ┬╖ ${overview.symbol}`} testId="chart-panel" className="h-full">
+                     <StockChart symbol={overview.symbol} />
+                   </Panel>
+                 </div>
+-                <div className="lg:col-span-4 flex flex-col gap-3">
+-                  <MarketDepthPanel symbol={overview.symbol} />
++                <div className="lg:col-span-4 space-y-3">
+                   <MacroPanel />
+                 </div>
+               </div>
+@@ -195,6 +198,26 @@ export default function Dashboard() {
+               {/* Peer Comparison */}
+               <PeersPanel symbol={overview.symbol} onSelect={setSymbol} />
+ 
++              {/* Red Flags + Events */}
++              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
++                <div className="lg:col-span-7">
++                  <RedFlagsPanel symbol={overview.symbol} />
++                </div>
++                <div className="lg:col-span-5">
++                  <EventsPanel symbol={overview.symbol} />
++                </div>
++              </div>
++
++              {/* Social + Legal */}
++              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
++                <div className="lg:col-span-6">
++                  <SocialPanel symbol={overview.symbol} />
++                </div>
++                <div className="lg:col-span-6">
++                  <LegalPanel symbol={overview.symbol} />
++                </div>
++              </div>
++
+               {/* Options + Insider */}
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                 <div className="lg:col-span-7">
+@@ -224,9 +247,12 @@ export default function Dashboard() {
+       </div>
+ 
+       <footer className="border-t border-zinc-800 mt-10 py-4 px-4">
+-        <p className="text-[10px] tracking-widest uppercase text-zinc-600 text-center">
+-          Stock Sentinel IN ┬╖ Data: NSE/BSE via Yahoo ┬╖ Screener.in ┬╖ Moneycontrol ┬╖ AI: Gemini 3 Flash ┬╖ Not investment advice
+-        </p>
++        <div className="max-w-3xl mx-auto text-center space-y-2">
++          <DisclaimerNote />
++          <p className="text-[10px] tracking-widest uppercase text-zinc-600">
++            Stock Sentinel IN ┬╖ Data: NSE/BSE ┬╖ Yahoo ┬╖ Screener.in ┬╖ Moneycontrol ┬╖ Reddit ┬╖ AI: Gemini 3 Flash
++          </p>
++        </div>
+       </footer>
+     </div>
+   );

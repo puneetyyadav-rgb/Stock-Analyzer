@@ -1,12 +1,16 @@
-"""Concall transcript summarization using Gemini 3 Flash via Emergent Universal Key."""
+"""Concall transcript summarization using Gemini 3.5 Flash."""
 import os
 import json
 import logging
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import asyncio
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
+def get_gemini_client():
+    key = os.environ.get("GEMINI_API_KEY")
+    return genai.Client(api_key=key) if key else None
 
 CONCALL_SYSTEM = """You are an Indian equity research analyst specializing in earnings call analysis.
 Extract structured insights from a quarterly earnings concall transcript.
@@ -45,70 +49,51 @@ Schema is same as transcript schema:
 }"""
 
 
-async def summarize_alternative(symbol: str, date_str: str, context: dict) -> dict:
-    if not EMERGENT_LLM_KEY:
-        return {"error": "LLM key missing"}
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"alt-concall-{symbol}-{date_str}",
-        system_message=ALTERNATIVE_SYSTEM,
-    ).with_model("gemini", "gemini-3-flash-preview")
-    user_msg = UserMessage(
-        text=f"Symbol: {symbol}\nApprox quarter: {date_str}\n\nContext:\n{json.dumps(context, default=str)[:8000]}"
+def sync_generate_concall(prompt: str) -> str:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return ""
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
     )
+    return response.text
+
+async def summarize_alternative(symbol: str, date_str: str, context: dict) -> dict:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return {"error": "GEMINI_API_KEY missing"}
+    
+    prompt = f"{ALTERNATIVE_SYSTEM}\n\nSymbol: {symbol}\nApprox quarter: {date_str}\n\nContext:\n{json.dumps(context, default=str)[:8000]}"
     try:
-        resp = await chat.send_message(user_msg)
-        text = resp if isinstance(resp, str) else str(resp)
+        text = await asyncio.to_thread(sync_generate_concall, prompt)
         text = text.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1] if "```" in text else text
-            if text.lower().startswith("json"):
-                text = text[4:].strip()
-            text = text.rstrip("`").strip()
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1:
-            text = text[start:end + 1]
         result = json.loads(text)
         result["source"] = "alternative"
         return result
     except Exception as e:
-        logger.error(f"alt summary error: {e}")
+        logger.error(f"Alt concall error: {e}")
         return {"error": str(e)}
 
 
 async def summarize_concall(symbol: str, transcript_text: str, date_str: str) -> dict:
-    if not EMERGENT_LLM_KEY:
-        return {"error": "LLM key missing"}
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return {"error": "GEMINI_API_KEY missing"}
     if not transcript_text or len(transcript_text) < 500:
         return {"error": "Transcript text too short or unavailable"}
 
-    # truncate to fit context
     trimmed = transcript_text[:25000]
 
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"concall-{symbol}-{date_str}",
-        system_message=CONCALL_SYSTEM,
-    ).with_model("gemini", "gemini-3-flash-preview")
-
-    user_msg = UserMessage(
-        text=f"Symbol: {symbol}\nConcall date: {date_str}\n\nTranscript:\n{trimmed}\n\nAnalyze and respond as JSON."
-    )
+    prompt = f"{CONCALL_SYSTEM}\n\nSymbol: {symbol}\nConcall date: {date_str}\n\nTranscript:\n{trimmed}\n\nAnalyze and respond as JSON."
 
     try:
-        resp = await chat.send_message(user_msg)
-        text = resp if isinstance(resp, str) else str(resp)
+        text = await asyncio.to_thread(sync_generate_concall, prompt)
         text = text.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1] if "```" in text else text
-            if text.lower().startswith("json"):
-                text = text[4:].strip()
-            text = text.rstrip("`").strip()
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1:
-            text = text[start:end + 1]
         result = json.loads(text)
         result["source"] = "transcript"
         return result

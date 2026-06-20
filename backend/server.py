@@ -23,7 +23,7 @@ import events_service as ev_mod
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=2000)
 db = client[os.environ.get("DB_NAME", "stock_sentinel")]
 
 app = FastAPI(title="StockSentinel India")
@@ -181,8 +181,27 @@ async def ai_verdict(symbol: str):
     cached = _cache_get(cache_key)
     if cached:
         return cached
-    stock_data = await asyncio.to_thread(ss.get_full_analysis, symbol)
-    macro = await asyncio.to_thread(ss.get_macro_snapshot)
+    (
+        stock_data,
+        social_data,
+        legal_data,
+        events_data,
+        red_flags_data,
+        macro
+    ) = await asyncio.gather(
+        asyncio.to_thread(ss.get_full_analysis, symbol),
+        social(symbol),
+        legal(symbol),
+        events(symbol),
+        red_flags(symbol),
+        asyncio.to_thread(ss.get_macro_snapshot)
+    )
+    
+    stock_data["social"] = social_data
+    stock_data["legal"] = legal_data
+    stock_data["events"] = events_data
+    stock_data["red_flags"] = red_flags_data
+    
     verdict = await ai.generate_verdict(stock_data, macro)
     _cache_set(cache_key, verdict)
     # store in mongo for history
@@ -382,9 +401,8 @@ async def red_flags(symbol: str):
         return cached
     screener = await asyncio.to_thread(ss.get_screener_data, symbol)
     news_items = await asyncio.to_thread(ss.get_news, symbol)
-    raw_ann = await asyncio.to_thread(ls.get_nse_announcements, symbol)
-    relevant = ls.filter_legal_relevant(raw_ann)
-    classified = await ls.classify_legal_announcements(relevant)
+    legal_data = await legal(symbol)
+    classified = legal_data.get("items", [])
     special = ss.get_special_news_tags(news_items)
 
     flags = []

@@ -4,12 +4,18 @@ SEBI developer API; do not represent this as one anywhere in the UI."""
 import os
 import json
 import logging
+import asyncio
 from extra_service import _nse_session, _strip_symbol
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+def get_gemini_client():
+    key = os.environ.get("GEMINI_API_KEY")
+    return genai.Client(api_key=key) if key else None
 
 LEGAL_KEYWORDS = [
     "court", "litigation", "sebi", "arbitration", "nclt", "tribunal",
@@ -54,25 +60,31 @@ Return a JSON array, same order as input. If the input array is empty, return []
 Do not invent details not present in the announcement subject — if a subject is vague, say so in summary rather than guessing."""
 
 
+def sync_classify(prompt: str) -> str:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return "[]"
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+    )
+    return response.text
+
 async def classify_legal_announcements(items: list) -> list:
-    if not items or not EMERGENT_LLM_KEY:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not items or not key:
         return []
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id="legal-classify",
-        system_message=CLASSIFY_PROMPT,
-    ).with_model("gemini", "gemini-3-flash-preview")
-    msg = UserMessage(text=json.dumps(items[:20], default=str))
+    
+    prompt = f"{CLASSIFY_PROMPT}\n\n{json.dumps(items[:20], default=str)}"
     try:
-        resp = await chat.send_message(msg)
-        text = str(resp).strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1] if "```" in text else text
-            if text.lower().startswith("json"):
-                text = text[4:].strip()
-            text = text.rstrip("`").strip()
-        start, end = text.find("["), text.rfind("]")
-        return json.loads(text[start:end + 1]) if start != -1 else []
+        text = await asyncio.to_thread(sync_classify, prompt)
+        text = text.strip()
+        result = json.loads(text)
+        return result
     except Exception as e:
         logger.error(f"classify legal error: {e}")
         return []
