@@ -258,6 +258,25 @@ async def ai_technical(symbol: str):
     return verdict
 
 
+@api_router.post("/stock/{symbol}/ai-news")
+async def ai_news(symbol: str):
+    cache_key = f"ai_news:{symbol}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+    (
+        news_data,
+        overview_data
+    ) = await asyncio.gather(
+        asyncio.to_thread(ss.get_news, symbol),
+        asyncio.to_thread(ss.get_overview, symbol)
+    )
+    
+    verdict = await ai.generate_news_analysis(news_data, overview_data)
+    _cache_set(cache_key, verdict)
+    return verdict
+
+
 @api_router.get("/macro")
 async def macro():
     key = "macro"

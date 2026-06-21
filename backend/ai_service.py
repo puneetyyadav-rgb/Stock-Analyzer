@@ -160,6 +160,21 @@ Schema:
 }"""
 
 
+NEWS_SYSTEM_PROMPT = """You are a senior News Desk Financial Analyst.
+You process raw financial headlines and synthesize them into actionable insights.
+Output STRICT JSON only. No markdown fences, no commentary outside JSON.
+Schema:
+{
+  "summary": "2-3 sentences summarizing the recent news cycle",
+  "crux": "1 bold sentence stating the single most important takeaway",
+  "main_pointers": ["bullet 1", "bullet 2", "bullet 3"],
+  "buy_sell_target": "Directional bias (Bullish/Bearish/Neutral) and estimated price impact based ONLY on the news",
+  "scenarios": [
+    {"if_this_happens": "string", "then_expected_impact": "string"}
+  ]
+}"""
+
+
 def sync_analyze_options(prompt: str) -> str:
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
@@ -234,6 +249,43 @@ async def generate_technical_analysis(tech_data: dict) -> dict:
         return result
     except Exception as e:
         logger.error(f"AI technical error: {e}")
+        return {"error": str(e)}
+
+
+def sync_generate_news_analysis(prompt: str) -> str:
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return ""
+    client = genai.Client(api_key=key)
+    response = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        )
+    )
+    return response.text
+
+async def generate_news_analysis(news_items: list, stock_context: dict) -> dict:
+    client = get_gemini_client()
+    if not client:
+        return {"error": "GEMINI_API_KEY not configured"}
+
+    prompt = (
+        f"{NEWS_SYSTEM_PROMPT}\n\n"
+        f"Stock Context:\n{json.dumps(stock_context, default=str)}\n\n"
+        f"Analyze these news items and provide the JSON response:\n"
+        f"```json\n{json.dumps(news_items, default=str)}\n```"
+    )
+
+    try:
+        text = await asyncio.to_thread(sync_generate_news_analysis, prompt)
+        text = text.strip()
+        result = json.loads(text)
+        result["disclaimer"] = DISCLAIMER_TEXT
+        return result
+    except Exception as e:
+        logger.error(f"AI news error: {e}")
         return {"error": str(e)}
 
 

@@ -5,6 +5,7 @@ import MacroPanel from "../components/MacroPanel";
 import MarketDepthPanel from "../components/MarketDepthPanel";
 import AIVerdict from "../components/AIVerdict";
 import AITechnicalAnalysis from "../components/AITechnicalAnalysis";
+import AINewsAnalysis from "../components/AINewsAnalysis";
 import StockDetails from "../components/StockDetails";
 import { Panel } from "../components/Panel";
 import FiiDiiPanel from "../components/FiiDiiPanel";
@@ -209,6 +210,9 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
                 <AIVerdict symbol={overview.symbol} />
                 <AITechnicalAnalysis symbol={overview.symbol} />
+                <div className="lg:col-span-2">
+                  <AINewsAnalysis symbol={overview.symbol} />
+                </div>
               </div>
 
               {/* FII/DII + Concalls */}
