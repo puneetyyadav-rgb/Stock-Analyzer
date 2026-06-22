@@ -63,50 +63,95 @@ export default function AINewsAnalysis({ symbol }) {
       )}
       {newsAI && !newsAI.error && (
         <div className="space-y-4">
-          <div className="p-3 bg-amber-950/10 border border-amber-900/30 rounded">
-            <h4 className="text-[10px] tracking-widest uppercase text-amber-500 mb-1">The Crux</h4>
-            <p className="text-sm font-semibold text-zinc-200">{newsAI.crux}</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="text-[10px] tracking-widest uppercase text-zinc-400">Summary</h4>
-              <p className="text-xs text-zinc-300 leading-relaxed">{newsAI.summary}</p>
+          {!newsAI.dataSufficient ? (
+            <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded text-center">
+              <AlertCircle size={24} className="text-amber-500 mx-auto mb-2" />
+              <h4 className="text-sm font-semibold text-zinc-200 mb-1">Low News Volume</h4>
+              <p className="text-xs text-zinc-400">
+                There are not enough substantive recent headlines or corporate announcements to draw a confident conclusion.
+              </p>
             </div>
-            
-            <div className="space-y-2">
-              <h4 className="text-[10px] tracking-widest uppercase text-blue-400">Main Pointers</h4>
-              <ul className="space-y-1">
-                {(newsAI.main_pointers || []).map((ptr, i) => (
-                  <li key={i} className="text-xs text-zinc-300 flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    <span>{ptr}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
-              <h4 className="text-[10px] tracking-widest uppercase text-emerald-400 mb-2">Trade Bias & Target Impact</h4>
-              <p className="text-sm text-zinc-200">{newsAI.buy_sell_target}</p>
-            </div>
-            
-            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
-              <h4 className="text-[10px] tracking-widest uppercase text-purple-400 mb-2">"What If" Scenarios</h4>
-              <ul className="space-y-3">
-                {(newsAI.scenarios || []).map((sc, i) => (
-                  <li key={i} className="flex flex-col gap-1 text-xs">
-                    <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[9px]">If this happens:</span>
-                    <span className="text-zinc-200">{sc.if_this_happens}</span>
-                    <span className="text-purple-400 font-semibold uppercase tracking-wider text-[9px] mt-1">Then expect:</span>
-                    <span className="text-zinc-300">{sc.then_expected_impact}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="p-3 bg-amber-950/10 border border-amber-900/30 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] tracking-widest uppercase text-amber-500">The Crux</h4>
+                  {newsAI.headlinesAnalyzed && (
+                    <span className="text-[9px] tracking-widest uppercase text-zinc-500">
+                      Analyzed {newsAI.headlinesAnalyzed} updates
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-zinc-200">{newsAI.crux}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h4 className="text-[10px] tracking-widest uppercase text-zinc-400">Summary</h4>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{newsAI.summary}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="text-[10px] tracking-widest uppercase text-blue-400">Main Pointers</h4>
+                  <ul className="space-y-2">
+                    {(newsAI.mainPointers || []).map((ptr, i) => (
+                      <li key={i} className="text-xs text-zinc-300 flex items-start gap-2">
+                        <span className="text-blue-500 mt-0.5">•</span>
+                        <div className="flex flex-col">
+                          <span>{ptr.point}</span>
+                          {ptr.sourceDate && <span className="text-[9px] text-zinc-500 mt-0.5">{ptr.sourceDate}</span>}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
+                  <h4 className="text-[10px] tracking-widest uppercase text-emerald-400 mb-2">Directional Bias</h4>
+                  {newsAI.directionalBias ? (
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-400">Bias:</span>
+                        <span className={`font-semibold ${newsAI.directionalBias.bias === 'Bullish' ? 'text-emerald-400' : newsAI.directionalBias.bias === 'Bearish' ? 'text-red-400' : 'text-zinc-300'}`}>
+                          {newsAI.directionalBias.bias}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-400">Magnitude:</span>
+                        <span className="text-zinc-200">{newsAI.directionalBias.magnitude}</span>
+                      </div>
+                      <div className="mt-2 text-zinc-300">{newsAI.directionalBias.basis}</div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-400">No bias data</p>
+                  )}
+                </div>
+                
+                <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
+                  <h4 className="text-[10px] tracking-widest uppercase text-purple-400 mb-2">"What If" Scenarios</h4>
+                  <ul className="space-y-3">
+                    {(newsAI.scenarios || []).map((sc, i) => (
+                      <li key={i} className="flex flex-col gap-1 text-xs pb-2 border-b border-zinc-800/50 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start">
+                          <span className="text-zinc-400 font-semibold uppercase tracking-wider text-[9px]">If this happens:</span>
+                          {sc.probability && (
+                            <span className="text-[8px] tracking-widest uppercase px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded">
+                              {sc.probability}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-zinc-200">{sc.trigger}</span>
+                        <span className="text-purple-400 font-semibold uppercase tracking-wider text-[9px] mt-1">Then expect:</span>
+                        <span className="text-zinc-300">{sc.expectedImpact}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </>
+          )}
           
           <DisclaimerNote className="bg-transparent border-0 pt-2" />
         </div>

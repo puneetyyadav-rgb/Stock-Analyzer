@@ -103,47 +103,65 @@ def map_sector(yahoo_sector: str) -> str:
     return SECTOR_MAP.get(yahoo_sector or "", "Other")
 
 
-SYSTEM_PROMPT = """You are a senior Indian equity research analyst with deep expertise in NSE/BSE markets.
-You analyze stocks using a 9-factor framework:
-1. Macroeconomic factors (rates, inflation, GDP, currency, commodities, geopolitics)
-2. Sector/Industry dynamics
-3. Company financials & corporate actions
-4. Market/Technical factors (FII/DII, charts, RSI, MACD, Patterns, Regime)
-5. News & sentiment
-6. Global shocks
-7. Government/Regulatory policy
-8. Demand-supply & trade data
-9. Management commentary, big orders, court cases
+SYSTEM_PROMPT = """You are the Head of Research at an institutional merchant bank. Four desks have submitted independent reads on this stock. A junior analyst would list each desk's verdict and tally agreement vs. disagreement. You are senior — your job is to trace the actual chain of cause and effect connecting them, the way an experienced banker reasons out loud in an investment committee.
 
-Provide a structured, terse, data-driven verdict. Use Indian context (Rs/Cr, NSE, SEBI, RBI).
-The supplied analysisAsOf date is authoritative. Base the conclusion on information available as of that date.
-Use publication/period dates to distinguish current evidence from historical context. Never describe an event
-before analysisAsOf as upcoming or as a catalyst. Do not invent board, earnings, dividend, policy, or macro dates.
-Only list a dated catalyst when an explicit future date exists in upcoming_events or recent news; otherwise label
-it as conditional and undated. Past events may be cited only in past tense as evidence. When data is missing or
-stale, say so instead of filling the gap from memory.
+THE FOUR DESKS (data for each provided below):
+1. FUNDAMENTALS — financials, valuation, governance, macro/sector context
+2. NEWS & SENTIMENT — recent headlines, corporate/legal filings, social sentiment
+3. TECHNICAL — trend regime, volatility state, candlestick patterns, RSI/MACD
+4. QUANTITATIVE — Monte Carlo median forecast, confidence band, sector ranking
+
+STEP 1: THE 9-FACTOR ASSESSMENT
+Before writing your synthesis, you MUST systematically assess the stock across these 9 specific categories to establish your base facts.
+CRITICAL GUARDRAIL: Base every single 9-factor assessment STRICTLY on the JSON payload provided. If the payload contains no official data for a specific factor (e.g. Global Shocks or Trade Data), you MUST state "No data available" instead of guessing or inventing an assessment.
+
+STEP 2: THE CENTRAL QUESTION (Master Synthesis)
+Does the market's current price ALREADY reflect what Fundamentals/News suggest — or is there a lag? Specifically:
+- If Fundamentals/News point one direction but Technical/Quantitative haven't moved yet, that gap is usually the most important finding in the whole analysis — not a contradiction to smooth over.
+- If Technical/Quantitative already show the move, then Fundamentals/News may just be confirming what's already priced in — meaning the easy money, if any, is already gone.
+- Trace WHY: what specific event or data point would explain the lag or the confirmation. Name the mechanism, not just the correlation.
+- Only state a causal link between two desks if the data actually supports one. When in doubt, say the link is unclear rather than inventing one.
+
+OTHER GROUNDING RULES:
+- Use ONLY the data provided per desk. Do not draw on outside knowledge of the company.
+- Never invent a specific price, percentage, or date — qualitative magnitude and named time horizons only.
+- No "Buy/Sell" instruction — directional bias and reasoning only. You are diagnosing, not directing.
+- Plain text only, no markdown or asterisks.
+
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:
 {
-  "verdict": "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL",
-  "confidence": 0-100,
-  "targetPrice": number or null,
-  "timeHorizon": "Short-term (1-3M)" | "Medium-term (3-12M)" | "Long-term (1Y+)",
-  "summary": "2-3 sentence executive summary",
-  "bullCase": ["3-5 bullets"],
-  "bearCase": ["3-5 bullets"],
-  "keyRisks": ["3-5 bullets"],
-  "catalysts": ["3-5 upcoming catalysts/events"],
-  "factorAnalysis": {
-    "macro": "1-2 sentences",
-    "sector": "1-2 sentences",
-    "fundamentals": "1-2 sentences",
-    "technicals": "1-2 sentences",
-    "sentiment": "1-2 sentences",
-    "regulatory": "1-2 sentences",
-    "management": "1-2 sentences"
+  "nineFactorAssessment": {
+    "macroeconomic": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},
+    "industryAndSector": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
+    "companyFinancials": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
+    "technicalAndMarket": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
+    "newsAndSentiment": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
+    "globalShocks": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},
+    "regulatoryPolicy": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},
+    "demandSupplyTrade": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},
+    "managementAndCorporate": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."}
   },
-  "sectorSpecific": [{"factor": "...", "assessment": "...", "dataAvailable": true}]
+  "deskSignals": {
+    "fundamentals": {"bias": "Bullish" | "Bearish" | "Neutral", "dataSufficient": true | false, "keyFact": "the single most important input from this desk"},
+    "news": {"bias": "Bullish" | "Bearish" | "Neutral", "dataSufficient": true | false, "keyFact": "the single most important input from this desk"},
+    "technical": {"bias": "Bullish" | "Bearish" | "Neutral", "dataSufficient": true | false, "keyFact": "the single most important input from this desk"},
+    "quantitative": {"bias": "Bullish" | "Bearish" | "Neutral", "dataSufficient": true | false, "keyFact": "the single most important input from this desk"}
+  },
+  "catalystChain": "3-5 sentences tracing the actual cause-and-effect: what happened, why it matters financially, and whether the market (technical/quant) has reacted to it yet. Write this the way an analyst reasons out loud, not as a list.",
+  "pricedInAssessment": {
+    "status": "Not Yet Priced In" | "Already Priced In" | "Partially Priced In" | "Unclear",
+    "reasoning": "Specifically compare what Fundamentals+News justify against what Technical+Quantitative show has already happened in the price."
+  },
+  "unexplainedTensions": [
+    {"desks": ["desk1", "desk2"], "description": "a genuine disagreement with NO clear causal explanation found — only include this if you actually could not connect them"}
+  ],
+  "thesis": {
+    "bias": "Bullish" | "Bearish" | "Neutral",
+    "conviction": "High" | "Medium" | "Low",
+    "coreArgument": "2-4 sentences — the actual smart conclusion, written in a senior banker's voice, built directly on the catalystChain and pricedInAssessment above",
+    "whatWouldChangeThisView": "the specific evidence that would flip this conclusion if it showed up next"
+  }
 }"""
 
 
@@ -161,16 +179,28 @@ Schema:
 
 
 NEWS_SYSTEM_PROMPT = """You are a senior News Desk Financial Analyst.
-You process raw financial headlines and synthesize them into actionable insights.
+You process raw financial headlines and corporate announcements, synthesizing them into actionable insights.
+CRITICAL INSTRUCTION: You must base your analysis ONLY on the headlines provided. Do not use background knowledge to hallucinate events that are not in the payload.
+If there are fewer than 2 recent substantive news items, or they are just routine updates, set "dataSufficient": false.
+
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:
 {
-  "summary": "2-3 sentences summarizing the recent news cycle",
-  "crux": "1 bold sentence stating the single most important takeaway",
-  "main_pointers": ["bullet 1", "bullet 2", "bullet 3"],
-  "buy_sell_target": "Directional bias (Bullish/Bearish/Neutral) and estimated price impact based ONLY on the news",
+  "dataSufficient": true | false,
+  "headlinesAnalyzed": number,
+  "dateRange": {"oldest": "string", "newest": "string"},
+  "summary": "2-3 plain-text sentences summarizing the recent news cycle. No markdown.",
+  "crux": "1 plain-text sentence stating the single most important takeaway. No markdown.",
+  "mainPointers": [
+    {"point": "string", "sourceDate": "string"}
+  ],
+  "directionalBias": {
+    "bias": "Bullish" | "Bearish" | "Neutral",
+    "magnitude": "High" | "Medium" | "Low",
+    "basis": "1 sentence explaining why"
+  },
   "scenarios": [
-    {"if_this_happens": "string", "then_expected_impact": "string"}
+    {"trigger": "If X happens", "expectedImpact": "Y expected impact", "probability": "High" | "Medium" | "Low", "category": "string"}
   ]
 }"""
 
@@ -334,59 +364,55 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
 
     payload = {
         "analysisAsOf": analysis_as_of.isoformat(),
-        "dataFreshness": {
-            "latestNewsPublishedAt": news_items[0].get("publishedAt") if news_items else None,
-            "macroUpdatedAt": macro_data.get("updatedAt"),
-            "eventsFilteredAsOf": analysis_as_of.isoformat(),
-        },
-        "stock": {
-            "symbol": overview.get("symbol"),
-            "name": overview.get("name"),
-            "sector": overview.get("sector"),
-            "industry": overview.get("industry"),
-            "price": overview.get("price"),
-            "changePercent": overview.get("changePercent"),
-            "marketCap": overview.get("marketCap"),
-            "peRatio": overview.get("peRatio"),
-            "pbRatio": overview.get("pbRatio"),
-            "roe": overview.get("roe"),
-            "debtToEquity": overview.get("debtToEquity"),
-            "profitMargin": overview.get("profitMargin"),
-            "revenueGrowth": overview.get("revenueGrowth"),
-            "earningsGrowth": overview.get("earningsGrowth"),
-            "dividendYield": overview.get("dividendYield"),
-            "yearHigh": overview.get("yearHigh"),
-            "yearLow": overview.get("yearLow"),
-            "analystTarget": overview.get("targetMeanPrice"),
-            "analystRec": overview.get("recommendation"),
-            "summary": (overview.get("longBusinessSummary") or "")[:600],
-        },
-        "technicals": stock_data.get("technicals", {}),
-        "financials_quarterly": stock_data.get("financials", {}).get("quarterly", [])[:4],
-        "corporate_actions": stock_data.get("corporate", {}),
-        "holders": stock_data.get("holders", {}).get("majorHoldersBreakdown", {}),
-        "screener_pros": stock_data.get("screener", {}).get("pros", [])[:5],
-        "screener_cons": stock_data.get("screener", {}).get("cons", [])[:5],
-        "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
-        "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
-        "recent_news_with_sentiment": [
-            {
-                "title": n.get("title"),
-                "source": n.get("source"),
-                "publishedAt": n.get("publishedAt"),
-                "sentiment": n.get("sentimentLabel"),
+        "desks": {
+            "fundamentals": {
+                "stock": {
+                    "symbol": overview.get("symbol"),
+                    "name": overview.get("name"),
+                    "sector": overview.get("sector"),
+                    "industry": overview.get("industry"),
+                    "price": overview.get("price"),
+                    "marketCap": overview.get("marketCap"),
+                    "peRatio": overview.get("peRatio"),
+                    "pbRatio": overview.get("pbRatio"),
+                    "roe": overview.get("roe"),
+                    "debtToEquity": overview.get("debtToEquity"),
+                    "revenueGrowth": overview.get("revenueGrowth"),
+                    "earningsGrowth": overview.get("earningsGrowth"),
+                },
+                "macro_snapshot": macro_data.get("indicators", []),
+                "sector_bucket": bucket,
+                "financials_quarterly": stock_data.get("financials", {}).get("quarterly", [])[:4],
+                "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
+                "screener_pros": stock_data.get("screener", {}).get("pros", [])[:5],
+                "screener_cons": stock_data.get("screener", {}).get("cons", [])[:5],
+                "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
+                "holders": stock_data.get("holders", {}).get("majorHoldersBreakdown", {}),
+            },
+            "news": {
+                "recent_news_with_sentiment": [
+                    {
+                        "title": n.get("title"),
+                        "source": n.get("source"),
+                        "publishedAt": n.get("publishedAt"),
+                        "sentiment": n.get("sentimentLabel"),
+                    }
+                    for n in news_items[:20]
+                ],
+                "legal_announcements": stock_data.get("legal", {}).get("items", [])[:5],
+                "upcoming_events": stock_data.get("events", {}).get("items", [])[:5],
+                "social_sentiment": stock_data.get("social", {}),
+                "red_flags": stock_data.get("red_flags", {}).get("items", [])[:5],
+            },
+            "technical": {
+                "technicals": stock_data.get("technicals", {}),
+                "regime": stock_data.get("regime", {}),
+                "patterns": stock_data.get("patterns", {}),
+            },
+            "quantitative": {
+                "ml_forecast": stock_data.get("ml_forecast", {}),
             }
-            for n in news_items[:20]
-        ],
-        "social_sentiment": stock_data.get("social", {}),
-        "legal_announcements": stock_data.get("legal", {}).get("items", [])[:5],
-        "upcoming_events": stock_data.get("events", {}).get("items", [])[:5],
-        "red_flags": stock_data.get("red_flags", {}).get("items", [])[:5],
-        "macro_snapshot": macro_data.get("indicators", []),
-        "sector_bucket": bucket,
-        "ml_forecast": stock_data.get("ml_forecast", {}),
-        "regime": stock_data.get("regime", {}),
-        "patterns": stock_data.get("patterns", {}),
+        }
     }
 
     sector_instruction = ""
@@ -408,7 +434,6 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         text = await asyncio.to_thread(sync_generate_verdict, prompt)
         text = text.strip()
         result = json.loads(text)
-        result["catalysts"] = _remove_past_catalysts(result.get("catalysts", []), analysis_as_of)
         result["analysisAsOf"] = analysis_as_of.isoformat()
         result["disclaimer"] = DISCLAIMER_TEXT
         result["sectorBucket"] = bucket

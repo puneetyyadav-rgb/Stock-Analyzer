@@ -265,14 +265,34 @@ async def ai_news(symbol: str):
     if cached:
         return cached
     (
-        news_data,
-        overview_data
+        news_items,
+        overview_data,
+        legal_data
     ) = await asyncio.gather(
         asyncio.to_thread(ss.get_news, symbol),
-        asyncio.to_thread(ss.get_overview, symbol)
+        asyncio.to_thread(ss.get_overview, symbol),
+        legal(symbol)
     )
     
-    verdict = await ai.generate_news_analysis(news_data, overview_data)
+    formatted_items = []
+    for n in (news_items or [])[:15]:
+        formatted_items.append({
+            "title": n.get("title"),
+            "date": n.get("publishedAt") or n.get("date"),
+            "sentiment": n.get("sentimentLabel"),
+            "source": "news"
+        })
+        
+    announcements = legal_data.get("items", [])
+    for l in (announcements or [])[:10]:
+        formatted_items.append({
+            "title": l.get("summary") or l.get("announcement") or "",
+            "date": l.get("date") or l.get("dt"),
+            "sentiment": l.get("sentimentLabel") or "Neutral",
+            "source": "corporate_announcement"
+        })
+    
+    verdict = await ai.generate_news_analysis(formatted_items, overview_data)
     _cache_set(cache_key, verdict)
     return verdict
 

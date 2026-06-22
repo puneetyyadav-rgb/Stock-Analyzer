@@ -5,11 +5,21 @@ import { getAIVerdict } from "../lib/api";
 import { DisclaimerNote } from "./Disclaimer";
 
 const verdictColors = {
-  "STRONG BUY": "bg-emerald-500 text-emerald-950",
-  "BUY": "bg-emerald-700 text-emerald-50",
-  "HOLD": "bg-amber-600 text-amber-50",
-  "SELL": "bg-red-700 text-red-50",
-  "STRONG SELL": "bg-red-500 text-red-950",
+  "Bullish": "bg-emerald-600 text-emerald-50",
+  "Bearish": "bg-red-600 text-red-50",
+  "Neutral": "bg-zinc-600 text-zinc-50",
+};
+
+const factorTitles = {
+  macroeconomic: "Macroeconomic",
+  industryAndSector: "Industry & Sector",
+  companyFinancials: "Company Financials",
+  technicalAndMarket: "Technical & Market",
+  newsAndSentiment: "News & Sentiment",
+  globalShocks: "Global Shocks",
+  regulatoryPolicy: "Regulatory Policy",
+  demandSupplyTrade: "Demand-Supply & Trade",
+  managementAndCorporate: "Management & Corporate"
 };
 
 export default function AIVerdict({ symbol }) {
@@ -73,105 +83,128 @@ export default function AIVerdict({ symbol }) {
         </div>
       )}
       {verdict && !verdict.error && (
-        <div className="space-y-3" data-testid="ai-verdict-content">
+        <div className="space-y-4" data-testid="ai-verdict-content">
           <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-zinc-800">
-            <div className={`px-3 py-1 text-xs font-bold tracking-widest uppercase ${verdictColors[verdict.verdict] || "bg-zinc-700 text-zinc-100"}`}>
-              {verdict.verdict}
+            <div className={`px-3 py-1 text-xs font-bold tracking-widest uppercase ${verdictColors[verdict.thesis?.bias] || "bg-zinc-700 text-zinc-100"}`}>
+              {verdict.thesis?.bias || "ANALYSIS"}
             </div>
             <div className="text-[10px] tracking-widest uppercase text-zinc-500">
-              Confidence: <span className="text-zinc-200 font-mono">{verdict.confidence}%</span>
+              Conviction: <span className="text-zinc-200 font-mono">{verdict.thesis?.conviction}</span>
             </div>
             <div className="text-[10px] tracking-widest uppercase text-zinc-500">
-              Horizon: <span className="text-zinc-200">{verdict.timeHorizon}</span>
+              Pricing Status: <span className={`font-mono ${verdict.pricedInAssessment?.status === 'Not Yet Priced In' ? 'text-emerald-400' : 'text-amber-400'}`}>{verdict.pricedInAssessment?.status}</span>
             </div>
             {verdict.analysisAsOf && (
               <div className="text-[10px] tracking-widest uppercase text-zinc-500">
-                Analysis as of: <span className="text-blue-300 font-mono">{verdict.analysisAsOf}</span>
-              </div>
-            )}
-            {verdict.targetPrice && (
-              <div className="text-[10px] tracking-widest uppercase text-zinc-500">
-                Target: <span className="text-emerald-400 font-mono">₹{Number(verdict.targetPrice).toFixed(2)}</span>
-              </div>
-            )}
-            {verdict.sectorBucket && verdict.sectorBucket !== "Other" && (
-              <div className="text-[10px] tracking-widest uppercase text-zinc-500">
-                Sector lens: <span className="text-blue-400">{verdict.sectorBucket}</span>
+                As of: <span className="text-blue-300 font-mono">{verdict.analysisAsOf}</span>
               </div>
             )}
           </div>
-
+          
           <DisclaimerNote className="bg-amber-950/30 border border-amber-900/40 px-2 py-1" />
 
-          <p className="text-sm text-zinc-300 leading-relaxed">{verdict.summary}</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-emerald-400 mb-1.5">Bull Case</h4>
-              <ul className="space-y-1">
-                {(verdict.bullCase || []).map((b, i) => (
-                  <li key={i} className="text-xs text-zinc-300 flex gap-2"><span className="text-emerald-500">▲</span>{b}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-red-400 mb-1.5">Bear Case</h4>
-              <ul className="space-y-1">
-                {(verdict.bearCase || []).map((b, i) => (
-                  <li key={i} className="text-xs text-zinc-300 flex gap-2"><span className="text-red-500">▼</span>{b}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-amber-400 mb-1.5">Key Risks</h4>
-              <ul className="space-y-1">
-                {(verdict.keyRisks || []).map((b, i) => (
-                  <li key={i} className="text-xs text-zinc-300 flex gap-2"><span className="text-amber-500">⚠</span>{b}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-1.5">Catalysts</h4>
-              <ul className="space-y-1">
-                {(verdict.catalysts || []).map((b, i) => (
-                  <li key={i} className="text-xs text-zinc-300 flex gap-2"><span className="text-blue-500">●</span>{b}</li>
-                ))}
-              </ul>
+          {/* Thesis Section */}
+          <div className="p-4 bg-blue-950/20 border border-blue-900/50 rounded-lg">
+            <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-2">Master Synthesis Thesis</h4>
+            <p className="text-sm text-zinc-200 leading-relaxed font-medium mb-3">{verdict.thesis?.coreArgument}</p>
+            <div className="pt-3 border-t border-blue-900/30">
+              <h5 className="text-[9px] tracking-widest uppercase text-zinc-500 mb-1">What would change this view:</h5>
+              <p className="text-xs text-zinc-400">{verdict.thesis?.whatWouldChangeThisView}</p>
             </div>
           </div>
 
-          {verdict.factorAnalysis && (
-            <div className="border-t border-zinc-800 pt-3">
-              <h4 className="text-[10px] tracking-widest uppercase text-zinc-400 mb-2">9-Factor Breakdown</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {Object.entries(verdict.factorAnalysis).map(([k, v]) => (
-                  <div key={k} className="border border-zinc-800/50 p-2 bg-zinc-900/30">
-                    <div className="text-[10px] tracking-widest uppercase text-zinc-500 mb-1">{k}</div>
-                    <div className="text-xs text-zinc-300 leading-snug">{v}</div>
-                  </div>
-                ))}
+          {/* Priced In Assessment & Catalyst Chain */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-purple-400 mb-2">Priced-In Assessment</h4>
+              <p className="text-xs text-zinc-300 leading-relaxed">{verdict.pricedInAssessment?.reasoning}</p>
+            </div>
+            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-emerald-400 mb-2">Catalyst Chain</h4>
+              <p className="text-xs text-zinc-300 leading-relaxed">{verdict.catalystChain}</p>
+            </div>
+          </div>
+
+          {/* Comprehensive 9-Factor Breakdown */}
+          {verdict.nineFactorAssessment && (
+            <div className="pt-2">
+              <h4 className="text-[10px] tracking-widest uppercase text-zinc-400 mb-2">Comprehensive 9-Factor Breakdown</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {Object.entries(verdict.nineFactorAssessment).map(([key, data]) => {
+                  const isMissing = data.text?.includes("No data available");
+                  return (
+                    <div key={key} className={`border border-zinc-800/50 p-3 rounded ${isMissing ? 'bg-zinc-900/20' : 'bg-zinc-900/40'}`}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <div className="text-[9px] font-bold tracking-widest uppercase text-zinc-300">
+                          {factorTitles[key] || key}
+                        </div>
+                        {!isMissing && (
+                          <span className={`text-[8px] tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                            data.bias === 'Bullish' ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900' :
+                            data.bias === 'Bearish' ? 'bg-red-950/50 text-red-400 border border-red-900' :
+                            'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                          }`}>
+                            {data.bias}
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-xs leading-snug ${isMissing ? 'text-zinc-600 italic' : 'text-zinc-400'}`}>
+                        {data.text}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {verdict.sectorSpecific && verdict.sectorSpecific.length > 0 && (
-            <div className="border-t border-zinc-800 pt-3" data-testid="sector-specific-section">
-              <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-2">
-                Sector-Specific Factors ({verdict.sectorBucket})
-              </h4>
-              <ul className="space-y-1.5">
-                {verdict.sectorSpecific.map((s, i) => (
-                  <li key={i} className={`border-l-2 ${s.dataAvailable ? "border-blue-700/60" : "border-zinc-700"} pl-2 py-1 bg-zinc-900/30`}>
-                    <div className="text-[11px] font-medium text-zinc-200">{s.factor}</div>
-                    <div className="text-[11px] text-zinc-400 leading-snug">{s.assessment}</div>
-                    {!s.dataAvailable && (
-                      <span className="text-[9px] tracking-widest uppercase text-amber-400">No data available</span>
+          {/* Four Desks Scorecard */}
+          <div className="pt-2">
+            <h4 className="text-[10px] tracking-widest uppercase text-zinc-400 mb-2">The Four Desks</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Object.entries(verdict.deskSignals || {}).map(([desk, data]) => (
+                <div key={desk} className="border border-zinc-800/50 p-3 bg-zinc-900/30 rounded">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-300">{desk}</div>
+                    {data.dataSufficient ? (
+                      <span className={`text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                        data.bias === 'Bullish' ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900' :
+                        data.bias === 'Bearish' ? 'bg-red-950/50 text-red-400 border border-red-900' :
+                        'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                      }`}>
+                        {data.bias}
+                      </span>
+                    ) : (
+                      <span className="text-[9px] tracking-widest uppercase text-amber-500">Insufficient Data</span>
                     )}
+                  </div>
+                  <div className="text-xs text-zinc-400 leading-snug">
+                    <span className="text-zinc-500 font-medium">Key Fact: </span>
+                    {data.keyFact}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Unexplained Tensions */}
+          {verdict.unexplainedTensions && verdict.unexplainedTensions.length > 0 && (
+            <div className="mt-4 p-3 bg-red-950/20 border border-red-900/40 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-red-400 mb-2 flex items-center gap-1.5">
+                <AlertCircle size={12} />
+                Unexplained Tensions
+              </h4>
+              <ul className="space-y-2">
+                {verdict.unexplainedTensions.map((tension, i) => (
+                  <li key={i} className="text-xs text-zinc-300">
+                    <span className="text-red-400 font-medium mr-2">[{tension.desks?.join(" vs ")}]</span>
+                    {tension.description}
                   </li>
                 ))}
               </ul>
             </div>
           )}
+
         </div>
       )}
     </Panel>

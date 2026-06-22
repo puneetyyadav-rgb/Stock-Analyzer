@@ -3,7 +3,7 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
-const client = axios.create({ baseURL: API, timeout: 60000 });
+const client = axios.create({ baseURL: API, timeout: 180000 });
 
 export const searchStocks = (q) => client.get(`/search`, { params: { q } }).then((r) => r.data);
 export const getOverview = (sym) => client.get(`/stock/${sym}/overview`).then((r) => r.data);

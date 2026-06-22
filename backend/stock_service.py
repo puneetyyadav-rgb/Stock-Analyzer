@@ -445,13 +445,17 @@ def get_news(symbol: str) -> list:
     news_items = []
     clean_symbol = sym.replace(".NS", "").replace(".BO", "")
     company_name = clean_symbol
+    industry_name = ""
 
     # Yahoo Finance news via yfinance
     try:
         t = yf.Ticker(sym)
         try:
-            company_name = (t.info or {}).get("shortName") or company_name
+            info = t.info or {}
+            company_name = info.get("shortName") or company_name
+            industry_name = info.get("industry") or info.get("sector") or ""
         except Exception:
+            industry_name = ""
             pass
         for n in (t.news or [])[:15]:
             content = n.get("content", n)
@@ -513,7 +517,7 @@ def get_news(symbol: str) -> list:
     legal_suffixes = {"limited", "ltd", "plc", "inc", "corporation", "corp", "company"}
     company_terms = [
         token for token in re.findall(r"[A-Za-z0-9&]+", company_name)
-        if len(token) >= 3 and token.lower() not in legal_suffixes
+        if len(token) >= 2 and token.lower() not in legal_suffixes
     ]
     relevance_terms = list(dict.fromkeys([clean_symbol, *company_terms]))
     primary_name = " ".join(company_terms) or company_name
@@ -523,6 +527,10 @@ def get_news(symbol: str) -> list:
     publisher_filter = " OR ".join(f"site:{domain}" for domain in NEWS_PUBLISHER_DOMAINS)
     publisher_query = f'("{primary_name}" OR "{clean_symbol}") ({publisher_filter}) when:60d'
     news_items.extend(_google_news_items(publisher_query, 40, relevance_terms))
+
+    if industry_name:
+        industry_query = f'"{industry_name}" (industry OR sector OR market OR prices) India when:14d'
+        news_items.extend(_google_news_items(industry_query, 10, []))
 
     return _finalize_news(news_items)
 
