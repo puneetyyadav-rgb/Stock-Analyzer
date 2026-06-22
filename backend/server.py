@@ -19,6 +19,7 @@ import social_service as sc
 import legal_service as ls
 import events_service as ev_mod
 import sector_service as sec
+import scraper_service as scr
 
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -36,12 +37,13 @@ _CACHE: dict = {}
 _CACHE_TTL = 60  # seconds
 
 
-def _cache_get(key: str):
+def _cache_get(key: str, ttl: int | None = None):
     item = _CACHE.get(key)
     if not item:
         return None
     ts, val = item
-    if (datetime.now(timezone.utc) - ts).total_seconds() > _CACHE_TTL:
+    effective_ttl = ttl if ttl is not None else _CACHE_TTL
+    if (datetime.now(timezone.utc) - ts).total_seconds() > effective_ttl:
         return None
     return val
 
@@ -423,7 +425,6 @@ async def sector_analysis(symbol: str):
         }
         # Stock vs peer percentile rough position
         my_pe = ov.get("peRatio")
-        my_roe = ov.get("roe")
         if my_pe and data["peer_aggregates"]["avg_pe"]:
             data["stock_vs_peers"] = {
                 "pe_vs_peer_avg": "Cheaper" if my_pe < data["peer_aggregates"]["avg_pe"] else "Pricier",
@@ -431,6 +432,29 @@ async def sector_analysis(symbol: str):
             }
     _cache_set(key, data)
     return data
+
+
+@api_router.get("/stock/{symbol}/external-scrape")
+async def external_scrape(symbol: str):
+    """Aggregated headless-browser scrape of Aftermarkets, Trendlyne, StockEdge.
+    Cached for 30 minutes — each browser-driven scrape costs 5-10 seconds."""
+    key = f"external_scrape:{symbol}"
+    cached = _cache_get(key, ttl=1800)
+    if cached:
+        return cached
+    aftermarkets_task = scr.scrape_aftermarkets(symbol)
+    trendlyne_task = scr.scrape_trendlyne(symbol)
+    stockedge_task = scr.scrape_stockedge(symbol)
+    aftermarkets, trendlyne, stockedge = await asyncio.gather(
+        aftermarkets_task, trendlyne_task, stockedge_task, return_exceptions=False
+    )
+    result = {
+        "aftermarkets": aftermarkets,
+        "trendlyne": trendlyne,
+        "stockedge": stockedge,
+    }
+    _cache_set(key, result)
+    return result
 
 
 @api_router.get("/stock/{symbol}/red-flags")
@@ -501,4 +525,5 @@ app.add_middleware(
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    await scr.shutdown()
     client.close()

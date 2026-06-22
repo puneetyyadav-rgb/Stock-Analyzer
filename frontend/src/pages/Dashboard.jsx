@@ -16,6 +16,7 @@ import EventsPanel from "../components/EventsPanel";
 import RedFlagsPanel from "../components/RedFlagsPanel";
 import NewsSplitPanel from "../components/NewsSplitPanel";
 import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
+import ExternalScrapePanel from "../components/ExternalScrapePanel";
 import { DisclaimerNote } from "../components/Disclaimer";
 import WatchlistPanel from "../components/WatchlistPanel";
 import PdfExportButton from "../components/PdfExportButton";
@@ -202,6 +203,9 @@ export default function Dashboard() {
 
               {/* Sectoral Analysis */}
               <SectorAnalysisPanel symbol={overview.symbol} />
+
+              {/* External Intelligence (Aftermarkets/Trendlyne/StockEdge via headless browser) */}
+              <ExternalScrapePanel symbol={overview.symbol} />
 
               {/* News Split */}
               <NewsSplitPanel symbol={overview.symbol} />

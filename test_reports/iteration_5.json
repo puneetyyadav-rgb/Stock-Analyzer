@@ -1,0 +1,32 @@
+{
+  "summary": "Phase 5 (Playwright headless scraper + expanded sector keyword library) — all 13 pytest cases pass. Backend: /api/stock/RELIANCE/external-scrape returns aftermarkets.available=true with full shape (marketView, businessScore int 0-100, 4-key subScores {valuation,growth,returnsMargins,financialHealth} each with rating+score+description, all 5 safetyChecks keys, livePrice {price,changePercent,change}, dayRange, sectorTag, editorialQuote, url, source='Aftermarkets'); trendlyne.available=false with AWS WAF reason; stockedge.available=false with login-walled reason. Cache works: second call <3s vs first ~8-12s. Sector keyword expansion verified: SUNPHARMA sector_news=25 items containing pharma keywords, TATAMOTORS sector_news populated with auto/EV terms. Regression: 9 prior endpoints all 200 (with /ai-verdict using POST). Frontend: ExternalScrapePanel renders between SectorAnalysisPanel (y=1706) and NewsSplitPanel (y=2707) at y=2264; Aftermarkets card shows editorialQuote (italic + purple border), marketView label+value, businessScore badge with color tiers, livePrice with colored % change, 4 subscore tiles, 5 safety badges; Trendlyne+StockEdge labeled 'Anti-bot blocked' (amber) with honest reasons and 'Open in browser' deep-links.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Initial dashboard load", "issues": ["Pre-existing recharts width(-1)/height(-1) console warnings on first render before chart container has dimensions (carried over from iteration_4, cosmetic only)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase5.py",
+    "/app/test_reports/pytest/phase5_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Suppress recharts width(-1) warning by setting fixed dimensions before container measures (carryover from iter 4).",
+    "(Optional) Search-by-symbol matches first suggestion alphabetically — typing 'RELIANCE' picks 'RELINFRA' first. Could rank exact ticker match higher in suggestion list."
+  ],
+  "critical_code_review_comments": [
+    "scraper_service.py regex parsers (lines 92, 101, 120, 131, 140, 145) rely on stable Aftermarkets HTML text ordering — any minor template change on aftermarkets.in will silently break subScores/safetyChecks extraction (already returns partial data without raising). Consider snapshot test + alerting on missing keys.",
+    "scrape_aftermarkets opens a new BrowserContext per call but never reuses; consider context pooling for higher concurrency.",
+    "scraper_service.shutdown() relies on FastAPI shutdown event — verify it's wired in server.py @app.on_event('shutdown') to avoid leaked Chromium PIDs across reloads.",
+    "/external-scrape catches no exception in the endpoint layer; if Playwright launch itself fails (e.g. /pw-browsers missing on a fresh container), endpoint may 500. Add a try/except returning {available:false, error:...} for each source."
+  ],
+  "updated_files": ["/app/backend/tests/test_phase5.py"],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (all panel renders + ordering + badges + blocked-source cards verified)"},
+  "test_credentials": "N/A (no auth)",
+  "seed_data_creation": "None — tests hit live RELIANCE/SUNPHARMA/TATAMOTORS data via yfinance/Moneycontrol/Aftermarkets.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 5 confirmed end-to-end. /api/stock/RELIANCE/external-scrape returns full aftermarkets payload (businessScore observed values 54-63 depending on time of scrape since live data). Singleton Playwright browser launches in ~3-5s on first call; cached calls <100ms. Sector keyword library expansion validated for pharma (SUNPHARMA) and auto (TATAMOTORS) buckets — sector_news bucket consistently 25 items. Frontend ExternalScrapePanel data-testids: external-scrape-panel, aftermarkets-card, trendlyne-card, stockedge-card, am-subscore-{valuation|growth|returnsMargins|financialHealth}, am-safety-{Promoter pledge|ASM list|GSM list|F&O ban|Default probability}. Search input selects first alphabetical suggestion; tests use whichever stock gets selected — panel structure is symbol-agnostic. Regression suite at /app/backend/tests/test_phase5.py covers all 9 prior endpoints + new ones."
+}
