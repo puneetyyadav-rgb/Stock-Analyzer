@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@the-convocation/twitter-scraper": "^0.22.3",
+    "tough-cookie": "^6.0.1"
+  }
+}

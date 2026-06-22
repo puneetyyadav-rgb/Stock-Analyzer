@@ -24,3 +24,4 @@ export const getMarketDepth = (sym) => client.get(`/stock/${sym}/depth`).then((r
 export const getMLPredict = (sym) => client.get(`/stock/${sym}/ml-predict`).then((r) => r.data);
 export const getRegime = (sym) => client.get(`/stock/${sym}/regime`).then((r) => r.data);
 export const getPatterns = (sym) => client.get(`/stock/${sym}/patterns`).then((r) => r.data);
+export const getSocial = (sym) => client.get(`/stock/${sym}/social`).then((r) => r.data);

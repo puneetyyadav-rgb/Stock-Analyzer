@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { Newspaper, Loader2, AlertCircle } from "lucide-react";
-import { getAINews } from "../lib/api";
+import { getAINews, getSocial } from "../lib/api";
 import { DisclaimerNote } from "./Disclaimer";
 
 export default function AINewsAnalysis({ symbol }) {
   const [newsAI, setNewsAI] = useState(null);
+  const [socialData, setSocialData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
   useEffect(() => {
     setNewsAI(null);
+    setSocialData(null);
     setErr(null);
   }, [symbol]);
 
@@ -18,9 +20,17 @@ export default function AINewsAnalysis({ symbol }) {
     setLoading(true);
     setErr(null);
     try {
-      const r = await getAINews(symbol);
-      if (r.error) setErr(r.error);
-      else setNewsAI(r);
+      const [aiRes, socialRes] = await Promise.all([
+        getAINews(symbol),
+        getSocial(symbol)
+      ]);
+      
+      if (aiRes.error) setErr(aiRes.error);
+      else setNewsAI(aiRes);
+      
+      if (socialRes && socialRes.twitter_x && socialRes.twitter_x.tweets) {
+        setSocialData(socialRes.twitter_x.tweets);
+      }
     } catch (e) {
       setErr(e.message || "Failed to load News Analysis");
     } finally {
@@ -150,6 +160,29 @@ export default function AINewsAnalysis({ symbol }) {
                   </ul>
                 </div>
               </div>
+              
+              {socialData && socialData.length > 0 && (
+                <div className="p-3 bg-blue-950/20 border border-blue-900/50 rounded mt-4">
+                  <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-2">Live FinTwit Chatter</h4>
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {socialData.slice(0, 8).map((t, i) => (
+                      <div key={i} className="pb-2 border-b border-zinc-800/50 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-xs font-semibold text-zinc-300">{t.author} <span className="text-zinc-500 font-normal">@{t.handle}</span></span>
+                          <span className={`text-[8px] tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                                t.sentimentLabel === 'Bullish' ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900' :
+                                t.sentimentLabel === 'Bearish' ? 'bg-red-950/50 text-red-400 border border-red-900' :
+                                'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                              }`}>
+                            {t.sentimentLabel}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 whitespace-pre-wrap">{t.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
           

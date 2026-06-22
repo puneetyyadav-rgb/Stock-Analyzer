@@ -23,6 +23,7 @@ import events_service as ev_mod
 import ml_service as mls
 import regime_service as rs
 import pattern_service as ps
+import twitter_service as ts
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -442,16 +443,12 @@ async def social(symbol: str):
     company_name = ov.get("name") or symbol
     reddit_data = await asyncio.to_thread(sc.get_reddit_sentiment, company_name)
     stocktwits_data = await asyncio.to_thread(sc.get_stocktwits_sentiment, symbol)
+    twitter_data = await ts.get_twitter_sentiment(symbol)
+    
     result = {
         "reddit": reddit_data,
         "stocktwits": stocktwits_data,
-        "twitter_x": {
-            "available": False,
-            "reason": (
-                "X discontinued its free read tier in Feb 2026 (pay-per-use only, ~$0.005/read). "
-                "Not integrated — Reddit is the primary retail-sentiment source here."
-            ),
-        },
+        "twitter_x": twitter_data,
     }
     _cache_set(key, result)
     return result

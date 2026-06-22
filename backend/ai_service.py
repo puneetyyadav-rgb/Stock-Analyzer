@@ -107,7 +107,7 @@ SYSTEM_PROMPT = """You are the Head of Research at an institutional merchant ban
 
 THE FOUR DESKS (data for each provided below):
 1. FUNDAMENTALS — financials, valuation, governance, macro/sector context
-2. NEWS & SENTIMENT — recent headlines, corporate/legal filings, social sentiment
+2. NEWS & SENTIMENT — official headlines, legal filings vs retail Twitter/FinTwit sentiment
 3. TECHNICAL — trend regime, volatility state, candlestick patterns, RSI/MACD
 4. QUANTITATIVE — Monte Carlo median forecast, confidence band, sector ranking
 
@@ -136,7 +136,7 @@ Schema:
     "industryAndSector": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
     "companyFinancials": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
     "technicalAndMarket": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
-    "newsAndSentiment": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences."},
+    "newsAndSentiment": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences explicitly comparing Official News vs Retail Twitter chatter."},
     "globalShocks": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},
     "regulatoryPolicy": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},
     "demandSupplyTrade": {"bias": "Bullish" | "Bearish" | "Neutral", "text": "1-2 sentences. State 'No data available' if missing."},

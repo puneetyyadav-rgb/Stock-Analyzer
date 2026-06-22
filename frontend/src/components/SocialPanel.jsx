@@ -100,12 +100,26 @@ export default function SocialPanel({ symbol }) {
           </div>
 
           {/* Twitter / X */}
-          <div className="border border-zinc-800/60 p-2 bg-zinc-900/30" data-testid="twitter-block">
-            <div className="flex items-center justify-between">
-              <h4 className="text-[10px] tracking-widest uppercase text-zinc-500">X / Twitter</h4>
-              <span className="text-[9px] tracking-widest uppercase text-zinc-600">Not Integrated</span>
+          <div className="border border-zinc-800/60 p-2.5" data-testid="twitter-block">
+            <div className="flex items-center justify-between mb-1.5">
+              <h4 className="text-[10px] tracking-widest uppercase text-blue-400">X / Twitter</h4>
+              {data.twitter_x?.tweets ? (
+                <span className="text-[10px] text-zinc-400">{data.twitter_x.tweets.length} tweets analyzed</span>
+              ) : (
+                <span className="text-[9px] tracking-widest uppercase text-zinc-500">Unavailable</span>
+              )}
             </div>
-            <p className="text-[10px] text-zinc-500 leading-snug mt-1">{data.twitter_x?.reason}</p>
+            {data.twitter_x?.error && (
+               <p className="text-[11px] text-zinc-500 leading-snug">{data.twitter_x.error}</p>
+            )}
+            {data.twitter_x?.tweets && data.twitter_x.tweets.length === 0 && (
+               <p className="text-[11px] text-zinc-500 leading-snug">No recent tweets found for this ticker.</p>
+            )}
+            {data.twitter_x?.tweets && data.twitter_x.tweets.length > 0 && (
+               <p className="text-[11px] text-zinc-300 leading-snug">
+                 Live FinTwit chatter is active. View the full feed in the <span className="font-semibold text-zinc-200">News Desk</span> tab.
+               </p>
+            )}
           </div>
         </div>
       )}
