@@ -1,0 +1,32 @@
+{
+  "summary": "Phase 4 testing (news-split + sector-analysis) for RELIANCE. Backend: 18/18 pytest cases pass (news-split shape/counts/sentiment, sector-analysis with peer aggregates and deep links, plus regression on /overview /news /red-flags /events /legal /social). Frontend: dashboard renders correctly with Peers → SectorAnalysis → NewsSplit → RedFlags/Events ordering verified by Y-coordinates; tabs (Company 19 / Sector 25 / Market/Misc 1) switch properly; 5 colored deep-link buttons all have target=_blank rel=noreferrer pointing to trendlyne, stockedge, aftermarkets, moneycontrol, NSE; old monolithic 'Latest News & Sentiment' panel removed. Verdict bar 'Sector tracking Nifty 50' with Rel 1M +0.18% renders. Stock vs peers: 'Pricier by +165.86% on P/E'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Initial dashboard load", "issues": ["Console warns 'width(-1) height(-1) of chart should be > 0' on first render before stock is selected (cosmetic recharts warning, not blocking)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase4.py",
+    "/app/test_reports/pytest/phase4_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Add data-testid attributes to NewsSplitPanel tab buttons (e.g. news-split-tab-company/sector/market) and individual news cards to make UI tests selector-stable. Tabs are currently locatable only via inner text.",
+    "(Optional) Suppress recharts 'width(-1)' warning on landing page when no chart container is mounted."
+  ],
+  "critical_code_review_comments": [
+    "sector_service.get_sector_news catches all exceptions silently and returns []; consider differentiating 4xx vs network errors in logs for easier debugging.",
+    "categorize_news uses simple substring matching; could false-positive when company keyword is a common word (e.g. 'reliance' as adjective). For RELIANCE this works.",
+    "/api/stock/{symbol}/sector-analysis re-fetches peers from /api/stock/{symbol}/peers logic — duplicate yfinance calls between this endpoint and the dedicated /peers endpoint. Both use 60s in-memory cache so impact is small but worth a shared helper.",
+    "_CACHE is module-level dict without TTL eviction — grows unbounded over time across all symbols. Replace with cachetools.TTLCache or LRU."
+  ],
+  "updated_files": ["/app/backend/tests/test_phase4.py"],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% (all observed flows pass)"},
+  "test_credentials": "N/A (no auth)",
+  "seed_data_creation": "None - tests use live RELIANCE data from yfinance/Moneycontrol/Screener.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 4 confirmed end-to-end. Backend endpoints /api/stock/RELIANCE/news-split returns counts {company:19, sector:25, market:1} with sentimentLabel on items; /api/stock/RELIANCE/sector-analysis returns sector_index ^CNXENERGY, peer_aggregates with top_gainer (GAIL), top_loser (PETRONET), stock_vs_peers (Pricier +165.86%), and 5 deep_links. Frontend Dashboard renders the new panels in the right order; NewsSplitPanel tabs work; deep-link buttons open in new tabs with rel=noreferrer. Old monolithic news panel confirmed removed. Test suite at /app/backend/tests/test_phase4.py is the regression for this phase."
+}

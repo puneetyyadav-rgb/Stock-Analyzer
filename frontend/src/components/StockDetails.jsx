@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Panel, KV } from "./Panel";
-import { getFinancials, getCorporate, getHolders, getNews, getScreener, getTechnicals } from "../lib/api";
+import { getFinancials, getCorporate, getHolders, getScreener, getTechnicals } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
-import { ExternalLink, TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 const Section = ({ children, hidden }) => hidden ? null : children;
 
@@ -10,17 +10,15 @@ export default function StockDetails({ symbol, overview }) {
   const [financials, setFinancials] = useState(null);
   const [corporate, setCorporate] = useState(null);
   const [holders, setHolders] = useState(null);
-  const [news, setNews] = useState(null);
   const [screener, setScreener] = useState(null);
   const [technicals, setTechnicals] = useState(null);
 
   useEffect(() => {
     if (!symbol) return;
-    setFinancials(null); setCorporate(null); setHolders(null); setNews(null); setScreener(null); setTechnicals(null);
+    setFinancials(null); setCorporate(null); setHolders(null); setScreener(null); setTechnicals(null);
     getFinancials(symbol).then(setFinancials).catch(() => {});
     getCorporate(symbol).then(setCorporate).catch(() => {});
     getHolders(symbol).then(setHolders).catch(() => {});
-    getNews(symbol).then((d) => setNews(d.items)).catch(() => {});
     getScreener(symbol).then(setScreener).catch(() => {});
     getTechnicals(symbol).then(setTechnicals).catch(() => {});
   }, [symbol]);
@@ -162,35 +160,7 @@ export default function StockDetails({ symbol, overview }) {
         </Panel>
       </div>
 
-      {/* News full width */}
-      <div className="lg:col-span-12">
-        <Panel title="Latest News & Sentiment" testId="news-panel">
-          {news === null && <p className="text-xs text-zinc-500">Loading news…</p>}
-          {news && news.length === 0 && <p className="text-xs text-zinc-600">No recent news.</p>}
-          {news && news.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-auto pr-1">
-              {news.map((n, i) => (
-                <a
-                  key={i}
-                  href={n.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="border border-zinc-800/60 p-2.5 hover:border-zinc-600 transition-colors block group"
-                  data-testid={`news-item-${i}`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="text-[9px] tracking-widest uppercase text-blue-400">{n.source}</span>
-                    <ExternalLink size={10} className="text-zinc-600 group-hover:text-zinc-300 mt-0.5 shrink-0" />
-                  </div>
-                  <h4 className="text-xs text-zinc-200 font-medium leading-snug mb-1 group-hover:text-blue-300">{n.title}</h4>
-                  {n.summary && <p className="text-[11px] text-zinc-500 line-clamp-2 leading-snug">{n.summary}</p>}
-                  {n.publishedAt && <p className="text-[9px] text-zinc-600 mt-1 font-mono">{n.publishedAt}</p>}
-                </a>
-              ))}
-            </div>
-          )}
-        </Panel>
-      </div>
+      {/* News is now rendered by NewsSplitPanel in Dashboard (Company / Sector / Market tabs) */}
 
       {/* About & Screener Ratios */}
       <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-3">

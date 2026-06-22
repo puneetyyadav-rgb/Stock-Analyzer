@@ -14,6 +14,8 @@ import SocialPanel from "../components/SocialPanel";
 import LegalPanel from "../components/LegalPanel";
 import EventsPanel from "../components/EventsPanel";
 import RedFlagsPanel from "../components/RedFlagsPanel";
+import NewsSplitPanel from "../components/NewsSplitPanel";
+import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
 import { DisclaimerNote } from "../components/Disclaimer";
 import WatchlistPanel from "../components/WatchlistPanel";
 import PdfExportButton from "../components/PdfExportButton";
@@ -197,6 +199,12 @@ export default function Dashboard() {
 
               {/* Peer Comparison */}
               <PeersPanel symbol={overview.symbol} onSelect={setSymbol} />
+
+              {/* Sectoral Analysis */}
+              <SectorAnalysisPanel symbol={overview.symbol} />
+
+              {/* News Split */}
+              <NewsSplitPanel symbol={overview.symbol} />
 
               {/* Red Flags + Events */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
