@@ -86,3 +86,14 @@ AI app for Indian stock market analysis (NSE/BSE). User enters a stock name and 
 - New backend: `social_service.py`, `legal_service.py`, `events_service.py`
 - New frontend: `SocialPanel.jsx`, `LegalPanel.jsx`, `EventsPanel.jsx`, `RedFlagsPanel.jsx`, `Disclaimer.jsx`
 - Modified: `stock_service.py` (VADER + promoter pledge + special tags), `ai_service.py` (sector branching + sectorSpecific schema), `server.py` (4 new routes), `Dashboard.jsx`, `AIVerdict.jsx`, `PdfExportButton.jsx`
+
+## Phase 4 Implementation (2026-02-22)
+### Added per user spec
+- **News Split (3 tabs)** — `/api/stock/{symbol}/news-split` returns `{company, sector_news, market}` buckets. Frontend `NewsSplitPanel` shows tabbed UI with counts and VADER sentiment per card. Old monolithic news panel removed from StockDetails.
+- **Sectoral Analysis** — `/api/stock/{symbol}/sector-analysis` returns sector NSE index performance (today/1M/3M) vs Nifty 50 benchmark, peer aggregates (avg P/E, P/B, ROE, margins, growth + top gainer/loser), stock-vs-peer P/E delta, and a verdict bar.
+- **External deep-links** — Sectoral Analysis panel includes 5 colored buttons → Trendlyne, StockEdge, Aftermarkets, MC Sector News, NSE Indices. Trendlyne/StockEdge/Aftermarkets are anti-bot/SPA so deep-linked rather than scraped (called out in UI).
+- **Sector news source** — Moneycontrol `/news/tags/<slug>.html` (server-rendered) mapped from Yahoo sectors. 25 items per request for major sectors.
+
+### Files added
+- `/app/backend/sector_service.py` (categorize_news, get_sector_news, get_sector_analysis)
+- `/app/frontend/src/components/NewsSplitPanel.jsx`, `SectorAnalysisPanel.jsx`
