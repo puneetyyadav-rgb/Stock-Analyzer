@@ -97,3 +97,20 @@ AI app for Indian stock market analysis (NSE/BSE). User enters a stock name and 
 ### Files added
 - `/app/backend/sector_service.py` (categorize_news, get_sector_news, get_sector_analysis)
 - `/app/frontend/src/components/NewsSplitPanel.jsx`, `SectorAnalysisPanel.jsx`
+
+## Phase 5 Implementation (2026-02-23)
+### Added
+- **Playwright headless scraper** (`scraper_service.py`) — singleton Chromium launched lazily, reused across calls. PLAYWRIGHT_BROWSERS_PATH=/pw-browsers set at module load.
+- **Aftermarkets full scrape** — structured: editorialQuote, marketView, businessScore (0-100), 4 sub-scores (valuation/growth/returnsMargins/financialHealth with rating+score+description), 5 safetyChecks (Promoter pledge / ASM / GSM / F&O ban / Default probability), live price, day range, sectorTag.
+- **Trendlyne & StockEdge** — confirmed blocked even with playwright-stealth (AWS WAF and login-wall respectively); now return honest `available:false` with reason text + deep-link to open in user's browser.
+- `/api/stock/{symbol}/external-scrape` endpoint with 30-min cache (TTL parameterized in `_cache_get`).
+- `ExternalScrapePanel.jsx` — renders Aftermarkets primary card + two "Anti-bot blocked" honest cards.
+
+### Sector Keyword Library Expansion
+- Sector keyword map grew from ~5 keywords/sector to **15-30+ per sector** (250 total terms).
+- Mid-cap industries covered: specialty chemicals, agrochemicals, jewellery, gold loans, asset management, exchanges, ports, defence, drones, solar, hydrogen, batteries, EV, QSR, hotels, multiplexes, REITs, footwear, etc.
+- SUNPHARMA / TATAMOTORS verified: sector_news bucket consistently populated with 25 sector-specific items.
+
+### Known limits documented in UI
+- Trendlyne — AWS WAF "Human Verification" page blocks headless Chromium even with stealth plugins. Genuinely unscrapable from any server. UI says so.
+- StockEdge — per-share pages require auth or internal numeric stock IDs. UI says so.
