@@ -22,6 +22,9 @@ import WatchlistPanel from "../components/WatchlistPanel";
 import PdfExportButton from "../components/PdfExportButton";
 import MLPredictor from "../components/MLPredictor";
 import PatternsPanel from "../components/PatternsPanel";
+import NewsSplitPanel from "../components/NewsSplitPanel";
+import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
+import ExternalScrapePanel from "../components/ExternalScrapePanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -188,8 +191,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-
               {/* Chart + Depth + Macro + Patterns */}
+              <SectorAnalysisPanel symbol={overview.symbol} />
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-3">
                 <div className="lg:col-span-8 flex flex-col gap-3">
                   <Panel title={`Price Chart · ${overview.symbol}`} testId="chart-panel" className="h-full min-h-[320px]">
@@ -210,6 +213,9 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
                 <AIVerdict symbol={overview.symbol} />
                 <AITechnicalAnalysis symbol={overview.symbol} />
+                <div className="lg:col-span-2">
+                  <NewsSplitPanel symbol={overview.symbol} />
+                </div>
                 <div className="lg:col-span-2">
                   <AINewsAnalysis symbol={overview.symbol} />
                 </div>
@@ -246,6 +252,11 @@ export default function Dashboard() {
                 <div className="lg:col-span-6">
                   <LegalPanel symbol={overview.symbol} />
                 </div>
+              </div>
+
+              {/* External Scraping */}
+              <div className="mb-3">
+                <ExternalScrapePanel symbol={overview.symbol} />
               </div>
 
               {/* Options + Insider */}

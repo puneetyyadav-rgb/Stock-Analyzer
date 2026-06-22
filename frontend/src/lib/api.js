@@ -25,3 +25,6 @@ export const getMLPredict = (sym) => client.get(`/stock/${sym}/ml-predict`).then
 export const getRegime = (sym) => client.get(`/stock/${sym}/regime`).then((r) => r.data);
 export const getPatterns = (sym) => client.get(`/stock/${sym}/patterns`).then((r) => r.data);
 export const getSocial = (sym) => client.get(`/stock/${sym}/social`).then((r) => r.data);
+export const getNewsSplit = (sym) => client.get(`/stock/${sym}/news-split`).then((r) => r.data);
+export const getSectorAnalysis = (sym) => client.get(`/stock/${sym}/sector-analysis`).then((r) => r.data);
+export const getExternalScrape = (sym) => client.get(`/stock/${sym}/external-scrape`).then((r) => r.data);

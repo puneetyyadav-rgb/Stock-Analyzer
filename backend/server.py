@@ -24,6 +24,8 @@ import ml_service as mls
 import regime_service as rs
 import pattern_service as ps
 import twitter_service as ts
+import sector_service as sec
+import scraper_service as scr
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -576,6 +578,99 @@ async def patterns(symbol: str):
     return data
 
 
+@api_router.get("/stock/{symbol}/news-split")
+async def news_split(symbol: str):
+    """Return news bucketed by company / sector / market relevance."""
+    key = f"news_split:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    ov = await asyncio.to_thread(ss.get_overview, symbol)
+    items = await asyncio.to_thread(ss.get_news, symbol)
+    buckets = sec.categorize_news(items, ov.get("name") or symbol, ov.get("sector") or "")
+    # add a few extra real sector-only headlines from Moneycontrol sector landing
+    extra_sector = await asyncio.to_thread(sec.get_sector_news, ov.get("sector") or "")
+    # Score sentiment on extras using the same VADER helper
+    extra_sector = await asyncio.to_thread(ss._score_news, extra_sector)
+    if extra_sector:
+        existing_titles = {n.get("title") for n in buckets["sector"]}
+        for n in extra_sector:
+            if n.get("title") not in existing_titles:
+                buckets["sector"].append(n)
+    result = {
+        "sector": ov.get("sector"),
+        "company": buckets["company"],
+        "sector_news": buckets["sector"],
+        "market": buckets["market"],
+        "counts": {
+            "company": len(buckets["company"]),
+            "sector": len(buckets["sector"]),
+            "market": len(buckets["market"]),
+        },
+    }
+    _cache_set(key, result)
+    return result
+
+
+@api_router.get("/stock/{symbol}/sector-analysis")
+async def sector_analysis(symbol: str):
+    key = f"sector_an:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    ov = await asyncio.to_thread(ss.get_overview, symbol)
+    data = await asyncio.to_thread(sec.get_sector_analysis, symbol, ov.get("sector"))
+    # Also compute peers' aggregate metrics (avg PE, ROE, profit margin) for sector comparison
+    peers = await asyncio.to_thread(ex.get_peers, symbol)
+    def _avg(lst):
+        vals = [x for x in lst if x is not None]
+        return sum(vals) / len(vals) if vals else None
+    if peers:
+        data["peer_aggregates"] = {
+            "count": len(peers),
+            "avg_pe": _avg([p.get("peRatio") for p in peers]),
+            "avg_pb": _avg([p.get("pbRatio") for p in peers]),
+            "avg_roe": _avg([p.get("roe") for p in peers]),
+            "avg_profit_margin": _avg([p.get("profitMargin") for p in peers]),
+            "avg_revenue_growth": _avg([p.get("revenueGrowth") for p in peers]),
+            "top_gainer": max(peers, key=lambda p: p.get("changePercent") or -999, default=None),
+            "top_loser": min(peers, key=lambda p: p.get("changePercent") or 999, default=None),
+        }
+        # Stock vs peer percentile rough position
+        my_pe = ov.get("peRatio")
+        if my_pe and data["peer_aggregates"]["avg_pe"]:
+            data["stock_vs_peers"] = {
+                "pe_vs_peer_avg": "Cheaper" if my_pe < data["peer_aggregates"]["avg_pe"] else "Pricier",
+                "pe_diff_pct": ((my_pe - data["peer_aggregates"]["avg_pe"]) / data["peer_aggregates"]["avg_pe"]) * 100,
+            }
+    _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/external-scrape")
+async def external_scrape(symbol: str):
+    """Aggregated headless-browser scrape of Aftermarkets, Trendlyne, StockEdge.
+    Cached for 30 minutes — each browser-driven scrape costs 5-10 seconds."""
+    key = f"external_scrape:{symbol}"
+    cached = _cache_get(key, ttl=1800)
+    if cached:
+        return cached
+    aftermarkets_task = scr.scrape_aftermarkets(symbol)
+    trendlyne_task = scr.scrape_trendlyne(symbol)
+    stockedge_task = scr.scrape_stockedge(symbol)
+    aftermarkets, trendlyne, stockedge = await asyncio.gather(
+        aftermarkets_task, trendlyne_task, stockedge_task, return_exceptions=False
+    )
+    result = {
+        "aftermarkets": aftermarkets,
+        "trendlyne": trendlyne,
+        "stockedge": stockedge,
+    }
+    _cache_set(key, result)
+    return result
+
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -589,4 +684,5 @@ app.add_middleware(
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    await scr.shutdown()
     client.close()
