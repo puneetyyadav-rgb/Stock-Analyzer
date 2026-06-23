@@ -25,8 +25,9 @@ def _strip_symbol(symbol: str) -> str:
 def get_fii_dii() -> dict:
     """Scrape Moneycontrol FII/DII daily activity from Next.js page data."""
     try:
-        r = requests.get("https://www.moneycontrol.com/markets/fii-dii-data/",
-                         headers=HEADERS, timeout=12, allow_redirects=True)
+        import curl_cffi.requests as creq
+        r = creq.get("https://www.moneycontrol.com/markets/fii-dii-data/",
+                         headers={"Referer": "https://www.moneycontrol.com/", "Accept": "text/html"}, impersonate="chrome120", timeout=12, allow_redirects=True)
         if r.status_code != 200:
             return {"rows": [], "error": f"HTTP {r.status_code}"}
         m = re.search(r'__NEXT_DATA__"[^>]*>(.*?)</script>', r.text, re.S)

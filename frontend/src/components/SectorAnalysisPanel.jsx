@@ -16,11 +16,14 @@ const DEEP_LINKS_META = [
 
 export default function SectorAnalysisPanel({ symbol }) {
   const [data, setData] = useState(null);
+  const [extData, setExtData] = useState(null);
 
   useEffect(() => {
     if (!symbol) return;
     setData(null);
+    setExtData(null);
     axios.get(`${API}/stock/${symbol}/sector-analysis`).then((r) => setData(r.data)).catch(() => setData({ error: true }));
+    axios.get(`${API}/stock/${symbol}/external-scrape`).then((r) => setExtData(r.data)).catch(() => setExtData({ error: true }));
   }, [symbol]);
 
   return (
@@ -136,11 +139,44 @@ export default function SectorAnalysisPanel({ symbol }) {
                 );
               })}
             </div>
-            <p className="text-[9px] text-zinc-600 mt-2 leading-snug">
-              Trendlyne, StockEdge, and Aftermarkets are protected by anti-bot/SPA rendering that prevents server-side scraping —
-              these deep links open the relevant pages directly in your browser where they render normally.
-            </p>
           </div>
+          
+          {/* Real-time scraped data from Trendlyne & Aftermarkets */}
+          {extData && !extData.error && (
+            <div className="border-t border-zinc-800/40 pt-3 mt-3">
+               <h4 className="text-[10px] tracking-widest uppercase text-orange-400 mb-2 font-semibold flex items-center gap-1">Trendlyne Fundamentals <span className="px-1.5 py-0.5 text-[8px] bg-orange-950/50 text-orange-400 border border-orange-900 rounded-sm">Live Scrape</span></h4>
+               {extData.trendlyne?.available ? (
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                   {Object.entries(extData.trendlyne.fundamentals || {}).map(([k, v]) => (
+                      <div key={k} className="border border-zinc-800/40 p-2 bg-zinc-900/20">
+                        <div className="text-[9px] tracking-widest uppercase text-zinc-500 mb-0.5">{k.replace(/_/g, ' ')}</div>
+                        <div className="text-sm font-mono text-zinc-200">{v !== null ? v : "—"}</div>
+                      </div>
+                   ))}
+                 </div>
+               ) : (
+                 <p className="text-xs text-zinc-500">{extData.trendlyne?.reason || extData.trendlyne?.error || "Trendlyne data unavailable."}</p>
+               )}
+               
+               <h4 className="text-[10px] tracking-widest uppercase text-purple-400 mb-2 mt-4 font-semibold flex items-center gap-1">Aftermarkets Insight</h4>
+               {extData.aftermarkets?.available ? (
+                 <div className="flex gap-4">
+                    <div className="border border-purple-900/30 p-2 bg-purple-950/10 flex-1">
+                      <div className="text-[9px] tracking-widest uppercase text-zinc-500 mb-1">Market View</div>
+                      <div className="text-xs text-zinc-200 font-medium">{extData.aftermarkets.marketView || "N/A"}</div>
+                    </div>
+                    {extData.aftermarkets.businessScore && (
+                      <div className="border border-purple-900/30 p-2 bg-purple-950/10 flex-1">
+                        <div className="text-[9px] tracking-widest uppercase text-zinc-500 mb-1">Business Score</div>
+                        <div className="text-xs text-zinc-200 font-medium">{extData.aftermarkets.businessScore}/100</div>
+                      </div>
+                    )}
+                 </div>
+               ) : (
+                 <p className="text-xs text-zinc-500">{extData.aftermarkets?.error || "Aftermarkets data unavailable."}</p>
+               )}
+            </div>
+          )}
         </div>
       )}
     </Panel>

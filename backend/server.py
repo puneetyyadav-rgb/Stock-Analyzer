@@ -1,3 +1,8 @@
+import sys
+import asyncio
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
 from dotenv import load_dotenv
 load_dotenv()
@@ -597,6 +602,14 @@ async def news_split(symbol: str):
         for n in extra_sector:
             if n.get("title") not in existing_titles:
                 buckets["sector"].append(n)
+        
+        # Re-sort using the smart date parser so new items integrate seamlessly
+        for n in buckets["sector"]:
+            pub = ss._parse_news_datetime(n.get("publishedAt"))
+            n["_ts"] = pub.timestamp() if pub else 0
+        buckets["sector"].sort(key=lambda x: x.get("_ts", 0), reverse=True)
+        for n in buckets["sector"]:
+            n.pop("_ts", None)
     result = {
         "sector": ov.get("sector"),
         "company": buckets["company"],
@@ -649,22 +662,23 @@ async def sector_analysis(symbol: str):
 
 @api_router.get("/stock/{symbol}/external-scrape")
 async def external_scrape(symbol: str):
-    """Aggregated headless-browser scrape of Aftermarkets, Trendlyne, StockEdge.
-    Cached for 30 minutes — each browser-driven scrape costs 5-10 seconds."""
-    key = f"external_scrape:{symbol}"
-    cached = _cache_get(key, ttl=1800)
+    """Aggregated headless-browser scrape of Trendlyne, Aftermarkets, and Tickertape."""
+    key = f"external_scrape_v3:{symbol}"
+    cached = _cache_get(key)
     if cached:
         return cached
     aftermarkets_task = scr.scrape_aftermarkets(symbol)
+    tickertape_task = scr.scrape_tickertape(symbol)
     trendlyne_task = scr.scrape_trendlyne(symbol)
-    stockedge_task = scr.scrape_stockedge(symbol)
-    aftermarkets, trendlyne, stockedge = await asyncio.gather(
-        aftermarkets_task, trendlyne_task, stockedge_task, return_exceptions=False
+    
+    aftermarkets, tickertape, trendlyne = await asyncio.gather(
+        aftermarkets_task, tickertape_task, trendlyne_task, return_exceptions=False
     )
+    
     result = {
         "aftermarkets": aftermarkets,
+        "tickertape": tickertape,
         "trendlyne": trendlyne,
-        "stockedge": stockedge,
     }
     _cache_set(key, result)
     return result

@@ -25,7 +25,7 @@ def sync_generate_verdict(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-1.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -211,7 +211,7 @@ def sync_analyze_options(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-1.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -252,7 +252,7 @@ def sync_generate_technical_analysis(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-1.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -288,7 +288,7 @@ def sync_generate_news_analysis(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-1.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -440,4 +440,34 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         return result
     except Exception as e:
         logger.error(f"AI verdict error: {e}")
+        return {"error": str(e)}
+
+async def generate_external_intelligence_verdict(aftermarkets: dict, tickertape: dict) -> dict:
+    client = get_gemini_client()
+    if not client:
+        return {"error": "GEMINI_API_KEY not configured"}
+
+    prompt = f"""You are a specialized financial AI extracting a 'Raw Conclusion' from external data sources.
+Analyze the following scraped data from Aftermarkets and Tickertape, and provide a synthesized raw conclusion.
+Output STRICT JSON only. No markdown fences.
+Schema:
+{{
+  "verdict": "Bullish" | "Bearish" | "Neutral",
+  "summary": "2-3 sentences synthesizing the raw external data conclusion.",
+  "key_drivers": ["string", "string"],
+  "risk_factors": ["string", "string"]
+}}
+
+Data:
+Aftermarkets: {json.dumps(aftermarkets, default=str)}
+Tickertape: {json.dumps(tickertape, default=str)}
+"""
+
+    try:
+        text = await asyncio.to_thread(sync_generate_verdict, prompt)
+        text = text.strip()
+        result = json.loads(text)
+        return result
+    except Exception as e:
+        logger.error(f"AI external verdict error: {e}")
         return {"error": str(e)}

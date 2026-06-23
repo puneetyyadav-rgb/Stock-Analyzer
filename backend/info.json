@@ -1,0 +1,89 @@
+{
+  "success": true,
+  "data": {
+    "type": "stock",
+    "info": {
+      "sector": "Oil & Gas - Refining & Marketing",
+      "name": "Reliance Industries Ltd",
+      "ticker": "RELIANCE",
+      "exchange": "NSE",
+      "description": "Reliance Industries Limited is engaged in refining, manufacturing of refined petroleum products, petrochemicals, including manufacturing of basic chemicals, fertilizers and nitrogen compounds, plastic and synthetic rubber in primary forms.",
+      "tags": [
+        {
+          "name": "Oil & Gas - Refining & Marketing",
+          "visible": true,
+          "type": "sub-sector"
+        },
+        {
+          "name": "Ambani Group",
+          "visible": true,
+          "type": "custom"
+        },
+        {
+          "name": "5G",
+          "visible": true,
+          "type": "custom"
+        }
+      ]
+    },
+    "ratios": {
+      "risk": 1.596065766323693,
+      "3mAvgVol": 19465398.81967213,
+      "4wpct": -1.7407407407407407,
+      "52wHigh": 1611.8,
+      "52wLow": 1253.2,
+      "52wpct": -8.944261394838,
+      "beta": 1.0389739211759,
+      "bps": 802.4150717820694,
+      "divYield": 0.4523159214610643,
+      "eps": 59.6896623124349,
+      "inddy": 1.421693992496426,
+      "indpb": 1.4623883398161148,
+      "indpe": 12.20892616165304,
+      "marketCap": 1795091.2614733,
+      "mrktCapRank": 1,
+      "pb": 1.6531425253883074,
+      "pe": 22.223352045475703,
+      "roe": 7.709406669173635,
+      "nShareholders": 4421289,
+      "lastPrice": 1326.5,
+      "ttmPe": 22.223352045475703,
+      "marketCapLabel": "Largecap",
+      "12mVol": 20.72481933982444,
+      "mrktCapf": 1795091.2614733,
+      "apef": 22.223352045475703,
+      "pbr": 1.6531425253883074,
+      "etfLiq": 0.003816943462411655,
+      "etfLiqLabel": "High"
+    },
+    "sid": "RELI",
+    "gic": {
+      "sector": "Energy",
+      "industrygroup": "Energy",
+      "industry": "Oil, Gas & Consumable Fuels",
+      "subindustry": "Oil & Gas Refining & Marketing",
+      "short": "Energy"
+    },
+    "isin": "INE002A01018",
+    "slug": "/stocks/reliance-industries-RELI",
+    "tradable": true,
+    "labels": {
+      "sector": {
+        "title": "Energy",
+        "extra": "",
+        "description": "Oil & Gas - Refining & Marketing"
+      },
+      "marketCap": {
+        "title": "Largecap",
+        "extra": "Companies with market capitalisation above 20,000 cr are considered large cap",
+        "description": "With a market cap of \u20b917,95,091 cr, stock is ranked 1"
+      },
+      "risk": {
+        "title": "Low Risk",
+        "extra": "Stocks which are <2 times as volatile as Nifty are considered low risk stocks",
+        "description": "Stock is 1.60x as volatile as Nifty"
+      }
+    }
+  },
+  "error": null
+}

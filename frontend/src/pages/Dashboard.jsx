@@ -22,9 +22,7 @@ import WatchlistPanel from "../components/WatchlistPanel";
 import PdfExportButton from "../components/PdfExportButton";
 import MLPredictor from "../components/MLPredictor";
 import PatternsPanel from "../components/PatternsPanel";
-import NewsSplitPanel from "../components/NewsSplitPanel";
 import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
-import ExternalScrapePanel from "../components/ExternalScrapePanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -192,7 +190,7 @@ export default function Dashboard() {
                 </div>
               </div>
               {/* Chart + Depth + Macro + Patterns */}
-              <SectorAnalysisPanel symbol={overview.symbol} />
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-3">
                 <div className="lg:col-span-8 flex flex-col gap-3">
                   <Panel title={`Price Chart · ${overview.symbol}`} testId="chart-panel" className="h-full min-h-[320px]">
@@ -214,11 +212,13 @@ export default function Dashboard() {
                 <AIVerdict symbol={overview.symbol} />
                 <AITechnicalAnalysis symbol={overview.symbol} />
                 <div className="lg:col-span-2">
-                  <NewsSplitPanel symbol={overview.symbol} />
-                </div>
-                <div className="lg:col-span-2">
                   <AINewsAnalysis symbol={overview.symbol} />
                 </div>
+              </div>
+
+              {/* Dedicated Sectoral Analysis & News */}
+              <div className="mb-3">
+                <SectorAnalysisPanel symbol={overview.symbol} />
               </div>
 
               {/* FII/DII + Concalls */}
@@ -254,10 +254,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* External Scraping */}
-              <div className="mb-3">
-                <ExternalScrapePanel symbol={overview.symbol} />
-              </div>
+
 
               {/* Options + Insider */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -291,7 +288,7 @@ export default function Dashboard() {
         <div className="max-w-3xl mx-auto text-center space-y-2">
           <DisclaimerNote />
           <p className="text-[10px] tracking-widest uppercase text-zinc-600">
-            Stock Sentinel IN · Data: NSE/BSE · Yahoo · Screener.in · Moneycontrol · Reddit · AI: Gemini 3 Flash
+            Stock Sentinel IN · Data: NSE/BSE · Yahoo · Screener.in · Moneycontrol · Reddit · AI: Gemini 1.5 Flash
           </p>
         </div>
       </footer>
@@ -313,7 +310,7 @@ const EmptyState = ({ onPick }) => (
     <h2 className="text-3xl tracking-tight font-semibold mb-2">Indian Stock Analyzer</h2>
     <p className="text-sm text-zinc-400 max-w-xl">
       Search any NSE/BSE listed stock to get a full 9-factor terminal analysis — fundamentals, technicals,
-      macro context, news, FII/DII flows, concalls, options chain, peers, and an AI verdict from <span className="text-blue-400">Gemini 3 Flash</span>.
+      macro context, news, FII/DII flows, concalls, options chain, peers, and an AI verdict from <span className="text-blue-400">Gemini 1.5 Flash</span>.
     </p>
     <div className="mt-6">
       <p className="text-[10px] tracking-widest uppercase text-zinc-500 mb-2">Try a Nifty 50 stock</p>

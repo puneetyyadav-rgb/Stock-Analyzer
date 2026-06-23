@@ -1,8 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Panel, KV } from "./Panel";
-import { getFinancials, getCorporate, getHolders, getNews, getScreener, getTechnicals } from "../lib/api";
+import { getFinancials, getCorporate, getHolders, getScreener, getTechnicals, getNewsSplit } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { ExternalLink, TrendingUp, TrendingDown } from "lucide-react";
+
+const TABS = [
+  { key: "company", label: "Company" },
+  { key: "sector_news", label: "Sector" },
+  { key: "market", label: "Market / Misc" },
+];
+
+const sentimentColor = (label) => {
+  if (label === "Positive") return "text-emerald-400";
+  if (label === "Negative") return "text-red-400";
+  return "text-zinc-400";
+};
 
 const Section = ({ children, hidden }) => hidden ? null : children;
 
@@ -10,17 +22,18 @@ export default function StockDetails({ symbol, overview }) {
   const [financials, setFinancials] = useState(null);
   const [corporate, setCorporate] = useState(null);
   const [holders, setHolders] = useState(null);
-  const [news, setNews] = useState(null);
+  const [newsData, setNewsData] = useState(null);
+  const [newsTab, setNewsTab] = useState("company");
   const [screener, setScreener] = useState(null);
   const [technicals, setTechnicals] = useState(null);
 
   useEffect(() => {
     if (!symbol) return;
-    setFinancials(null); setCorporate(null); setHolders(null); setNews(null); setScreener(null); setTechnicals(null);
+    setFinancials(null); setCorporate(null); setHolders(null); setNewsData(null); setScreener(null); setTechnicals(null); setNewsTab("company");
     getFinancials(symbol).then(setFinancials).catch(() => {});
     getCorporate(symbol).then(setCorporate).catch(() => {});
     getHolders(symbol).then(setHolders).catch(() => {});
-    getNews(symbol).then((d) => setNews(d.items)).catch(() => {});
+    getNewsSplit(symbol).then(setNewsData).catch(() => setNewsData({ company: [], sector_news: [], market: [], counts: {} }));
     getScreener(symbol).then(setScreener).catch(() => {});
     getTechnicals(symbol).then(setTechnicals).catch(() => {});
   }, [symbol]);
@@ -164,14 +177,43 @@ export default function StockDetails({ symbol, overview }) {
 
       {/* News full width */}
       <div className="lg:col-span-12">
-        <Panel title="Latest News & Sentiment" testId="news-panel">
-          {news === null && <p className="text-xs text-zinc-500">Loading news…</p>}
-          {news && news.length === 0 && <p className="text-xs text-zinc-600">No recent news.</p>}
-          {news && news.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-auto pr-1">
-              {news.map((n, i) => (
+        <Panel 
+          title="Latest News & Sentiment" 
+          testId="news-panel"
+          right={
+            newsData && (
+              <div className="flex items-center gap-1" data-testid="news-tabs">
+                {TABS.map((t) => {
+                  const count = newsData.counts?.[t.key === "sector_news" ? "sector" : t.key] ?? (newsData[t.key] || []).length;
+                  const active = newsTab === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => setNewsTab(t.key)}
+                      data-testid={`news-tab-${t.key}`}
+                      className={`px-2 py-0.5 text-[10px] tracking-widest uppercase font-medium border ${
+                        active
+                          ? "bg-zinc-100 text-zinc-950 border-zinc-100"
+                          : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200 hover:border-zinc-600"
+                      }`}
+                    >
+                      {t.label} <span className="ml-1 font-mono">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          }
+        >
+          {!newsData && <p className="text-xs text-zinc-500">Loading news…</p>}
+          {newsData && (newsData[newsTab] || []).length === 0 && (
+            <p className="text-xs text-zinc-600">No {TABS.find((t) => t.key === newsTab)?.label.toLowerCase()} news at the moment.</p>
+          )}
+          {newsData && (newsData[newsTab] || []).length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[420px] overflow-auto pr-1">
+              {(newsData[newsTab] || []).map((n, i) => (
                 <a
-                  key={i}
+                  key={`${newsTab}-${i}`}
                   href={n.url}
                   target="_blank"
                   rel="noreferrer"
@@ -184,7 +226,10 @@ export default function StockDetails({ symbol, overview }) {
                   </div>
                   <h4 className="text-xs text-zinc-200 font-medium leading-snug mb-1 group-hover:text-blue-300">{n.title}</h4>
                   {n.summary && <p className="text-[11px] text-zinc-500 line-clamp-2 leading-snug">{n.summary}</p>}
-                  {n.publishedAt && <p className="text-[9px] text-zinc-600 mt-1 font-mono">{n.publishedAt}</p>}
+                  <div className="flex items-center justify-between mt-1">
+                    <span className={`text-[9px] tracking-widest uppercase ${sentimentColor(n.sentimentLabel)}`}>{n.sentimentLabel || "—"}</span>
+                    {n.publishedAt && <p className="text-[9px] text-zinc-600 font-mono">{n.publishedAt}</p>}
+                  </div>
                 </a>
               ))}
             </div>
