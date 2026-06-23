@@ -3,7 +3,7 @@ import asyncio
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, UploadFile, File
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -683,6 +683,34 @@ async def external_scrape(symbol: str):
     _cache_set(key, result)
     return result
 
+
+
+@api_router.post("/stock/{symbol}/upload-source")
+async def upload_source(symbol: str, file: UploadFile = File(...)):
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    
+    try:
+        from pypdf import PdfReader
+        import io
+        content = await file.read()
+        reader = PdfReader(io.BytesIO(content))
+        text_parts = []
+        for page in reader.pages:
+            try:
+                t = page.extract_text() or ""
+            except Exception:
+                t = ""
+            text_parts.append(t)
+        full_text = "\n".join(text_parts)
+        
+        # Call AI service
+        import ai_service as ais
+        data = await ais.extract_ratios_from_source(full_text)
+        return data
+    except Exception as e:
+        logger.error(f"Source upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 app.include_router(api_router)

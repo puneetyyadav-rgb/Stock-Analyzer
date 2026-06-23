@@ -23,6 +23,7 @@ import PdfExportButton from "../components/PdfExportButton";
 import MLPredictor from "../components/MLPredictor";
 import PatternsPanel from "../components/PatternsPanel";
 import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
+import RatioAnalysisPanel from "../components/RatioAnalysisPanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -219,6 +220,11 @@ export default function Dashboard() {
               {/* Dedicated Sectoral Analysis & News */}
               <div className="mb-3">
                 <SectorAnalysisPanel symbol={overview.symbol} />
+              </div>
+
+              {/* Custom Ratio Analysis from Source */}
+              <div className="mb-3">
+                <RatioAnalysisPanel symbol={overview.symbol} />
               </div>
 
               {/* FII/DII + Concalls */}

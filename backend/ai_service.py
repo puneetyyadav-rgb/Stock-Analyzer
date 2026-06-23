@@ -471,3 +471,39 @@ Tickertape: {json.dumps(tickertape, default=str)}
     except Exception as e:
         logger.error(f"AI external verdict error: {e}")
         return {"error": str(e)}
+
+
+async def extract_ratios_from_source(text: str) -> dict:
+    """Intelligently parse source material text to extract ratios and competitor comparisons."""
+    prompt = f"""You are a specialized financial AI extracting ratios and peer comparison data from raw PDF text of a financial report.
+Extract the key financial ratios of the primary company. Also extract any peer comparison grid/table available in the text.
+If you find extra notable fields (e.g., target price, estimates), include them in 'other_fields'.
+Output STRICT JSON only. Do not use markdown blocks like ```json.
+Schema:
+{{
+  "company_ratios": [
+     {{"name": "string", "value": "string/number", "unit": "string/null"}}
+  ],
+  "competitor_comparison": {{
+     "metrics": ["string", "string"],
+     "companies": [
+        {{
+           "name": "string",
+           "ratios": {{"metric_name": "value"}}
+        }}
+     ]
+  }},
+  "other_fields": {{"key": "value"}}
+}}
+
+Raw text (truncated to avoid limits):
+{text[:30000]}
+"""
+    try:
+        res = await asyncio.to_thread(sync_generate_verdict, prompt)
+        res = res.strip()
+        result = json.loads(res)
+        return result
+    except Exception as e:
+        logger.error(f"AI extract ratios error: {e}")
+        return {"error": str(e)}
