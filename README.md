@@ -39,6 +39,7 @@ KOTAK_PASSWORD="your_password"
 
 # AI Credentials
 GEMINI_API_KEY="your_google_gemini_key"
+GEMINI_API_KEY_PDF="your_second_gemini_key_for_heavy_pdfs" (Optional)
 ```
 
 Start the FastAPI server:
@@ -65,3 +66,64 @@ Do not commit your `.env` file! The `.gitignore` is pre-configured to ignore all
 
 ## 🤝 Contributing
 Feel free to open issues or submit pull requests for new feature integrations.
+
+## 📂 Folder Structure
+
+```text
+|-- backend
+|   |-- ai_service.py
+|   |-- concall_service.py
+|   |-- events_service.py
+|   |-- extra_service.py
+|   |-- kotak_service.py
+|   |-- legal_service.py
+|   |-- ml_service.py
+|   |-- pattern_service.py
+|   |-- regime_service.py
+|   |-- scraper_service.py
+|   |-- sector_service.py
+|   |-- server.py
+|   |-- social_service.py
+|   |-- stock_service.py
+|   |-- twitter_service.py
+|   `-- requirements.txt
+|-- frontend
+|   |-- package.json
+|   |-- public
+|   |   `-- index.html
+|   `-- src
+|       |-- App.js
+|       |-- index.js
+|       |-- index.css
+|       |-- components
+|       |   |-- AINewsAnalysis.jsx
+|       |   |-- AIRatioAnalysisPanel.jsx
+|       |   |-- AITechnicalAnalysis.jsx
+|       |   |-- AIVerdict.jsx
+|       |   |-- ConcallsPanel.jsx
+|       |   |-- EventsPanel.jsx
+|       |   |-- FiiDiiPanel.jsx
+|       |   |-- InsiderPanel.jsx
+|       |   |-- LegalPanel.jsx
+|       |   |-- MLPredictor.jsx
+|       |   |-- MacroPanel.jsx
+|       |   |-- MarketDepthPanel.jsx
+|       |   |-- NewsSplitPanel.jsx
+|       |   |-- OptionsPanel.jsx
+|       |   |-- PatternsPanel.jsx
+|       |   |-- PeersPanel.jsx
+|       |   |-- RatioAnalysisPanel.jsx
+|       |   |-- RedFlagsPanel.jsx
+|       |   |-- SectorAnalysisPanel.jsx
+|       |   |-- SocialPanel.jsx
+|       |   |-- StockChart.jsx
+|       |   |-- WatchlistPanel.jsx
+|       |   `-- ui/
+|       |-- lib
+|       |   |-- api.js
+|       |   |-- format.js
+|       |   `-- utils.js
+|       `-- pages
+|           `-- Dashboard.jsx
+`-- README.md
+```
