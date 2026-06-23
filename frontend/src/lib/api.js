@@ -18,6 +18,7 @@ export const getScreener = (sym) => client.get(`/stock/${sym}/screener`).then((r
 export const getAIVerdict = (sym) => client.post(`/stock/${sym}/ai-verdict`).then((r) => r.data);
 export const getAITechnical = (sym) => client.post(`/stock/${sym}/ai-technical`).then((r) => r.data);
 export const getAINews = (sym) => client.post(`/stock/${sym}/ai-news`).then((r) => r.data);
+export const getAIRatios = (sym, force = false, pdfData = null) => client.post(`/stock/${sym}/ai-ratios`, pdfData, { params: { force } }).then((r) => r.data);
 export const getMacro = () => client.get(`/macro`).then((r) => r.data);
 export const getSectors = () => client.get(`/sectors`).then((r) => r.data);
 export const getMarketDepth = (sym) => client.get(`/stock/${sym}/depth`).then((r) => r.data);
@@ -33,6 +34,6 @@ export const uploadSourceMaterial = (sym, file) => {
   formData.append("file", file);
   return client.post(`/stock/${sym}/upload-source`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
-    timeout: 180000
+    timeout: 600000
   }).then((r) => r.data);
 };

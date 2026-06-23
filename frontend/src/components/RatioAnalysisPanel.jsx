@@ -1,13 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Panel } from "./Panel";
 import { uploadSourceMaterial } from "../lib/api";
 import { UploadCloud, Loader2, CheckCircle2 } from "lucide-react";
 
-export default function RatioAnalysisPanel({ symbol }) {
+export default function RatioAnalysisPanel({ symbol, onAnalyzed }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!symbol) return;
+    const cached = localStorage.getItem(`ratioAnalysis_${symbol}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setData(parsed);
+        if (onAnalyzed) onAnalyzed(parsed);
+      } catch (e) {
+        // invalid cache
+      }
+    } else {
+      setData(null);
+      setFile(null);
+      if (onAnalyzed) onAnalyzed(null);
+    }
+  }, [symbol]);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -22,6 +40,8 @@ export default function RatioAnalysisPanel({ symbol }) {
     try {
       const res = await uploadSourceMaterial(symbol, file);
       setData(res);
+      localStorage.setItem(`ratioAnalysis_${symbol}`, JSON.stringify(res));
+      if (onAnalyzed) onAnalyzed(res);
     } catch (err) {
       setError(err.response?.data?.detail || err.message || "Failed to upload and parse source material");
     } finally {
@@ -75,7 +95,12 @@ export default function RatioAnalysisPanel({ symbol }) {
               <span className="text-sm font-medium text-zinc-200">Analysis Complete</span>
             </div>
             <button 
-              onClick={() => { setData(null); setFile(null); }}
+              onClick={() => { 
+                setData(null); 
+                setFile(null); 
+                localStorage.removeItem(`ratioAnalysis_${symbol}`);
+                if (onAnalyzed) onAnalyzed(null);
+              }}
               className="text-[10px] tracking-widest uppercase text-zinc-500 hover:text-zinc-300"
             >
               Upload Another
@@ -131,12 +156,36 @@ export default function RatioAnalysisPanel({ symbol }) {
             <div>
               <h4 className="text-[10px] tracking-widest uppercase text-zinc-400 mb-3">Other Extracted Insights</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Object.entries(data.other_fields).map(([k, v], i) => (
-                  <div key={i} className="border border-zinc-800/40 p-2.5">
-                    <div className="text-[10px] text-zinc-500 mb-1 uppercase tracking-wider">{k.replace(/_/g, " ")}</div>
-                    <div className="text-sm text-zinc-300 font-medium">{typeof v === "object" ? JSON.stringify(v) : v}</div>
-                  </div>
-                ))}
+                {Object.entries(data.other_fields).map(([k, v], i) => {
+                  let parsedValue = v;
+                  if (typeof v === "string" && v.trim().startsWith("{")) {
+                    try {
+                      parsedValue = JSON.parse(v);
+                    } catch (e) {
+                      parsedValue = v;
+                    }
+                  }
+                  
+                  return (
+                    <div key={i} className="border border-zinc-800/40 p-3 bg-zinc-900/20">
+                      <div className="text-[10px] text-zinc-500 mb-2 uppercase tracking-wider border-b border-zinc-800/50 pb-1">{k.replace(/_/g, " ")}</div>
+                      <div className="text-sm text-zinc-300 font-medium">
+                        {typeof parsedValue === "object" && parsedValue !== null ? (
+                          <div className="flex flex-col gap-1.5 mt-1">
+                            {Object.entries(parsedValue).map(([subK, subV], subI) => (
+                              <div key={subI} className="flex justify-between items-center text-xs">
+                                <span className="text-zinc-500 capitalize">{subK.replace(/_/g, " ")}</span>
+                                <span className="font-mono text-zinc-300">{typeof subV === "object" ? JSON.stringify(subV) : String(subV)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          String(parsedValue)
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

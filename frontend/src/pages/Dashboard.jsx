@@ -24,6 +24,7 @@ import MLPredictor from "../components/MLPredictor";
 import PatternsPanel from "../components/PatternsPanel";
 import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
 import RatioAnalysisPanel from "../components/RatioAnalysisPanel";
+import AIRatioAnalysisPanel from "../components/AIRatioAnalysisPanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -40,6 +41,7 @@ export default function Dashboard() {
   const [starred, setStarred] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [regime, setRegime] = useState(null);
+  const [pdfData, setPdfData] = useState(null);
 
   useEffect(() => {
     if (!symbol) return;
@@ -47,6 +49,7 @@ export default function Dashboard() {
     setErr(null);
     setOverview(null);
     setRegime(null);
+    setPdfData(null);
     getOverview(symbol)
       .then((d) => {
         setOverview(d);
@@ -211,10 +214,9 @@ export default function Dashboard() {
               {/* AI Analysis Suite */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
                 <AIVerdict symbol={overview.symbol} />
+                <AIRatioAnalysisPanel symbol={overview.symbol} pdfData={pdfData} />
                 <AITechnicalAnalysis symbol={overview.symbol} />
-                <div className="lg:col-span-2">
-                  <AINewsAnalysis symbol={overview.symbol} />
-                </div>
+                <AINewsAnalysis symbol={overview.symbol} />
               </div>
 
               {/* Dedicated Sectoral Analysis & News */}
@@ -224,7 +226,7 @@ export default function Dashboard() {
 
               {/* Custom Ratio Analysis from Source */}
               <div className="mb-3">
-                <RatioAnalysisPanel symbol={overview.symbol} />
+                <RatioAnalysisPanel symbol={overview.symbol} onAnalyzed={setPdfData} />
               </div>
 
               {/* FII/DII + Concalls */}

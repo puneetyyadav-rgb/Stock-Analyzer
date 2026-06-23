@@ -19,13 +19,17 @@ def get_gemini_client():
     key = os.environ.get("GEMINI_API_KEY")
     return genai.Client(api_key=key) if key else None
 
-def sync_generate_verdict(prompt: str) -> str:
-    key = os.environ.get("GEMINI_API_KEY")
+def sync_generate_verdict(prompt: str, use_pdf_key: bool = False) -> str:
+    if use_pdf_key:
+        key = os.environ.get("GEMINI_API_KEY_PDF") or os.environ.get("GEMINI_API_KEY")
+    else:
+        key = os.environ.get("GEMINI_API_KEY")
+        
     if not key:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-3.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -211,7 +215,7 @@ def sync_analyze_options(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-3.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -252,7 +256,7 @@ def sync_generate_technical_analysis(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-3.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -288,7 +292,7 @@ def sync_generate_news_analysis(prompt: str) -> str:
         return ""
     client = genai.Client(api_key=key)
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-3.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -474,8 +478,19 @@ Tickertape: {json.dumps(tickertape, default=str)}
 
 
 async def extract_ratios_from_source(text: str) -> dict:
-    """Intelligently parse source material text to extract ratios and competitor comparisons."""
-    prompt = f"""You are a specialized financial AI extracting ratios and peer comparison data from raw PDF text of a financial report.
+    """Intelligently parse source material text to extract ratios and competitor comparisons in ONE call to save quota."""
+    import time
+    
+    # Take up to 40,000 characters (roughly 10,000 tokens) to save tokens and ensure it fits well
+    truncated_text = text[:40000]
+
+    merged_result = {
+        "company_ratios": [],
+        "competitor_comparison": {"metrics": [], "companies": []},
+        "other_fields": {}
+    }
+
+    prompt = f"""You are a specialized financial AI extracting ratios and peer comparison data from raw PDF text.
 Extract the key financial ratios of the primary company. Also extract any peer comparison grid/table available in the text.
 If you find extra notable fields (e.g., target price, estimates), include them in 'other_fields'.
 Output STRICT JSON only. Do not use markdown blocks like ```json.
@@ -496,14 +511,127 @@ Schema:
   "other_fields": {{"key": "value"}}
 }}
 
-Raw text (truncated to avoid limits):
-{text[:30000]}
+Raw text:
+{truncated_text}
 """
-    try:
-        res = await asyncio.to_thread(sync_generate_verdict, prompt)
-        res = res.strip()
-        result = json.loads(res)
-        return result
-    except Exception as e:
-        logger.error(f"AI extract ratios error: {e}")
-        return {"error": str(e)}
+    max_retries = 3
+    chunk_result = None
+    for attempt in range(max_retries):
+        try:
+            res = await asyncio.to_thread(sync_generate_verdict, prompt, True)
+            res = res.strip()
+            if res.startswith("```json"):
+                res = res[7:]
+            if res.startswith("```"):
+                res = res[3:]
+            if res.endswith("```"):
+                res = res[:-3]
+            res = res.strip()
+            chunk_result = json.loads(res)
+            break
+        except Exception as e:
+            if attempt < max_retries - 1 and ("503" in str(e) or "429" in str(e) or "quota" in str(e).lower()):
+                delay = 3 ** (attempt + 1)
+                logger.warning(f"Hit rate limit (429/503), retrying in {delay}s...")
+                await asyncio.sleep(delay)
+            else:
+                logger.error(f"Parsing error: {e}")
+                break
+
+    if chunk_result:
+        merged_result = chunk_result
+
+    # Ensure keys exist
+    if "company_ratios" not in merged_result:
+        merged_result["company_ratios"] = []
+    if "competitor_comparison" not in merged_result:
+        merged_result["competitor_comparison"] = {"metrics": [], "companies": []}
+    if "other_fields" not in merged_result:
+        merged_result["other_fields"] = {}
+
+    # If absolutely nothing was extracted, return an error
+    if not merged_result["company_ratios"] and not merged_result.get("competitor_comparison", {}).get("companies") and not merged_result["other_fields"]:
+        return {"error": "Failed to extract data. The PDF may not contain readable financial text, or the AI API limit was completely exhausted."}
+
+    return merged_result
+
+RATIO_ANALYZER_PROMPT = """You are a senior equity research analyst specializing in ratio analysis. You read financial ratios the way an experienced analyst does — never one ratio in isolation, always in combination, and always relative to the sector/peers, never against fixed universal thresholds (a P/E of 25 is expensive for a bank, normal for IT, and cheap for a hot growth name — context decides, not the raw number).
+
+DATA YOU WILL RECEIVE:
+- This stock's own ratios (valuation, profitability, leverage, growth — whichever are available; some may be missing, that's expected)
+- Peer/sector average ratios, if provided
+- A list of individual peer companies with their own ratios, if provided
+- Historical values for this stock's own ratios (e.g. last few years), if provided
+
+GROUNDING RULES — do not violate these:
+- Use ONLY the ratios and peer data actually provided. Do not estimate or recall a ratio you weren't given — mark it "N/A" in dataCompleteness instead.
+- Never compare a ratio against a fixed universal "good/bad" number. Always compare against the provided sector/peer data. If no peer data is provided for a given ratio, say so explicitly rather than falling back to a generic rule of thumb.
+- Read ratios in combination, not isolation — this is the entire point of your job. A single ratio stated alone is not analysis.
+- Plain text only — no markdown, no asterisks.
+- No "Buy/Sell" instruction. Output a view and reasoning, not a directive.
+- Qualitative confidence only (High/Medium/Low) — never invent a specific target price or exact percentage upside/downside.
+
+HOW TO READ RATIOS IN COMBINATION (apply these checks wherever the underlying data is available; skip silently if the needed ratios for a given check are missing):
+1. RETURNS vs. LEVERAGE: A high ROE/ROCE alongside high debt-to-equity often means returns are leverage-amplified, not purely operational quality. Flag this combination explicitly — don't credit "strong ROE" without checking what's funding it.
+2. VALUATION vs. GROWTH: A high P/E is not automatically "expensive" if revenue/earnings growth is also high relative to peers (implied PEG logic) — but a high P/E alongside flat or declining growth, especially when peers trade cheaper for similar growth, is a real overvaluation flag.
+3. MARGIN TREND vs. GROWTH TREND: Revenue growing while margins are flat or improving suggests genuine operating leverage; revenue growing while margins are shrinking suggests growth bought at a cost (discounting, rising input costs, weak pricing power) — flag which pattern is present if historical data allows it.
+4. SOLVENCY CHECK: Low or declining interest coverage alongside rising debt-to-equity is a combination worth flagging on its own regardless of how other ratios look — this is a risk check, not a valuation call.
+5. BOOK VALUE vs. EARNINGS VALUATION DIVERGENCE: If P/E and P/B send different signals (e.g. cheap on earnings, expensive on book, or vice versa), say so explicitly rather than picking one — this divergence itself is often informative (e.g. asset-heavy vs. asset-light business model differences).
+
+Output STRICT JSON only. No markdown fences, no commentary outside JSON.
+Schema:
+{
+  "dataCompleteness": {"ratiosAvailable": ["..."], "ratiosMissing": ["..."], "peerDataAvailable": true | false},
+  "categoryReads": {
+    "valuation": {"verdict": "Cheap" | "Fair" | "Expensive" | "Unclear - insufficient peer data", "vsSectorReasoning": "explicitly reference the peer/sector numbers used"},
+    "profitability": {"verdict": "Strong" | "Average" | "Weak" | "Unclear - insufficient peer data", "vsSectorReasoning": "..."},
+    "leverage": {"verdict": "Conservative" | "Moderate" | "Aggressive" | "Unclear - insufficient peer data", "vsSectorReasoning": "..."},
+    "growth": {"verdict": "Above peers" | "In line" | "Below peers" | "Unclear - insufficient peer data", "vsSectorReasoning": "..."}
+  },
+  "crossRatioInsights": [
+    {"ratiosInvolved": ["...", "..."], "pattern": "which of the 5 combination checks above this matches, or 'Other'", "interpretation": "plain-language explanation of what this combination actually means for the business"}
+  ],
+  "redFlagCombos": [
+    {"ratiosInvolved": ["...", "..."], "severity": "High" | "Medium" | "Low", "explanation": "..."}
+  ],
+  "peerStanding": {
+    "position": "Above peer average" | "In line with peers" | "Below peer average" | "Insufficient peer data",
+    "strongestRelativeMetric": "the one ratio where this stock most clearly beats peers, or N/A",
+    "weakestRelativeMetric": "the one ratio where this stock most clearly lags peers, or N/A"
+  },
+  "synthesis": {
+    "view": "Bullish" | "Bearish" | "Neutral" | "Mixed",
+    "conviction": "High" | "Medium" | "Low",
+    "narrative": "3-5 sentences written the way an analyst actually talks — connect the categories to each other explicitly (e.g. 'cheap on earnings but that's likely because growth has slowed relative to peers, not a clean bargain'), do not just restate the category verdicts as a list",
+    "watchItem": "the one ratio or combination most likely to change this view if it shifts next quarter"
+  }
+}"""
+
+async def generate_ratio_analysis(stock_data: dict) -> dict:
+    client = get_gemini_client()
+    if not client:
+        return {"error": "GEMINI_API_KEY not configured"}
+
+    prompt = (
+        f"{RATIO_ANALYZER_PROMPT}\n\n"
+        f"Analyze this ratio data and provide the JSON response:\n"
+        f"```json\n{json.dumps(stock_data, default=str)}\n```"
+    )
+
+    import time
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            res = await asyncio.to_thread(sync_generate_verdict, prompt)
+            res = res.strip()
+            result = json.loads(res)
+            result["disclaimer"] = DISCLAIMER_TEXT
+            return result
+        except Exception as e:
+            if attempt < max_retries - 1 and "503" in str(e):
+                logger.warning(f"AI ratio analysis 503 error, retrying in {2**(attempt+1)} seconds...")
+                await asyncio.sleep(2 ** (attempt + 1))
+            else:
+                logger.error(f"AI ratio analysis error: {e}")
+                return {"error": str(e)}
+

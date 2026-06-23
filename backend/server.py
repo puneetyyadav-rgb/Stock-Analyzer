@@ -3,7 +3,7 @@ import asyncio
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Body
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -183,6 +183,43 @@ async def full(symbol: str):
         return cached
     data = await asyncio.to_thread(ss.get_full_analysis, symbol)
     _cache_set(key, data)
+    return data
+
+@api_router.post("/stock/{symbol}/ai-ratios")
+async def ai_ratios(symbol: str, force: bool = False, pdf_data: dict = Body(None)):
+    cache_key = f"ai_ratios:{symbol}"
+    # If pdf_data is provided, don't use the simple cache key because the input is unique
+    if pdf_data:
+        cache_key = f"ai_ratios_custom:{symbol}:{hash(str(pdf_data))}"
+        
+    if not force:
+        cached = _cache_get(cache_key)
+        if cached:
+            return cached
+
+    (
+        screener_data,
+        peers_data,
+        overview_data
+    ) = await asyncio.gather(
+        screener(symbol),
+        peers(symbol),
+        asyncio.to_thread(ss.get_overview, symbol)
+    )
+
+    payload = {
+        "overview": overview_data,
+        "screener": screener_data,
+        "peers": peers_data
+    }
+    
+    if pdf_data:
+        payload["pdf_extracted_data"] = pdf_data
+    
+    import ai_service as ais
+    data = await ais.generate_ratio_analysis(payload)
+    if data and "error" not in data:
+        _cache_set(cache_key, data)
     return data
 
 
@@ -707,7 +744,13 @@ async def upload_source(symbol: str, file: UploadFile = File(...)):
         # Call AI service
         import ai_service as ais
         data = await ais.extract_ratios_from_source(full_text)
+        
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+            
         return data
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Source upload error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
