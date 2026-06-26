@@ -29,90 +29,76 @@ def _safe_num(text: str) -> Optional[float]:
     text = text.replace(",", "")
     m = re.search(r"(-?[\d.]+)", text)
     return float(m.group(1)) if m else None
+import sys
+import os
+
+vendor_path = os.path.join(os.path.dirname(__file__), "vendor", "scrapling")
+if vendor_path not in sys.path:
+    sys.path.append(vendor_path)
+
+from scrapling import Fetcher
 
 def _scrape_aftermarkets_sync(symbol: str) -> dict:
-    import sys
-    import asyncio
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    
     clean = _strip_symbol(symbol)
     url = f"https://aftermarkets.in/stock/{clean}"
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=LAUNCH_ARGS)
-            ctx = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 900},
-                locale="en-IN",
-                timezone_id="Asia/Kolkata",
-            )
-            page = ctx.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=6000)
-            page.wait_for_timeout(1500)
-            sections = page.eval_on_selector_all(
-                "section, div",
-                """els => els.slice(0, 400).map(e => {
-                     const t = (e.innerText || '').replace(/\\s+/g,' ').trim();
-                     return (t.length > 40 && t.length < 1200) ? t : null;
-                   }).filter(Boolean)"""
-            )
-            page_text = " ".join(sections)
-            result = {"source": "Aftermarkets", "url": url, "available": True}
+        page = Fetcher.get(url)
+        page_text = page.get_all_text()
+        result = {"source": "Aftermarkets", "url": url, "available": True}
 
-            m = re.search(r"(?:Market view[^•]*?)(No clear market view|Bullish|Bearish|Mixed|Cautious)", page_text, re.I)
+        m = re.search(r"(?:Market view[^•]*?)(No clear market view|Bullish|Bearish|Mixed|Cautious)", page_text, re.I)
+        if m:
+            result["marketView"] = m.group(1).strip()
+        elif "No clear market view" in page_text:
+            result["marketView"] = "No clear market view"
+
+        safety = {}
+        for label in ["Promoter pledge", "ASM list", "GSM list", "F&O ban", "Default probability"]:
+            m = re.search(rf"{re.escape(label)}\s+([A-Za-z][A-Za-z\s]+?)(?=\s+(?:ASM list|GSM list|F&O ban|Default probability|Promoter pledge|business score|VALUATION|GROWTH|RETURNS|FINANCIAL|Financials|$))", page_text)
             if m:
-                result["marketView"] = m.group(1).strip()
-            elif "No clear market view" in page_text:
-                result["marketView"] = "No clear market view"
+                safety[label] = m.group(1).strip()[:30]
+        if safety:
+            result["safetyChecks"] = safety
 
-            safety = {}
-            for label in ["Promoter pledge", "ASM list", "GSM list", "F&O ban", "Default probability"]:
-                m = re.search(rf"{re.escape(label)}\s+([A-Za-z][A-Za-z\s]+?)(?=\s+(?:ASM list|GSM list|F&O ban|Default probability|Promoter pledge|business score|VALUATION|GROWTH|RETURNS|FINANCIAL|Financials|$))", page_text)
-                if m:
-                    safety[label] = m.group(1).strip()[:30]
-            if safety:
-                result["safetyChecks"] = safety
+        m = re.search(r"(\d{1,3})\s+business score, of 100", page_text)
+        if m:
+            result["businessScore"] = int(m.group(1))
 
-            m = re.search(r"(\d{1,3})\s+business score, of 100", page_text)
+        scores = {}
+        for key, label in [
+            ("VALUATION", "valuation"),
+            ("GROWTH", "growth"),
+            ("RETURNS & MARGINS", "returnsMargins"),
+            ("FINANCIAL HEALTH", "financialHealth"),
+        ]:
+            m = re.search(rf"{key}\s+([A-Z][A-Z\s&-]+?)\s+(\d{{1,3}})\s+([^✦]+?)(?=\s+(?:VALUATION|GROWTH|RETURNS|FINANCIAL|Financials|Concalls|$))", page_text)
             if m:
-                result["businessScore"] = int(m.group(1))
-
-            scores = {}
-            for key, label in [
-                ("VALUATION", "valuation"),
-                ("GROWTH", "growth"),
-                ("RETURNS & MARGINS", "returnsMargins"),
-                ("FINANCIAL HEALTH", "financialHealth"),
-            ]:
-                m = re.search(rf"{key}\s+([A-Z][A-Z\s&-]+?)\s+(\d{{1,3}})\s+([^✦]+?)(?=\s+(?:VALUATION|GROWTH|RETURNS|FINANCIAL|Financials|Concalls|$))", page_text)
-                if m:
-                    scores[label] = {
-                        "rating": m.group(1).strip(),
-                        "score": int(m.group(2)),
-                        "description": m.group(3).strip()[:140],
-                    }
-            if scores:
-                result["subScores"] = scores
-
-            m = re.search(r"₹([\d,.]+)\s*[▴▾]\s*([+-]?[\d.]+%)\s*([+-]?₹?[\d.]+)\s*today", page_text)
-            if m:
-                result["livePrice"] = {
-                    "price": _safe_num(m.group(1)),
-                    "changePercent": _safe_pct(m.group(2)),
-                    "change": _safe_num(m.group(3)),
+                scores[label] = {
+                    "rating": m.group(1).strip(),
+                    "score": int(m.group(2)),
+                    "description": m.group(3).strip()[:140],
                 }
+        if scores:
+            result["subScores"] = scores
 
-            m = re.search(r"Day low\s*₹([\d,.]+)\s*Day high\s*₹([\d,.]+)", page_text)
-            if m:
-                result["dayRange"] = {"low": _safe_num(m.group(1)), "high": _safe_num(m.group(2))}
+        m = re.search(r"₹([\d,.]+)\s*[▴▾]\s*([+-]?[\d.]+%)\s*([+-]?₹?[\d.]+)\s*today", page_text)
+        if m:
+            result["livePrice"] = {
+                "price": _safe_num(m.group(1)),
+                "changePercent": _safe_pct(m.group(2)),
+                "change": _safe_num(m.group(3)),
+            }
 
-            m = re.search(r"NSE:\s*\w+\s+([^•]+?)\s+₹[\d,]+\s*Cr\s+[“\"]([^”\"]+)[”\"]", page_text)
-            if m:
-                result["sectorTag"] = m.group(1).strip()[:80]
-                result["editorialQuote"] = m.group(2).strip()[:200]
+        m = re.search(r"Day low\s*₹([\d,.]+)\s*Day high\s*₹([\d,.]+)", page_text)
+        if m:
+            result["dayRange"] = {"low": _safe_num(m.group(1)), "high": _safe_num(m.group(2))}
 
-            return result
+        m = re.search(r"NSE:\s*\w+\s+([^•]+?)\s+₹[\d,]+\s*Cr\s+[“\"]([^”\"]+)[”\"]", page_text)
+        if m:
+            result["sectorTag"] = m.group(1).strip()[:80]
+            result["editorialQuote"] = m.group(2).strip()[:200]
+
+        return result
     except Exception as e:
         logger.error(f"aftermarkets scrape error: {e}")
         return {"available": False, "error": str(e)[:200], "url": url}
@@ -122,46 +108,59 @@ async def scrape_aftermarkets(symbol: str) -> dict:
     return await asyncio.to_thread(_scrape_aftermarkets_sync, symbol)
 
 
+def _extract_metric(text: str, title: str):
+    m = re.search(rf'"title":\s*"{re.escape(title)}",\s*"value":\s*([0-9\.]+)', text, re.I)
+    if not m:
+        m = re.search(rf'\b{re.escape(title)}\b[^0-9\n]{{0,30}}?([0-9\.]+)', text)
+    return m.group(1) if m else None
+
 def _scrape_trendlyne_sync(symbol: str) -> dict:
-    import sys
-    import asyncio
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-        
     clean = _strip_symbol(symbol)
     url = f"https://trendlyne.com/equity/{clean}/forecasts/"
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=LAUNCH_ARGS)
-            ctx = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 900},
-                locale="en-IN",
-                timezone_id="Asia/Kolkata",
-            )
-            page = ctx.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=6000)
-            page.wait_for_timeout(1500)
-            
-            text = page.evaluate("document.body.innerText")
-            
-            pe_match = re.search(r"PE TTM[^\d]*([0-9\.]+)", text)
-            roe_match = re.search(r"ROE[^\d]*([0-9\.]+)", text)
-            roce_match = re.search(r"ROCE[^\d]*([0-9\.]+)", text)
-            pb_match = re.search(r"PB TTM[^\d]*([0-9\.]+)", text)
-            eps_match = re.search(r"EPS[^\d]*([0-9\.]+)", text)
-            
-            return {
-                "available": True,
-                "url": url,
-                "fundamentals": {
-                    "PE_Ratio": pe_match.group(1) if pe_match else None,
-                    "PB_Ratio": pb_match.group(1) if pb_match else None,
-                    "ROE": roe_match.group(1) if roe_match else None,
-                    "ROCE": roce_match.group(1) if roce_match else None,
-                    "EPS": eps_match.group(1) if eps_match else None
-                }
-            }
+        page = Fetcher.get(url)
+        text = page.html_content
+
+        pe_val = _extract_metric(text, "PE TTM")
+        roe_val = _extract_metric(text, "ROE")
+        roce_val = _extract_metric(text, "ROCE")
+        pb_val = _extract_metric(text, "PB TTM")
+        eps_val = _extract_metric(text, "EPS TTM") or _extract_metric(text, "EPS")
+
+        swot_data = {"summary": None, "strengths": [], "weaknesses": [], "opportunities": [], "threats": []}
+        try:
+            links = page.css("a[href*='swot-buy-or-sell']")
+            if links:
+                swot_url = links[0].attrib.get("href")
+                swot_page = Fetcher.get(swot_url)
+                swot_text = swot_page.get_all_text()
+
+                summary_m = re.search(r"has\s+(\d+\s+Strengths?,\s+\d+\s+Weaknesses?,\s+\d+\s+Opportunities?\s+and\s+\d+\s+Threats?)", swot_text, re.I)
+                if summary_m:
+                    swot_data["summary"] = summary_m.group(1).strip()
+
+                swot_data["strengths"] = [" ".join(it.get_all_text().split()) for it in swot_page.css("#tag_strengths .swot_h3") if it.get_all_text().strip()]
+                swot_data["weaknesses"] = [" ".join(it.get_all_text().split()) for it in swot_page.css("#tag_weakness .swot_h3") if it.get_all_text().strip()]
+                swot_data["opportunities"] = [" ".join(it.get_all_text().split()) for it in swot_page.css("#tag_opportunity .swot_h3") if it.get_all_text().strip()]
+                swot_data["threats"] = [" ".join(it.get_all_text().split()) for it in swot_page.css("#tag_threats .swot_h3") if it.get_all_text().strip()]
+                
+                if not swot_data["summary"]:
+                    swot_data["summary"] = f"{len(swot_data['strengths'])} Strengths, {len(swot_data['weaknesses'])} Weaknesses, {len(swot_data['opportunities'])} Opportunities, {len(swot_data['threats'])} Threats"
+        except Exception as se:
+            logger.warning(f"trendlyne swot scrape error: {se}")
+
+        return {
+            "available": True,
+            "url": url,
+            "fundamentals": {
+                "PE_Ratio": pe_val,
+                "PB_Ratio": pb_val,
+                "ROE": roe_val,
+                "ROCE": roce_val,
+                "EPS": eps_val
+            },
+            "swot": swot_data
+        }
     except Exception as e:
         logger.error(f"trendlyne scrape error: {e}")
         return {"available": False, "error": str(e)[:200]}

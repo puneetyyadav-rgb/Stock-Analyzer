@@ -40,6 +40,11 @@ const SUGGESTIONS = {
     "How are operating margins trending?",
     "Summarize the key valuation ratios",
   ],
+  "Trendlyne SWOT Breakdown": [
+    "What are the most critical competitive strengths?",
+    "What valuation or debt risks are highlighted in weaknesses?",
+    "Summarize the growth opportunities and market threats",
+  ],
 };
 
 const DEFAULT_SUGGESTIONS = [

@@ -147,14 +147,66 @@ export default function SectorAnalysisPanel({ symbol }) {
             <div className="border-t border-zinc-800/40 pt-3 mt-3">
                <h4 className="text-[10px] tracking-widest uppercase text-orange-400 mb-2 font-semibold flex items-center gap-1">Trendlyne Fundamentals <span className="px-1.5 py-0.5 text-[8px] bg-orange-950/50 text-orange-400 border border-orange-900 rounded-sm">Live Scrape</span></h4>
                {extData.trendlyne?.available ? (
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                   {Object.entries(extData.trendlyne.fundamentals || {}).map(([k, v]) => (
-                      <div key={k} className="border border-zinc-800/40 p-2 bg-zinc-900/20">
-                        <div className="text-[9px] tracking-widest uppercase text-zinc-500 mb-0.5">{k.replace(/_/g, ' ')}</div>
-                        <div className="text-sm font-mono text-zinc-200">{v !== null ? v : "—"}</div>
-                      </div>
-                   ))}
-                 </div>
+                 <>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                     {Object.entries(extData.trendlyne.fundamentals || {}).map(([k, v]) => (
+                        <div key={k} className="border border-zinc-800/40 p-2 bg-zinc-900/20">
+                          <div className="text-[9px] tracking-widest uppercase text-zinc-500 mb-0.5">{k.replace(/_/g, ' ')}</div>
+                          <div className="text-sm font-mono text-zinc-200">{v !== null ? v : "—"}</div>
+                        </div>
+                     ))}
+                   </div>
+                   {extData.trendlyne?.swot && (
+                     <div className="mt-3 p-3 border border-zinc-800/80 bg-zinc-950/60 rounded">
+                       <div className="text-[10px] tracking-widest uppercase text-amber-400 font-semibold mb-2">
+                         Institutional SWOT Diagnosis {extData.trendlyne.swot.summary && `· ${extData.trendlyne.swot.summary}`}
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                         {extData.trendlyne.swot.strengths?.length > 0 && (
+                           <div className="border-l-2 border-emerald-500 pl-2.5">
+                             <div className="text-[9px] uppercase tracking-widest text-emerald-400 font-medium mb-1">
+                               Strengths ({extData.trendlyne.swot.strengths.length})
+                             </div>
+                             <ul className="text-xs text-zinc-300 space-y-1 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                               {extData.trendlyne.swot.strengths.map((s, i) => <li key={i} className="leading-snug">• {s}</li>)}
+                             </ul>
+                           </div>
+                         )}
+                         {extData.trendlyne.swot.weaknesses?.length > 0 && (
+                           <div className="border-l-2 border-red-500 pl-2.5">
+                             <div className="text-[9px] uppercase tracking-widest text-red-400 font-medium mb-1">
+                               Weaknesses ({extData.trendlyne.swot.weaknesses.length})
+                             </div>
+                             <ul className="text-xs text-zinc-300 space-y-1 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                               {extData.trendlyne.swot.weaknesses.map((w, i) => <li key={i} className="leading-snug">• {w}</li>)}
+                             </ul>
+                           </div>
+                         )}
+                         {extData.trendlyne.swot.opportunities?.length > 0 && (
+                           <div className="border-l-2 border-blue-500 pl-2.5">
+                             <div className="text-[9px] uppercase tracking-widest text-blue-400 font-medium mb-1">
+                               Opportunities ({extData.trendlyne.swot.opportunities.length})
+                             </div>
+                             <ul className="text-xs text-zinc-300 space-y-1 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                               {extData.trendlyne.swot.opportunities.map((o, i) => <li key={i} className="leading-snug">• {o}</li>)}
+                             </ul>
+                           </div>
+                         )}
+                         {extData.trendlyne.swot.threats?.length > 0 && (
+                           <div className="border-l-2 border-amber-500 pl-2.5">
+                             <div className="text-[9px] uppercase tracking-widest text-amber-400 font-medium mb-1">
+                               Threats ({extData.trendlyne.swot.threats.length})
+                             </div>
+                             <ul className="text-xs text-zinc-300 space-y-1 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                               {extData.trendlyne.swot.threats.map((t, i) => <li key={i} className="leading-snug">• {t}</li>)}
+                             </ul>
+                           </div>
+                         )}
+                       </div>
+                       <SourceQA symbol={symbol} sourceName="Trendlyne SWOT Breakdown" data={extData.trendlyne.swot} />
+                     </div>
+                   )}
+                 </>
                ) : (
                  <p className="text-xs text-zinc-500">{extData.trendlyne?.reason || extData.trendlyne?.error || "Trendlyne data unavailable."}</p>
                )}
