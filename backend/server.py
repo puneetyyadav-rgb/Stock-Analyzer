@@ -764,6 +764,19 @@ async def upload_source(symbol: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/stock/{symbol}/ask-source")
+async def ask_source(symbol: str, payload: dict):
+    source_name = payload.get("sourceName", "Unknown")
+    source_data = payload.get("sourceData", {})
+    question = payload.get("question", "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="question is required")
+    result = await ai.ask_source_qa(source_name, source_data, question)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
 app.include_router(api_router)
 
 app.add_middleware(

@@ -27,6 +27,7 @@ Schema:
   "sentimentLabel": "Strongly Bullish" | "Bullish" | "Cautious" | "Neutral" | "Bearish",
   "managementTone": "1-2 sentence assessment of management confidence/tone",
   "verdict": "1-2 sentence overall takeaway",
+  "futureConclusion": "2-3 rigorous sentences concluding the company's 2-3 year fundamental future outlook. SPECIFIC DEDUCTION INSTRUCTIONS: You must NOT write general fluff. To derive this conclusion, explicitly cross-examine: (1) whether stated forward revenue Guidance is concretely backed by Capex execution plans or new order inflows, (2) whether operating margins are structurally expanding or facing cost headwinds, and (3) whether analyst Q&A reveals unaddressed risks that contradict management's bullish tone.",
   "keyMetricsMentioned": {"revenue": "string", "margins": "string", "growth": "string", "other": "string"}
 }"""
 
@@ -47,6 +48,7 @@ Schema is same as transcript schema:
   "sentimentLabel": "...",
   "managementTone": "1-2 sentences",
   "verdict": "1-2 sentence overall takeaway prefixed with '[INDIRECT — synthesized from news/Screener]'",
+  "futureConclusion": "2-3 rigorous sentences concluding the company's future outlook. SPECIFIC DEDUCTION INSTRUCTIONS: Derive this strictly by synthesizing whether Screener pros/cons and recent headline catalysts indicate sustainable market share expansion versus deteriorating financial health.",
   "keyMetricsMentioned": {"revenue": "...", "margins": "...", "growth": "...", "other": "..."}
 }"""
 
@@ -65,6 +67,8 @@ async def summarize_alternative(symbol: str, date_str: str, context: dict) -> di
         text = await asyncio.to_thread(sync_generate_concall, prompt)
         text = text.strip()
         result = json.loads(text)
+        if isinstance(result, list):
+            result = result[0] if result else {}
         result["source"] = "alternative"
         return result
     except Exception as e:
@@ -87,6 +91,8 @@ async def summarize_concall(symbol: str, transcript_text: str, date_str: str) ->
         text = await asyncio.to_thread(sync_generate_concall, prompt)
         text = text.strip()
         result = json.loads(text)
+        if isinstance(result, list):
+            result = result[0] if result else {}
         result["source"] = "transcript"
         return result
     except Exception as e:

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { Scale, ExternalLink, Loader2 } from "lucide-react";
 import axios from "axios";
+import SourceQA from "./SourceQA";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -68,6 +69,7 @@ export default function LegalPanel({ symbol }) {
           </p>
         </>
       )}
+      <SourceQA symbol={symbol} sourceName="SEBI & Legal Tracker" data={data} />
     </Panel>
   );
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import axios from "axios";
 import { fmtNum, fmtBigNum } from "../lib/format";
+import SourceQA from "./SourceQA";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -103,6 +104,7 @@ export default function InsiderPanel({ symbol }) {
           </table>
         </div>
       )}
+      <SourceQA symbol={symbol} sourceName="Insider & Promoter Pledging" data={{ insiderTransactions: items, externalData: extData }} />
     </Panel>
   );
 }

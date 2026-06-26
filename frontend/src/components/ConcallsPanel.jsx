@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { Sparkles, Loader2, ExternalLink, FileText, Presentation, Youtube } from "lucide-react";
 import axios from "axios";
+import SourceQA from "./SourceQA";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -120,6 +121,12 @@ export default function ConcallsPanel({ symbol }) {
                         <span className="uppercase tracking-widest">Tone:</span> {summary.managementTone}
                       </p>
                     )}
+                    {summary.futureConclusion && (
+                      <div className="mt-2.5 p-2.5 bg-emerald-950/20 border border-emerald-800/40 rounded-sm">
+                        <h5 className="text-[9px] tracking-widest uppercase text-emerald-400 mb-1 font-semibold">Future Outlook Conclusion</h5>
+                        <p className="text-[11px] leading-snug text-zinc-200">{summary.futureConclusion}</p>
+                      </div>
+                    )}
                   </div>
                 )}
                 {summary?.error && (
@@ -130,6 +137,7 @@ export default function ConcallsPanel({ symbol }) {
           })}
         </div>
       )}
+      <SourceQA symbol={symbol} sourceName="Concalls & Management Commentary" data={summaries} />
     </Panel>
   );
 }

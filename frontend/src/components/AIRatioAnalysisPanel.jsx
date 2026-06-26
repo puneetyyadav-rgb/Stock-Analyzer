@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Panel } from "./Panel";
 import { getAIRatios } from "../lib/api";
 import { Loader2, AlertCircle, RefreshCw, Activity, AlertTriangle, Scale, Target } from "lucide-react";
+import SourceQA from "./SourceQA";
 
 export default function AIRatioAnalysisPanel({ symbol, pdfData }) {
   const [data, setData] = useState(null);
@@ -230,6 +231,7 @@ export default function AIRatioAnalysisPanel({ symbol, pdfData }) {
           )}
         </div>
       )}
+      <SourceQA symbol={symbol} sourceName="AI Ratio Analysis (PDF)" data={data} />
     </Panel>
   );
 }

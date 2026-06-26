@@ -4,6 +4,7 @@ import { Newspaper, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { getAINews, getSocial } from "../lib/api";
 import axios from "axios";
 import { DisclaimerNote } from "./Disclaimer";
+import SourceQA from "./SourceQA";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -277,6 +278,7 @@ export default function AINewsAnalysis({ symbol }) {
           )}
         </div>
       )}
+      <SourceQA symbol={symbol} sourceName="News Desk & Corporate Filings" data={newsAI} />
     </Panel>
   );
 }

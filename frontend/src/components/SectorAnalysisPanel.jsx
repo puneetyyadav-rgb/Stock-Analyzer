@@ -3,6 +3,7 @@ import { Panel, KV } from "./Panel";
 import { ExternalLink, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import axios from "axios";
 import { fmtNum, fmtPct, colorClass } from "../lib/format";
+import SourceQA from "./SourceQA";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -179,6 +180,7 @@ export default function SectorAnalysisPanel({ symbol }) {
           )}
         </div>
       )}
+      <SourceQA symbol={symbol} sourceName="Sectoral Analysis" data={{ sectorData: data, externalData: extData }} />
     </Panel>
   );
 }

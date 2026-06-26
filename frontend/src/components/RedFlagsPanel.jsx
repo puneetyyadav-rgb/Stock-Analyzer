@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { AlertTriangle, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
 import axios from "axios";
+import SourceQA from "./SourceQA";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -68,6 +69,7 @@ export default function RedFlagsPanel({ symbol }) {
           )}
         </>
       )}
+      <SourceQA symbol={symbol} sourceName="Red Flags" data={data} />
     </Panel>
   );
 }

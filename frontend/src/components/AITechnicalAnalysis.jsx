@@ -68,6 +68,13 @@ export default function AITechnicalAnalysis({ symbol }) {
             <p className="text-sm text-zinc-300 leading-relaxed">{tech.trend_summary}</p>
           </div>
           
+          {tech.volume_and_delivery_insight && (
+            <div className="p-3 bg-blue-950/20 border border-blue-900/50 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-2">Volume & Delivery Insight (Bhavcopy)</h4>
+              <p className="text-sm text-zinc-200 leading-relaxed font-medium">{tech.volume_and_delivery_insight}</p>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-emerald-900/40 bg-emerald-950/10 p-3 rounded">
               <h4 className="text-[10px] tracking-widest uppercase text-emerald-500 mb-2">Support Levels</h4>

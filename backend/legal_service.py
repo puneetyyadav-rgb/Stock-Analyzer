@@ -74,6 +74,8 @@ async def classify_legal_announcements(items: list) -> list:
         text = await asyncio.to_thread(sync_classify, prompt)
         text = text.strip()
         result = json.loads(text)
+        if isinstance(result, list) and len(result) == 1 and isinstance(result[0], list):
+            result = result[0]
         return result
     except Exception as e:
         logger.error(f"classify legal error: {e}")

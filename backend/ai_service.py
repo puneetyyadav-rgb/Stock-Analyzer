@@ -259,16 +259,19 @@ Schema:
 }"""
 
 
-TECHNICAL_SYSTEM_PROMPT = """You are a Chartered Market Technician (CMT) analyzing Indian stocks.
-You specialize in price action, support/resistance, candlestick patterns, and Relative Strength (RS) versus the benchmark (Nifty 50).
+TECHNICAL_SYSTEM_PROMPT = """You are an elite Chartered Market Technician (CMT) and Institutional Flow Analyst specializing in Indian equity markets (NSE/BSE).
+You specialize in multi-timeframe price action, dynamic support/resistance zones, candlestick morphology, Relative Strength (RS) versus Nifty 50, and NSE Bhavcopy Delivery Volume analysis.
+CRITICAL INDIAN MARKET RULE: Pay immense attention to the Delivery Percentage payload. In Indian equity markets, high delivery volume (>50-60%) accompanied by price advances signifies strong institutional accumulation (bullish conviction), whereas price advances on low delivery (<30%) indicate speculative intraday froth.
+
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:
 {
-  "trend_summary": "2-3 sentences describing the overall technical posture and how it is performing relative to the Nifty 50 benchmark",
-  "support_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "string"} ],
-  "resistance_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "string"} ],
-  "setup_recommendation": "1-2 sentences on how to trade this setup",
-  "monte_carlo_insight": "1 sentence interpreting the 80% confidence band and volatility"
+  "trend_summary": "2-3 comprehensive sentences evaluating multi-timeframe technical posture, moving average alignment (SMA 50/200), and Relative Strength vs Nifty 50",
+  "volume_and_delivery_insight": "2-3 analytical sentences explicitly evaluating the NSE Bhavcopy delivery percentage and traded volume. State clearly whether volume action confirms bullish institutional accumulation or speculative distribution",
+  "support_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "Detailed technical rationale"} ],
+  "resistance_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "Detailed technical rationale"} ],
+  "setup_recommendation": "2 precise, actionable sentences on trade execution, optimal entry zone, and strict stop-loss placement",
+  "monte_carlo_insight": "1-2 sentences interpreting the Monte Carlo 80% confidence distribution and implied volatility risk"
 }"""
 
 
@@ -345,6 +348,8 @@ async def generate_technical_analysis(tech_data: dict) -> dict:
         text = await asyncio.to_thread(sync_generate_technical_analysis, prompt)
         text = text.strip()
         result = json.loads(text)
+        if isinstance(result, list):
+            result = result[0] if result else {}
         result["disclaimer"] = DISCLAIMER_TEXT
         return result
     except Exception as e:
@@ -370,6 +375,8 @@ async def generate_news_analysis(news_items: list, stock_context: dict) -> dict:
         text = await asyncio.to_thread(sync_generate_news_analysis, prompt)
         text = text.strip()
         result = json.loads(text)
+        if isinstance(result, list):
+            result = result[0] if result else {}
         result["disclaimer"] = DISCLAIMER_TEXT
         return result
     except Exception as e:
@@ -491,6 +498,8 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         text = await asyncio.to_thread(sync_generate_verdict, prompt)
         text = text.strip()
         result = json.loads(text)
+        if isinstance(result, list):
+            result = result[0] if result else {}
         result["analysisAsOf"] = analysis_as_of.isoformat()
         result["disclaimer"] = DISCLAIMER_TEXT
         result["sectorBucket"] = bucket
@@ -686,3 +695,37 @@ async def generate_ratio_analysis(stock_data: dict) -> dict:
                 logger.error(f"AI ratio analysis error: {e}")
                 return {"error": str(e)}
 
+
+SOURCE_QA_SYSTEM = """You are a strict, source-locked financial Q&A assistant.
+ABSOLUTE RULES — VIOLATION IS UNACCEPTABLE:
+1. You may ONLY use the data payload provided below to answer the user's question. You have ZERO access to outside knowledge, training data, or the internet.
+2. If the answer is not explicitly present in the provided source data, you MUST respond EXACTLY: "The provided source data does not contain information about this."
+3. Do NOT speculate, infer from general knowledge, or hallucinate facts that are not in the payload.
+4. Keep answers concise: 2-5 sentences maximum. Use specific numbers, dates, and names from the payload.
+5. If the user asks about a metric or event, quote the exact value from the source data.
+
+Source Section: {source_name}
+Source Data Payload:
+{source_json}
+"""
+
+
+def sync_ask_source(prompt: str) -> str:
+    return _execute_ai_call_with_fallback(prompt, False)
+
+
+async def ask_source_qa(source_name: str, source_data: dict, question: str) -> dict:
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
+
+    source_json = json.dumps(source_data, default=str)[:12000]
+    prompt = SOURCE_QA_SYSTEM.format(source_name=source_name, source_json=source_json)
+    prompt += f"\n\nUser Question: {question}\n\nAnswer (strict source-only):"
+
+    try:
+        text = await asyncio.to_thread(sync_ask_source, prompt)
+        text = text.strip()
+        return {"answer": text, "sourceName": source_name}
+    except Exception as e:
+        logger.error(f"Source QA error: {e}")
+        return {"error": str(e)}
