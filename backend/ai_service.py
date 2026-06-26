@@ -41,7 +41,7 @@ def _call_groq_fallback(prompt: str) -> str:
             base_url="https://api.groq.com/openai/v1",
             api_key=groq_key
         )
-        models = ["openai/gpt-oss-120b", "qwen/qwen3-32b"]
+        models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b", "mixtral-8x7b-32768"]
         for model in models:
             try:
                 logger.info(f"Attempting Groq fallback using model: {model}")
@@ -444,12 +444,12 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
                     "revenueGrowth": overview.get("revenueGrowth"),
                     "earningsGrowth": overview.get("earningsGrowth"),
                 },
-                "macro_snapshot": macro_data.get("indicators", []),
+                "macro_snapshot": macro_data.get("indicators", [])[:4],
                 "sector_bucket": bucket,
-                "financials_quarterly": stock_data.get("financials", {}).get("quarterly", [])[:4],
+                "financials_quarterly": stock_data.get("financials", {}).get("quarterly", [])[:2],
                 "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
-                "screener_pros": stock_data.get("screener", {}).get("pros", [])[:5],
-                "screener_cons": stock_data.get("screener", {}).get("cons", [])[:5],
+                "screener_pros": stock_data.get("screener", {}).get("pros", [])[:4],
+                "screener_cons": stock_data.get("screener", {}).get("cons", [])[:4],
                 "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
                 "holders": stock_data.get("holders", {}).get("majorHoldersBreakdown", {}),
             },
@@ -461,12 +461,12 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
                         "publishedAt": n.get("publishedAt"),
                         "sentiment": n.get("sentimentLabel"),
                     }
-                    for n in news_items[:20]
+                    for n in news_items[:8]
                 ],
-                "legal_announcements": stock_data.get("legal", {}).get("items", [])[:5],
-                "upcoming_events": stock_data.get("events", {}).get("items", [])[:5],
+                "legal_announcements": stock_data.get("legal", {}).get("items", [])[:3],
+                "upcoming_events": stock_data.get("events", {}).get("items", [])[:3],
                 "social_sentiment": stock_data.get("social", {}),
-                "red_flags": stock_data.get("red_flags", {}).get("items", [])[:5],
+                "red_flags": stock_data.get("red_flags", {}).get("items", [])[:3],
             },
             "technical": {
                 "technicals": stock_data.get("technicals", {}),
