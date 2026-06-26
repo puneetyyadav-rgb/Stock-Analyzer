@@ -488,10 +488,103 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
             f"guessing a number. Populate 'sectorSpecific' array with one object per hint above."
         )
 
+    # Phase 1: Parallel Junior Desk Map Phase
+    fund_data = payload["desks"]["fundamentals"]
+    news_data = payload["desks"]["news"]
+    tech_data = payload["desks"]["technical"]
+    quant_data = payload["desks"]["quantitative"]
+
+    fund_prompt = (
+        f"You are an institutional Fundamental Desk Analyst specializing in Indian equity valuation.\n"
+        f"Review this fundamental payload for {overview.get('symbol')}:\n```json\n{json.dumps(fund_data, default=str)}\n```\n"
+        f"Output STRICT JSON with:\n{{\n"
+        f"  \"bias\": \"Bullish\" | \"Bearish\" | \"Neutral\",\n"
+        f"  \"dataSufficient\": true | false,\n"
+        f"  \"keyFact\": \"single most critical fundamental driver or valuation metric\",\n"
+        f"  \"executiveSummary\": \"2-3 plain-text sentences evaluating margin trajectory, debt, and sector context\",\n"
+        f"  \"nineFactorReads\": {{\n"
+        f"    \"macroeconomic\": \"1-2 sentences on macro alignment. 'No data available' if missing.\",\n"
+        f"    \"industryAndSector\": \"1-2 sentences on sector dynamics.\",\n"
+        f"    \"companyFinancials\": \"1-2 sentences on balance sheet and earnings trajectory.\",\n"
+        f"    \"demandSupplyTrade\": \"1-2 sentences on demand/supply.\"\n"
+        f"  }}\n}}"
+    )
+
+    news_prompt = (
+        f"You are an investigative News & Forensic Desk Analyst specializing in Indian equity litigation and market sentiment.\n"
+        f"Review this forensic and news payload for {overview.get('symbol')}:\n```json\n{json.dumps(news_data, default=str)}\n```\n"
+        f"Output STRICT JSON with:\n{{\n"
+        f"  \"bias\": \"Bullish\" | \"Bearish\" | \"Neutral\",\n"
+        f"  \"dataSufficient\": true | false,\n"
+        f"  \"keyFact\": \"single most critical corporate event, SEBI litigation notice, or sentiment divergence\",\n"
+        f"  \"executiveSummary\": \"2-3 plain-text sentences explicitly comparing Official Corporate News vs retail Twitter hype or fear\",\n"
+        f"  \"nineFactorReads\": {{\n"
+        f"    \"newsAndSentiment\": \"1-2 sentences comparing official news vs Twitter chatter.\",\n"
+        f"    \"regulatoryPolicy\": \"1-2 sentences on SEBI/regulatory action. 'No data available' if missing.\",\n"
+        f"    \"managementAndCorporate\": \"1-2 sentences on governance and red flags.\"\n"
+        f"  }}\n}}"
+    )
+
+    tech_prompt = (
+        f"You are an elite Chartered Market Technician (CMT) Desk Analyst specializing in Indian F&O and Bhavcopy delivery analysis.\n"
+        f"Review this technical payload for {overview.get('symbol')}:\n```json\n{json.dumps(tech_data, default=str)}\n```\n"
+        f"Output STRICT JSON with:\n{{\n"
+        f"  \"bias\": \"Bullish\" | \"Bearish\" | \"Neutral\",\n"
+        f"  \"dataSufficient\": true | false,\n"
+        f"  \"keyFact\": \"single most critical trend regime, delivery accumulation %, or breakout level\",\n"
+        f"  \"executiveSummary\": \"2-3 plain-text sentences evaluating multi-timeframe moving averages and Bhavcopy institutional delivery %\",\n"
+        f"  \"nineFactorReads\": {{\n"
+        f"    \"technicalAndMarket\": \"1-2 sentences on price action and flow conviction.\"\n"
+        f"  }}\n}}"
+    )
+
+    quant_prompt = (
+        f"You are an institutional Quantitative & ML Desk Analyst.\n"
+        f"Review this quantitative ML forecast payload for {overview.get('symbol')}:\n```json\n{json.dumps(quant_data, default=str)}\n```\n"
+        f"Output STRICT JSON with:\n{{\n"
+        f"  \"bias\": \"Bullish\" | \"Bearish\" | \"Neutral\",\n"
+        f"  \"dataSufficient\": true | false,\n"
+        f"  \"keyFact\": \"Monte Carlo median target and confidence distribution read\",\n"
+        f"  \"executiveSummary\": \"1-2 plain-text sentences interpreting ML forecast probabilities\",\n"
+        f"  \"nineFactorReads\": {{\n"
+        f"    \"globalShocks\": \"1-2 sentences on implied volatility risk. 'No data available' if missing.\"\n"
+        f"  }}\n}}"
+    )
+
+    async def _safe_run_desk(desk_p, desk_name):
+        try:
+            res_t = await asyncio.to_thread(sync_generate_verdict, desk_p)
+            res_t = res_t.strip()
+            return json.loads(res_t)
+        except Exception as err:
+            logger.warning(f"Desk {desk_name} failed: {err}")
+            return {
+                "bias": "Neutral",
+                "dataSufficient": False,
+                "keyFact": f"Desk analysis unavailable: {err}",
+                "executiveSummary": "No independent desk report generated.",
+                "nineFactorReads": {}
+            }
+
+    logger.info(f"Launching Map-Reduce junior desk analysis concurrently for {overview.get('symbol')}...")
+    fund_rep, news_rep, tech_rep, quant_rep = await asyncio.gather(
+        _safe_run_desk(fund_prompt, "fundamentals"),
+        _safe_run_desk(news_prompt, "news"),
+        _safe_run_desk(tech_prompt, "technical"),
+        _safe_run_desk(quant_prompt, "quantitative")
+    )
+
+    master_desk_reports = {
+        "fundamentals": fund_rep,
+        "news": news_rep,
+        "technical": tech_rep,
+        "quantitative": quant_rep
+    }
+
     prompt = (
         f"{SYSTEM_PROMPT}\n\n"
-        f"Analyze this Indian stock as of {analysis_as_of.isoformat()} and provide a verdict. Data:\n"
-        f"```json\n{json.dumps(payload, default=str)}\n```{sector_instruction}"
+        f"Analyze this Indian stock ({overview.get('symbol')}) as of {analysis_as_of.isoformat()} based strictly on the synthesized institutional desk reports below.\n"
+        f"```json\n{json.dumps(master_desk_reports, default=str)}\n```{sector_instruction}"
     )
 
     try:
