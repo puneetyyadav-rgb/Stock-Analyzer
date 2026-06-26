@@ -444,12 +444,12 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
                     "revenueGrowth": overview.get("revenueGrowth"),
                     "earningsGrowth": overview.get("earningsGrowth"),
                 },
-                "macro_snapshot": macro_data.get("indicators", [])[:4],
+                "macro_snapshot": macro_data.get("indicators", []),
                 "sector_bucket": bucket,
-                "financials_quarterly": stock_data.get("financials", {}).get("quarterly", [])[:2],
+                "financials_quarterly": stock_data.get("financials", {}).get("quarterly", [])[:4],
                 "screener_ratios": stock_data.get("screener", {}).get("ratios", {}),
-                "screener_pros": stock_data.get("screener", {}).get("pros", [])[:4],
-                "screener_cons": stock_data.get("screener", {}).get("cons", [])[:4],
+                "screener_pros": stock_data.get("screener", {}).get("pros", [])[:5],
+                "screener_cons": stock_data.get("screener", {}).get("cons", [])[:5],
                 "promoterPledge": stock_data.get("screener", {}).get("promoterPledge"),
                 "holders": stock_data.get("holders", {}).get("majorHoldersBreakdown", {}),
             },
@@ -461,12 +461,12 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
                         "publishedAt": n.get("publishedAt"),
                         "sentiment": n.get("sentimentLabel"),
                     }
-                    for n in news_items[:8]
+                    for n in news_items[:20]
                 ],
-                "legal_announcements": stock_data.get("legal", {}).get("items", [])[:3],
-                "upcoming_events": stock_data.get("events", {}).get("items", [])[:3],
+                "legal_announcements": stock_data.get("legal", {}).get("items", [])[:5],
+                "upcoming_events": stock_data.get("events", {}).get("items", [])[:5],
                 "social_sentiment": stock_data.get("social", {}),
-                "red_flags": stock_data.get("red_flags", {}).get("items", [])[:3],
+                "red_flags": stock_data.get("red_flags", {}).get("items", [])[:5],
             },
             "technical": {
                 "technicals": stock_data.get("technicals", {}),
