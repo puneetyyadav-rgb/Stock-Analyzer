@@ -18,7 +18,8 @@ Output STRICT JSON only — no markdown fences, no commentary.
 Schema:
 {
   "highlights": ["3-6 bullet headline points from the quarter"],
-  "guidance": ["3-5 bullets on forward guidance, FY-targets, capex plans"],
+  "managementGuidance": ["3-5 bullets on forward guidance and management targets"],
+  "capexPlans": ["Bullets detailing any capital expenditure or expansion plans"],
   "newOrders": ["any big order/deal/contract wins mentioned, else empty array"],
   "concerns": ["3-5 bullets on management-flagged risks or weak areas"],
   "qaInsights": ["3-5 key questions/answers from analyst Q&A"],
@@ -37,7 +38,8 @@ indirect (not from the transcript itself). Output STRICT JSON only — no markdo
 Schema is same as transcript schema:
 {
   "highlights": [...],
-  "guidance": [...],
+  "managementGuidance": [...],
+  "capexPlans": [...],
   "newOrders": [...],
   "concerns": [...],
   "qaInsights": [],
@@ -50,23 +52,13 @@ Schema is same as transcript schema:
 
 
 def sync_generate_concall(prompt: str) -> str:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return ""
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-    )
-    return response.text
+    from ai_service import sync_generate_verdict
+    return sync_generate_verdict(prompt)
 
 async def summarize_alternative(symbol: str, date_str: str, context: dict) -> dict:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return {"error": "GEMINI_API_KEY missing"}
+    from ai_service import _has_any_ai_key
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
     
     prompt = f"{ALTERNATIVE_SYSTEM}\n\nSymbol: {symbol}\nApprox quarter: {date_str}\n\nContext:\n{json.dumps(context, default=str)[:8000]}"
     try:
@@ -81,9 +73,9 @@ async def summarize_alternative(symbol: str, date_str: str, context: dict) -> di
 
 
 async def summarize_concall(symbol: str, transcript_text: str, date_str: str) -> dict:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return {"error": "GEMINI_API_KEY missing"}
+    from ai_service import _has_any_ai_key
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
     if not transcript_text or len(transcript_text) < 500:
         return {"error": "Transcript text too short or unavailable"}
 

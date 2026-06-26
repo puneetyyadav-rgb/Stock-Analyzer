@@ -185,6 +185,23 @@ def compute_technicals(symbol: str) -> dict:
         elif rsi_val and rsi_val < 30:
             signal_text = "Oversold"
 
+        nifty_df = yf.Ticker("^NSEI").history(period="6mo", interval="1d", auto_adjust=True)
+        rs_data = {}
+        if not nifty_df.empty and len(nifty_df) >= 60 and len(close) >= 60:
+            nifty_close = nifty_df["Close"]
+            stock_1m = (cur - float(close.iloc[-21])) / float(close.iloc[-21]) * 100 if len(close) >= 21 else 0
+            nifty_1m = (float(nifty_close.iloc[-1]) - float(nifty_close.iloc[-21])) / float(nifty_close.iloc[-21]) * 100 if len(nifty_close) >= 21 else 0
+            stock_3m = (cur - float(close.iloc[-60])) / float(close.iloc[-60]) * 100 if len(close) >= 60 else 0
+            nifty_3m = (float(nifty_close.iloc[-1]) - float(nifty_close.iloc[-60])) / float(nifty_close.iloc[-60]) * 100 if len(nifty_close) >= 60 else 0
+            rs_data = {
+                "stock_1m_pct": _safe_float(stock_1m),
+                "nifty_1m_pct": _safe_float(nifty_1m),
+                "outperformance_1m": _safe_float(stock_1m - nifty_1m),
+                "stock_3m_pct": _safe_float(stock_3m),
+                "nifty_3m_pct": _safe_float(nifty_3m),
+                "outperformance_3m": _safe_float(stock_3m - nifty_3m)
+            }
+
         return {
             "currentPrice": _safe_float(cur),
             "rsi": rsi_val,
@@ -197,6 +214,7 @@ def compute_technicals(symbol: str) -> dict:
             "support": _safe_float(support),
             "resistance": _safe_float(resistance),
             "trend": "Uptrend" if cur > (_safe_float(sma50.iloc[-1]) or 0) else "Downtrend",
+            "relativeStrength": rs_data,
         }
     except Exception as e:
         logger.error(f"technicals error: {e}")

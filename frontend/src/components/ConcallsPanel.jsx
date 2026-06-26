@@ -100,8 +100,11 @@ export default function ConcallsPanel({ symbol }) {
                     {summary.highlights?.length > 0 && (
                       <SummarySection title="Highlights" items={summary.highlights} color="text-zinc-300" />
                     )}
-                    {summary.guidance?.length > 0 && (
-                      <SummarySection title="Guidance" items={summary.guidance} color="text-emerald-300" />
+                    {summary.managementGuidance?.length > 0 && (
+                      <SummarySection title="Management Guidance" items={summary.managementGuidance} color="text-emerald-300" />
+                    )}
+                    {summary.capexPlans?.length > 0 && (
+                      <SummarySection title="Capex & Expansion" items={summary.capexPlans} color="text-indigo-300" />
                     )}
                     {summary.newOrders?.length > 0 && (
                       <SummarySection title="New Orders / Wins" items={summary.newOrders} color="text-blue-300" />

@@ -238,7 +238,8 @@ async def ai_verdict(symbol: str):
         macro,
         ml_forecast,
         regime,
-        patterns
+        patterns,
+        ext_data
     ) = await asyncio.gather(
         asyncio.to_thread(ss.get_full_analysis, symbol),
         social(symbol),
@@ -248,7 +249,8 @@ async def ai_verdict(symbol: str):
         asyncio.to_thread(ss.get_macro_snapshot),
         asyncio.to_thread(mls.generate_ml_prediction, symbol),
         asyncio.to_thread(rs.classify_regime, symbol),
-        asyncio.to_thread(ps.get_candlestick_patterns, symbol)
+        asyncio.to_thread(ps.get_candlestick_patterns, symbol),
+        external_scrape(symbol)
     )
     
     stock_data["social"] = social_data
@@ -258,6 +260,7 @@ async def ai_verdict(symbol: str):
     stock_data["ml_forecast"] = ml_forecast
     stock_data["regime"] = regime
     stock_data["patterns"] = patterns
+    stock_data["external_scrape"] = ext_data
     
     verdict = await ai.generate_verdict(stock_data, macro)
     _cache_set(cache_key, verdict)
@@ -280,22 +283,25 @@ async def ai_technical(symbol: str):
     if cached:
         return cached
     (
-        stock_data,
+        technicals_data,
         ml_forecast,
         regime,
-        patterns
+        patterns,
+        ext_data
     ) = await asyncio.gather(
-        asyncio.to_thread(ss.get_full_analysis, symbol),
+        asyncio.to_thread(ss.compute_technicals, symbol),
         asyncio.to_thread(mls.generate_ml_prediction, symbol),
         asyncio.to_thread(rs.classify_regime, symbol),
-        asyncio.to_thread(ps.get_candlestick_patterns, symbol)
+        asyncio.to_thread(ps.get_candlestick_patterns, symbol),
+        external_scrape(symbol)
     )
     
     tech_data = {
-        "technicals": stock_data.get("technicals", {}),
+        "technicals": technicals_data,
         "ml_forecast": ml_forecast,
         "regime": regime,
         "patterns": patterns,
+        "delivery": ext_data.get("delivery")
     }
     
     verdict = await ai.generate_technical_analysis(tech_data)
@@ -707,15 +713,17 @@ async def external_scrape(symbol: str):
     aftermarkets_task = scr.scrape_aftermarkets(symbol)
     tickertape_task = scr.scrape_tickertape(symbol)
     trendlyne_task = scr.scrape_trendlyne(symbol)
+    delivery_task = scr.scrape_delivery_volume(symbol)
     
-    aftermarkets, tickertape, trendlyne = await asyncio.gather(
-        aftermarkets_task, tickertape_task, trendlyne_task, return_exceptions=False
+    aftermarkets, tickertape, trendlyne, delivery = await asyncio.gather(
+        aftermarkets_task, tickertape_task, trendlyne_task, delivery_task, return_exceptions=False
     )
     
     result = {
         "aftermarkets": aftermarkets,
         "tickertape": tickertape,
         "trendlyne": trendlyne,
+        "delivery": delivery,
     }
     _cache_set(key, result)
     return result

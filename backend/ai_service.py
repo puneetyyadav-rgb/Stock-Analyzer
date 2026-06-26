@@ -19,23 +19,113 @@ def get_gemini_client():
     key = os.environ.get("GEMINI_API_KEY")
     return genai.Client(api_key=key) if key else None
 
-def sync_generate_verdict(prompt: str, use_pdf_key: bool = False) -> str:
+def _has_any_ai_key() -> bool:
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+    except Exception:
+        pass
+    return bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GROQ_API_KEY"))
+
+import time
+
+def _call_groq_fallback(prompt: str) -> str:
+    _has_any_ai_key()
+    groq_key = os.environ.get("GROQ_API_KEY")
+    if not groq_key:
+        logger.error("Groq fallback triggered, but GROQ_API_KEY is not set.")
+        return ""
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=groq_key
+        )
+        models = ["openai/gpt-oss-120b", "qwen/qwen3-32b"]
+        for model in models:
+            try:
+                logger.info(f"Attempting Groq fallback using model: {model}")
+                try:
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "user", "content": prompt}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.1,
+                    )
+                except Exception as json_mode_err:
+                    logger.warning(f"Failed with JSON mode on model {model}: {json_mode_err}. Retrying without JSON mode constraint...")
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.1,
+                    )
+                val = response.choices[0].message.content
+                if val:
+                    logger.info(f"Groq fallback succeeded with model: {model}")
+                    return val
+            except Exception as ex:
+                logger.warning(f"Groq model {model} failed: {ex}. Trying next fallback...")
+                continue
+    except Exception as e:
+        logger.error(f"Failed to initialize or call Groq client: {e}")
+    return ""
+
+def _call_gemini_with_retry(client, prompt: str, retries=3, backoff=2) -> str:
+    has_groq = bool(os.environ.get("GROQ_API_KEY"))
+    for i in range(retries):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                )
+            )
+            return response.text
+        except Exception as e:
+            if has_groq:
+                logger.warning(f"Gemini API error ({e}). Fast-switching directly to Groq fallback...")
+                raise e
+            if "503" in str(e) or "429" in str(e):
+                if i < retries - 1:
+                    logger.warning(f"Gemini API rate limit/503 hit. Retrying in {backoff} seconds... (Attempt {i+1}/{retries})")
+                    time.sleep(backoff)
+                    backoff *= 2
+                    continue
+            raise e
+    return ""
+
+def _execute_ai_call_with_fallback(prompt: str, use_pdf_key: bool = False) -> str:
+    _has_any_ai_key()
+
     if use_pdf_key:
         key = os.environ.get("GEMINI_API_KEY_PDF") or os.environ.get("GEMINI_API_KEY")
     else:
         key = os.environ.get("GEMINI_API_KEY")
         
     if not key:
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if groq_key:
+            logger.info("Gemini API key not found. Routing directly to Groq fallback.")
+            return _call_groq_fallback(prompt)
         return ""
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-    )
-    return response.text
+        
+    client = genai.Client(api_key=key, http_options={'timeout': 15000})
+    try:
+        return _call_gemini_with_retry(client, prompt)
+    except Exception as e:
+        logger.warning(f"Gemini API failed: {e}. Trying Groq fallback...")
+        groq_val = _call_groq_fallback(prompt)
+        if groq_val:
+            return groq_val
+        raise e
+
+def sync_generate_verdict(prompt: str, use_pdf_key: bool = False) -> str:
+    return _execute_ai_call_with_fallback(prompt, use_pdf_key)
 
 DISCLAIMER_TEXT = (
     "AI-generated analysis from public data sources. Not investment advice. "
@@ -110,9 +200,9 @@ def map_sector(yahoo_sector: str) -> str:
 SYSTEM_PROMPT = """You are the Head of Research at an institutional merchant bank. Four desks have submitted independent reads on this stock. A junior analyst would list each desk's verdict and tally agreement vs. disagreement. You are senior — your job is to trace the actual chain of cause and effect connecting them, the way an experienced banker reasons out loud in an investment committee.
 
 THE FOUR DESKS (data for each provided below):
-1. FUNDAMENTALS — financials, valuation, governance, macro/sector context
+1. FUNDAMENTALS — financials, valuation, governance, promoter pledging, macro/sector context
 2. NEWS & SENTIMENT — official headlines, legal filings vs retail Twitter/FinTwit sentiment
-3. TECHNICAL — trend regime, volatility state, candlestick patterns, RSI/MACD
+3. TECHNICAL — trend regime, relative strength vs Nifty 50, candlestick patterns, RSI/MACD
 4. QUANTITATIVE — Monte Carlo median forecast, confidence band, sector ranking
 
 STEP 1: THE 9-FACTOR ASSESSMENT
@@ -170,11 +260,11 @@ Schema:
 
 
 TECHNICAL_SYSTEM_PROMPT = """You are a Chartered Market Technician (CMT) analyzing Indian stocks.
-You specialize in price action, support/resistance, candlestick patterns, and volatility (Monte Carlo) analysis.
+You specialize in price action, support/resistance, candlestick patterns, and Relative Strength (RS) versus the benchmark (Nifty 50).
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:
 {
-  "trend_summary": "2-3 sentences describing the overall technical posture",
+  "trend_summary": "2-3 sentences describing the overall technical posture and how it is performing relative to the Nifty 50 benchmark",
   "support_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "string"} ],
   "resistance_levels": [ {"price": number, "strength": "Strong" | "Weak", "rationale": "string"} ],
   "setup_recommendation": "1-2 sentences on how to trade this setup",
@@ -210,23 +300,11 @@ Schema:
 
 
 def sync_analyze_options(prompt: str) -> str:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return ""
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-    )
-    return response.text
+    return _execute_ai_call_with_fallback(prompt, False)
 
 async def analyze_options(options_data: dict) -> dict:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return {"error": "GEMINI_API_KEY not configured"}
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
 
     prompt = f"""You are an Indian F&O analyst. Analyze this Option Chain data.
 Identify immediate Support (highest PE OI), immediate Resistance (highest CE OI), trend (based on PCR and LTP), and draw a clear, concise conclusion (Bullish, Bearish, or Neutral).
@@ -251,23 +329,11 @@ Option Chain Data:
 
 
 def sync_generate_technical_analysis(prompt: str) -> str:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return ""
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-    )
-    return response.text
+    return _execute_ai_call_with_fallback(prompt, False)
 
 async def generate_technical_analysis(tech_data: dict) -> dict:
-    client = get_gemini_client()
-    if not client:
-        return {"error": "GEMINI_API_KEY not configured"}
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
 
     prompt = (
         f"{TECHNICAL_SYSTEM_PROMPT}\n\n"
@@ -287,23 +353,11 @@ async def generate_technical_analysis(tech_data: dict) -> dict:
 
 
 def sync_generate_news_analysis(prompt: str) -> str:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return ""
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-    )
-    return response.text
+    return _execute_ai_call_with_fallback(prompt, False)
 
 async def generate_news_analysis(news_items: list, stock_context: dict) -> dict:
-    client = get_gemini_client()
-    if not client:
-        return {"error": "GEMINI_API_KEY not configured"}
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
 
     prompt = (
         f"{NEWS_SYSTEM_PROMPT}\n\n"
@@ -356,9 +410,8 @@ def _remove_past_catalysts(catalysts: list, analysis_date) -> list:
 
 
 async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
-    client = get_gemini_client()
-    if not client:
-        return {"error": "GEMINI_API_KEY not configured"}
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
 
     overview = stock_data.get("overview", {})
     analysis_as_of = datetime.now(INDIA_TIMEZONE).date()
@@ -447,9 +500,8 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
         return {"error": str(e)}
 
 async def generate_external_intelligence_verdict(aftermarkets: dict, tickertape: dict) -> dict:
-    client = get_gemini_client()
-    if not client:
-        return {"error": "GEMINI_API_KEY not configured"}
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
 
     prompt = f"""You are a specialized financial AI extracting a 'Raw Conclusion' from external data sources.
 Analyze the following scraped data from Aftermarkets and Tickertape, and provide a synthesized raw conclusion.
@@ -608,9 +660,8 @@ Schema:
 }"""
 
 async def generate_ratio_analysis(stock_data: dict) -> dict:
-    client = get_gemini_client()
-    if not client:
-        return {"error": "GEMINI_API_KEY not configured"}
+    if not _has_any_ai_key():
+        return {"error": "Neither GEMINI_API_KEY nor GROQ_API_KEY is configured"}
 
     prompt = (
         f"{RATIO_ANALYZER_PROMPT}\n\n"

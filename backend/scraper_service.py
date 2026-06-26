@@ -48,8 +48,8 @@ def _scrape_aftermarkets_sync(symbol: str) -> dict:
                 timezone_id="Asia/Kolkata",
             )
             page = ctx.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=25000)
-            page.wait_for_timeout(6000)
+            page.goto(url, wait_until="domcontentloaded", timeout=6000)
+            page.wait_for_timeout(1500)
             sections = page.eval_on_selector_all(
                 "section, div",
                 """els => els.slice(0, 400).map(e => {
@@ -140,8 +140,8 @@ def _scrape_trendlyne_sync(symbol: str) -> dict:
                 timezone_id="Asia/Kolkata",
             )
             page = ctx.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=25000)
-            page.wait_for_timeout(3000)
+            page.goto(url, wait_until="domcontentloaded", timeout=6000)
+            page.wait_for_timeout(1500)
             
             text = page.evaluate("document.body.innerText")
             
@@ -189,6 +189,31 @@ async def scrape_tickertape(symbol: str) -> dict:
             ratios = info_data.get("ratios", {})
             labels = info_data.get("labels", {})
             
+            holdings_url = f"https://api.tickertape.in/stocks/holdings/{sid}"
+            holdings_res = await client.get(holdings_url, timeout=10)
+            holdings_data = holdings_res.json().get("data", [])
+            
+            promoter_pledged = None
+            promoter_total = None
+            if holdings_data and len(holdings_data) > 0:
+                latest = holdings_data[-1].get("data", {})
+                promoter_pledged = latest.get("pmPctP")
+                promoter_total = latest.get("pmPctT")
+                
+            deals_url = f"https://api.tickertape.in/stocks/deals/{sid}"
+            deals_res = await client.get(deals_url, timeout=10)
+            recent_deals = []
+            if deals_res.status_code == 200:
+                deals_data = deals_res.json().get("data", [])
+                if deals_data:
+                    for d in deals_data[:5]:
+                        recent_deals.append({
+                            "date": d.get("date"),
+                            "type": d.get("action"),
+                            "party": d.get("clientName"),
+                            "price": d.get("price")
+                        })
+
             return {
                 "available": True,
                 "url": f"https://www.tickertape.in/stocks/{info_data.get('slug', '').split('/')[-1] or sid}",
@@ -202,7 +227,12 @@ async def scrape_tickertape(symbol: str) -> dict:
                     "marketCap": labels.get("marketCap", {}).get("title"),
                     "risk": labels.get("risk", {}).get("title"),
                     "sector": labels.get("sector", {}).get("title")
-                }
+                },
+                "promoter": {
+                    "pledgedPercentage": promoter_pledged,
+                    "totalPercentage": promoter_total
+                },
+                "recentDeals": recent_deals
             }
     except Exception as e:
         logger.error(f"tickertape scrape error: {e}")
@@ -211,3 +241,69 @@ async def scrape_tickertape(symbol: str) -> dict:
 
 async def shutdown():
     pass
+async def scrape_delivery_volume(symbol: str) -> dict:
+    from datetime import date, timedelta
+    from jugaad_data.nse import full_bhavcopy_save
+    import pandas as pd
+    import os
+    
+    clean = _strip_symbol(symbol)
+    try:
+        # Find the last valid trading day
+        d = date.today()
+        if d.weekday() >= 5: # Saturday or Sunday
+            d = d - timedelta(days=d.weekday() - 4)
+            
+        os.makedirs("bhavcopy", exist_ok=True)
+        date_str = d.strftime("%d%b%Y")
+        expected_file = f"bhavcopy/sec_bhavdata_full_{date_str}bhav.csv"
+        
+        # Try finding the latest available if today's isn't published yet
+        for i in range(5):
+            test_d = d - timedelta(days=i)
+            if test_d.weekday() >= 5:
+                continue
+            test_date_str = test_d.strftime("%d%b%Y")
+            test_file = f"bhavcopy/sec_bhavdata_full_{test_date_str}bhav.csv"
+            if os.path.exists(test_file):
+                expected_file = test_file
+                break
+        else:
+            # If not found locally, download the latest weekday
+            try:
+                full_bhavcopy_save(d, "bhavcopy")
+                expected_file = f"bhavcopy/sec_bhavdata_full_{d.strftime('%d%b%Y')}bhav.csv"
+            except Exception:
+                # Fallback to yesterday if today's is not ready
+                d = d - timedelta(days=1 if d.weekday() != 0 else 3)
+                full_bhavcopy_save(d, "bhavcopy")
+                expected_file = f"bhavcopy/sec_bhavdata_full_{d.strftime('%d%b%Y')}bhav.csv"
+                
+        if not os.path.exists(expected_file):
+             return {"available": False, "error": "Bhavcopy not found"}
+             
+        df = await asyncio.to_thread(pd.read_csv, expected_file)
+        df.columns = df.columns.str.strip()
+        df['SYMBOL'] = df['SYMBOL'].astype(str).str.strip()
+        df['SERIES'] = df['SERIES'].astype(str).str.strip()
+        
+        row = df[(df['SYMBOL'] == clean) & (df['SERIES'] == 'EQ')]
+        if row.empty:
+            return {"available": False, "error": "Symbol not found in Bhavcopy"}
+            
+        deliv_per = row['DELIV_PER'].values[0]
+        deliv_qty = row['DELIV_QTY'].values[0]
+        def safe_float(v):
+            try:
+                return float(v)
+            except:
+                return None
+        
+        return {
+            "available": True,
+            "deliveryPercentage": safe_float(deliv_per),
+            "deliveryQuantity": safe_float(deliv_qty)
+        }
+    except Exception as e:
+        logger.error(f"delivery scrape error: {e}")
+        return {"available": False, "error": str(e)[:200]}

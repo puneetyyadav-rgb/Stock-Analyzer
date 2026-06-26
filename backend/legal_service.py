@@ -61,22 +61,12 @@ Do not invent details not present in the announcement subject — if a subject i
 
 
 def sync_classify(prompt: str) -> str:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        return "[]"
-    client = genai.Client(api_key=key)
-    response = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-        )
-    )
-    return response.text
+    from ai_service import sync_generate_verdict
+    return sync_generate_verdict(prompt)
 
 async def classify_legal_announcements(items: list) -> list:
-    key = os.environ.get("GEMINI_API_KEY")
-    if not items or not key:
+    from ai_service import _has_any_ai_key
+    if not items or not _has_any_ai_key():
         return []
     
     prompt = f"{CLASSIFY_PROMPT}\n\n{json.dumps(items[:20], default=str)}"
