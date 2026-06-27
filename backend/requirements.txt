@@ -27,3 +27,4 @@ twikit
 browserforge
 python-multipart
 openai>=1.0.0
+websocket-client
