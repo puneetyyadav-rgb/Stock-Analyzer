@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import { Sparkles, Loader2, AlertCircle } from "lucide-react";
-import { getAIVerdict } from "../lib/api";
+import { Sparkles, Loader2, AlertCircle, TrendingUp, ShieldCheck } from "lucide-react";
+import { getAIVerdict, getVerdictHistory } from "../lib/api";
 import { DisclaimerNote } from "./Disclaimer";
 
 const verdictColors = {
@@ -26,10 +26,13 @@ export default function AIVerdict({ symbol }) {
   const [verdict, setVerdict] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const [history, setHistory] = useState(null);
 
   useEffect(() => {
     setVerdict(null);
     setErr(null);
+    setHistory(null);
+    getVerdictHistory(symbol).then(setHistory).catch(() => {});
   }, [symbol]);
 
   const run = async () => {
@@ -99,9 +102,36 @@ export default function AIVerdict({ symbol }) {
                 As of: <span className="text-blue-300 font-mono">{verdict.analysisAsOf}</span>
               </div>
             )}
+            {history?.accuracy !== null && history?.accuracy !== undefined && (
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-950/40 border border-emerald-900/50 rounded text-[10px] tracking-widest uppercase text-emerald-400">
+                <ShieldCheck size={11} />
+                Track Record: <span className="font-mono font-bold">{history.accuracy}%</span>
+                <span className="text-zinc-500">({history.scored} verdicts)</span>
+              </div>
+            )}
           </div>
           
           <DisclaimerNote className="bg-amber-950/30 border border-amber-900/40 px-2 py-1" />
+
+          {/* Cross-Source Divergence Alerts */}
+          {verdict.divergences && verdict.divergences.length > 0 && (
+            <div className="p-3 bg-amber-950/30 border border-amber-900/50 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-amber-400 font-semibold mb-2 flex items-center gap-1.5">
+                <AlertCircle size={12} />
+                Source Divergence Detected
+              </h4>
+              <div className="space-y-1">
+                {verdict.divergences.map((d, i) => (
+                  <div key={i} className="text-xs text-zinc-300">
+                    <span className="text-amber-300 font-medium">{d.metric}:</span>{" "}
+                    <span className="font-mono text-zinc-400">{d.source_a}</span> reports <span className="font-mono text-zinc-200">{d.value_a}</span> vs{" "}
+                    <span className="font-mono text-zinc-400">{d.source_b}</span> reports <span className="font-mono text-zinc-200">{d.value_b}</span>{" "}
+                    <span className="text-amber-500 font-mono">({d.diff_pct}% diff)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Thesis Section */}
           <div className="p-4 bg-blue-950/20 border border-blue-900/50 rounded-lg">

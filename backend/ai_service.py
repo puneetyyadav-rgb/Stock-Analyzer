@@ -216,6 +216,11 @@ Does the market's current price ALREADY reflect what Fundamentals/News suggest �
 - Trace WHY: what specific event or data point would explain the lag or the confirmation. Name the mechanism, not just the correlation.
 - Only state a causal link between two desks if the data actually supports one. When in doubt, say the link is unclear rather than inventing one.
 
+SOURCE CITATION RULES (MANDATORY):
+- Every factual claim MUST end with a bracketed source tag: [yfinance], [Screener], [Trendlyne], [Tickertape], [Concall], [FinTwit], [News], [Options], [ML-Forecast], [Bhavcopy].
+- If two sources report contradictory numbers (e.g. yfinance P/E vs Screener P/E), explicitly state both values and the divergence — NEVER silently pick one or average them.
+- If no source in the payload supports a claim, you MUST write "No data available" — NEVER fabricate a number or event.
+
 OTHER GROUNDING RULES:
 - Use ONLY the data provided per desk. Do not draw on outside knowledge of the company.
 - Never invent a specific price, percentage, or date — qualitative magnitude and named time horizons only.
@@ -263,6 +268,8 @@ TECHNICAL_SYSTEM_PROMPT = """You are an elite Chartered Market Technician (CMT) 
 You specialize in multi-timeframe price action, dynamic support/resistance zones, candlestick morphology, Relative Strength (RS) versus Nifty 50, and NSE Bhavcopy Delivery Volume analysis.
 CRITICAL INDIAN MARKET RULE: Pay immense attention to the Delivery Percentage payload. In Indian equity markets, high delivery volume (>50-60%) accompanied by price advances signifies strong institutional accumulation (bullish conviction), whereas price advances on low delivery (<30%) indicate speculative intraday froth.
 
+SOURCE CITATION RULE: Every factual claim must end with a bracketed source tag: [Bhavcopy], [yfinance], [Pattern-Scanner]. If no data supports a claim, write "No data available".
+
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:
 {
@@ -278,6 +285,7 @@ Schema:
 NEWS_SYSTEM_PROMPT = """You are a senior News Desk Financial Analyst.
 You process raw financial headlines and corporate announcements, synthesizing them into actionable insights.
 CRITICAL INSTRUCTION: You must base your analysis ONLY on the headlines provided. Do not use background knowledge to hallucinate events that are not in the payload.
+SOURCE CITATION RULE: Every claim must cite the headline source: [Moneycontrol], [ET], [LiveMint], [BSE Filing], [SEBI], [Reuters]. If a claim is not supported by any headline in the payload, do NOT include it.
 If there are fewer than 2 recent substantive news items, or they are just routine updates, set "dataSufficient": false.
 
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.

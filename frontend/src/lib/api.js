@@ -29,6 +29,7 @@ export const getSocial = (sym) => client.get(`/stock/${sym}/social`).then((r) =>
 export const getNewsSplit = (sym) => client.get(`/stock/${sym}/news-split`).then((r) => r.data);
 export const getSectorAnalysis = (sym) => client.get(`/stock/${sym}/sector-analysis`).then((r) => r.data);
 export const getExternalScrape = (sym) => client.get(`/stock/${sym}/external-scrape`).then((r) => r.data);
+export const getVerdictHistory = (sym) => client.get(`/stock/${sym}/verdict-history`).then((r) => r.data);
 export const uploadSourceMaterial = (sym, file) => {
   const formData = new FormData();
   formData.append("file", file);

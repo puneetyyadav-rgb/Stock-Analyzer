@@ -31,6 +31,7 @@ import pattern_service as ps
 import twitter_service as ts
 import sector_service as sec
 import scraper_service as scr
+import validation_service as vs
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -263,17 +264,41 @@ async def ai_verdict(symbol: str):
     stock_data["patterns"] = patterns
     stock_data["external_scrape"] = ext_data
     
+    # ── Phase 1: Data Sanitization & Divergence Detection ──
+    overview = stock_data.get("overview", {})
+    sanitized_ov, outlier_flags = vs.sanitize_overview(overview)
+    stock_data["overview"] = sanitized_ov
+    divergences = vs.detect_divergences(sanitized_ov, ext_data)
+    stock_data["_divergences"] = divergences
+    stock_data["_outlier_flags"] = outlier_flags
+    divergence_note = vs.build_divergence_note(divergences)
+    if divergence_note:
+        macro["_divergence_note"] = divergence_note
+    
     verdict = await ai.generate_verdict(stock_data, macro)
+    
+    # Attach divergence info to response so frontend can display it
+    if divergences:
+        verdict["divergences"] = divergences
+    if outlier_flags:
+        verdict["outlier_flags"] = outlier_flags
+    
     _cache_set(cache_key, verdict)
-    # store in mongo for history
+    # ── Phase 2: Structured verdict ledger ──
     try:
-        await db.ai_verdicts.insert_one({
+        price_at_verdict = sanitized_ov.get("price")
+        thesis = verdict.get("thesis", {})
+        await db.verdict_history.insert_one({
             "symbol": symbol,
-            "verdict": verdict,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "bias": thesis.get("bias", "Neutral"),
+            "conviction": thesis.get("conviction", "Low"),
+            "price_at_verdict": price_at_verdict,
+            "target_horizon_days": 30,
+            "verdict_summary": thesis.get("coreArgument", "")[:500],
+            "createdAt": datetime.now(timezone.utc),
         })
     except Exception as e:
-        logger.error(f"mongo insert error: {e}")
+        logger.error(f"verdict_history insert error: {e}")
     return verdict
 
 
@@ -780,6 +805,66 @@ async def ask_source(symbol: str, payload: dict):
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
     return result
+
+
+
+@api_router.get("/stock/{symbol}/verdict-history")
+async def verdict_history(symbol: str):
+    """Return past AI verdicts for this symbol with accuracy calibration."""
+    try:
+        cursor = db.verdict_history.find(
+            {"symbol": symbol},
+            {"_id": 0}
+        ).sort("createdAt", -1).limit(50)
+        records = await cursor.to_list(length=50)
+    except Exception as e:
+        logger.error(f"verdict_history read error: {e}")
+        records = []
+
+    if not records:
+        return {"history": [], "accuracy": None, "total": 0}
+
+    # ── Accuracy calibration: compare past bias vs realized price move ──
+    scored = 0
+    correct = 0
+    for rec in records:
+        price_then = rec.get("price_at_verdict")
+        if not price_then:
+            continue
+        try:
+            current_price = (await asyncio.to_thread(ss.get_overview, symbol)).get("price")
+        except Exception:
+            current_price = None
+        if not current_price:
+            continue
+        move_pct = ((current_price - price_then) / price_then) * 100
+        bias = rec.get("bias", "Neutral")
+        scored += 1
+        if bias == "Bullish" and move_pct > 0:
+            correct += 1
+        elif bias == "Bearish" and move_pct < 0:
+            correct += 1
+        elif bias == "Neutral" and abs(move_pct) < 5:
+            correct += 1
+        rec["realized_move_pct"] = round(move_pct, 2)
+        rec["was_correct"] = (
+            (bias == "Bullish" and move_pct > 0) or
+            (bias == "Bearish" and move_pct < 0) or
+            (bias == "Neutral" and abs(move_pct) < 5)
+        )
+        # Serialize datetime for JSON
+        if rec.get("createdAt"):
+            rec["createdAt"] = rec["createdAt"].isoformat() if hasattr(rec["createdAt"], "isoformat") else str(rec["createdAt"])
+
+    accuracy_pct = round((correct / scored) * 100, 1) if scored > 0 else None
+
+    return {
+        "history": records,
+        "accuracy": accuracy_pct,
+        "scored": scored,
+        "correct": correct,
+        "total": len(records),
+    }
 
 
 app.include_router(api_router)
