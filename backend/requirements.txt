@@ -26,3 +26,5 @@ google-genai
 twikit
 browserforge
 python-multipart
+openai>=1.0.0
+neo_api_client
