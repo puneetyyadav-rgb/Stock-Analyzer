@@ -25,3 +25,4 @@ playwright
 google-genai
 twikit
 browserforge
+python-multipart
