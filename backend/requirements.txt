@@ -14,3 +14,13 @@ nest-asyncio
 python-dotenv
 motor
 pymongo
+yfinance
+pandas
+numpy
+vaderSentiment
+python-dateutil
+defusedxml
+pyotp
+playwright
+google-genai
+twikit
