@@ -5,12 +5,18 @@ import asyncio
 from datetime import datetime, timezone
 from functools import lru_cache
 
-# We wrap the import in a try-except because in some environments
-# neo_api_client might fail to install or import without specific dependencies
 try:
     from neo_api_client import NeoAPI
 except ImportError:
-    NeoAPI = None
+    try:
+        import subprocess
+        import sys
+        logging.info("Installing neo_api_client with --no-deps to bypass certifi conflict...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-deps", "git+https://github.com/Kotak-Neo/Kotak-neo-api-v2.git"])
+        from neo_api_client import NeoAPI
+    except Exception as e:
+        logging.error(f"Failed to auto-install neo_api_client: {e}")
+        NeoAPI = None
 
 logger = logging.getLogger(__name__)
 
