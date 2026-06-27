@@ -27,4 +27,4 @@ twikit
 browserforge
 python-multipart
 openai>=1.0.0
-neo_api_client
+git+https://github.com/Kotak-Neo/Kotak-neo-api-v2.git
