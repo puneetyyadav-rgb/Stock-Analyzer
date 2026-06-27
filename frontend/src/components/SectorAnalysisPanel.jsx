@@ -142,8 +142,12 @@ export default function SectorAnalysisPanel({ symbol }) {
             </div>
           </div>
           
-          {/* Real-time scraped data from Trendlyne & Aftermarkets */}
-          {extData && !extData.error && (
+          {!extData && (
+            <div className="border-t border-zinc-800/40 pt-3 mt-3 flex items-center gap-2 text-zinc-500 text-xs">
+              <Loader2 size={12} className="animate-spin text-orange-400" /> Fetching Live Trendlyne SWOT & Aftermarkets Insights…
+            </div>
+          )}
+          {extData && (
             <div className="border-t border-zinc-800/40 pt-3 mt-3">
                <h4 className="text-[10px] tracking-widest uppercase text-orange-400 mb-2 font-semibold flex items-center gap-1">Trendlyne Fundamentals <span className="px-1.5 py-0.5 text-[8px] bg-orange-950/50 text-orange-400 border border-orange-900 rounded-sm">Live Scrape</span></h4>
                {extData.trendlyne?.available ? (

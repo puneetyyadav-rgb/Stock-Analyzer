@@ -716,9 +716,13 @@ async def external_scrape(symbol: str):
     trendlyne_task = scr.scrape_trendlyne(symbol)
     delivery_task = scr.scrape_delivery_volume(symbol)
     
-    aftermarkets, tickertape, trendlyne, delivery = await asyncio.gather(
-        aftermarkets_task, tickertape_task, trendlyne_task, delivery_task, return_exceptions=False
+    results = await asyncio.gather(
+        aftermarkets_task, tickertape_task, trendlyne_task, delivery_task, return_exceptions=True
     )
+    aftermarkets = results[0] if isinstance(results[0], dict) else {"available": False, "error": str(results[0])}
+    tickertape = results[1] if isinstance(results[1], dict) else {"available": False, "error": str(results[1])}
+    trendlyne = results[2] if isinstance(results[2], dict) else {"available": False, "error": str(results[2])}
+    delivery = results[3] if isinstance(results[3], dict) else {"available": False, "error": str(results[3])}
     
     result = {
         "aftermarkets": aftermarkets,
