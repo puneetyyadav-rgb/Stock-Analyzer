@@ -12,3 +12,5 @@ pyjwt>=2.8.0
 asyncio
 nest-asyncio
 python-dotenv
+motor
+pymongo
