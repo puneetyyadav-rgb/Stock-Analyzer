@@ -49,12 +49,13 @@ _CACHE: dict = {}
 _CACHE_TTL = 60  # seconds
 
 
-def _cache_get(key: str):
+def _cache_get(key: str, custom_ttl: float = None):
     item = _CACHE.get(key)
     if not item:
         return None
     ts, val = item
-    if (datetime.now(timezone.utc) - ts).total_seconds() > _CACHE_TTL:
+    ttl = custom_ttl if custom_ttl is not None else _CACHE_TTL
+    if (datetime.now(timezone.utc) - ts).total_seconds() > ttl:
         return None
     return val
 
@@ -707,7 +708,7 @@ async def sector_analysis(symbol: str):
 async def external_scrape(symbol: str):
     """Aggregated headless-browser scrape of Trendlyne, Aftermarkets, and Tickertape."""
     key = f"external_scrape_v3:{symbol}"
-    cached = _cache_get(key)
+    cached = _cache_get(key, custom_ttl=3600)
     if cached:
         return cached
     aftermarkets_task = scr.scrape_aftermarkets(symbol)
