@@ -365,9 +365,9 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
         score = max(5.0, min(95.0, score))
         
         backtest = {"available": False}
-        if symbol != "BT" and len(closes) >= 140:
+        if symbol != "BT" and len(closes) >= 80:
             try:
-                backtest = backtest_signal_ic(closes.tolist(), volumes.tolist() if len(volumes) == len(closes) else None, fwd_days=5, step=5, lookback=100)
+                backtest = backtest_signal_ic(closes.tolist(), volumes.tolist() if len(volumes) == len(closes) else None, fwd_days=5, step=5, lookback=60)
             except Exception as bte:
                 logger.warning(f"Backtest IC failed for {symbol}: {bte}")
 

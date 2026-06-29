@@ -157,7 +157,7 @@ def get_chart(symbol: str, period: str = "1y") -> dict:
 def compute_technicals(symbol: str) -> dict:
     sym = normalize_symbol(symbol)
     try:
-        df = yf.Ticker(sym).history(period="6mo", interval="1d", auto_adjust=True)
+        df = yf.Ticker(sym).history(period="1y", interval="1d", auto_adjust=True)
         if df.empty or len(df) < 30:
             return {}
         close = df["Close"]
