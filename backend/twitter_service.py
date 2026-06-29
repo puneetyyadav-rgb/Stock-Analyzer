@@ -49,7 +49,33 @@ async def get_twitter_sentiment(symbol: str) -> dict:
         except Exception as e:
             logger.warning(f"Twitter node scraper failed, using public fallback: {e}")
 
-    # Robust live public sentiment fallback via Google News RSS search for retail/social sentiment
+    # Zero-auth: indexed tweets via DuckDuckGo (X de-indexes heavily — best-effort, RSS below covers gaps)
+    try:
+        import asyncio, re
+        from social_service import _ddg_search
+        ddg = await asyncio.to_thread(_ddg_search, f'(site:twitter.com OR site:x.com) "{clean_sym}" stock')
+        for r in ddg:
+            text = r["title"] + (". " + r["snippet"] if r.get("snippet") else "")
+            low = text.lower()
+            if not text or any(s in low for s in ("telegram", "whatsapp", "sure shot", "paid tip")):
+                continue
+            score = _vader.polarity_scores(text)["compound"]
+            m = re.search(r"(?:twitter|x)\.com/([^/?#]+)", r["url"])
+            handle = m.group(1) if m else "unknown"
+            results.append({
+                "author": handle,
+                "handle": handle,
+                "text": text[:280],
+                "createdAt": "Recent",
+                "sentimentScore": round(score, 3),
+                "sentimentLabel": "Bullish" if score > 0.15 else "Bearish" if score < -0.15 else "Neutral",
+            })
+        if results:
+            return {"query": query, "tweets": results}
+    except Exception as e:
+        logger.warning(f"ddg twitter search failed: {e}")
+
+    # Secondary fallback: live public sentiment via Google News RSS search
     try:
         import asyncio
         import requests
@@ -63,7 +89,7 @@ async def get_twitter_sentiment(symbol: str) -> dict:
             items = []
             if r.status_code == 200:
                 root = ET.fromstring(r.text)
-                for idx, item in enumerate(root.findall(".//item")[:8]):
+                for idx, item in enumerate(root.findall(".//item")[:50]):
                     title = item.find("title").text if item.find("title") is not None else ""
                     pubDate = item.find("pubDate").text if item.find("pubDate") is not None else "Recent"
                     if title:

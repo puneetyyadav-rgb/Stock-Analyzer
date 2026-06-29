@@ -45,7 +45,8 @@ async function main() {
             process.exit(0);
         }
 
-        const tweets = scraper.searchTweets(query, 30, 1);
+        // SearchMode 2 = Latest tweets
+        const tweets = scraper.searchTweets(query, 60, 2);
         const results = [];
         let count = 0;
         
@@ -59,7 +60,7 @@ async function main() {
                 created_at: t.timeParsed ? new Date(t.timeParsed).toISOString() : new Date().toISOString()
             });
             count++;
-            if (count >= 30) break;
+            if (count >= 60) break;
         }
 
         console.log(JSON.stringify({ tweets: results }));
