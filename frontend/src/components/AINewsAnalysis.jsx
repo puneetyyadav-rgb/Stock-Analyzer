@@ -66,6 +66,7 @@ export default function AINewsAnalysis({ symbol }) {
 
   const TABS = [
     { key: "ai_summary", label: "AI Summary", count: null },
+    { key: "twitter_x", label: "🐦 FinTwit Feed", count: socialData?.length || null },
     { key: "company", label: "Company", count: splitData?.counts?.company },
     { key: "sector_news", label: "Sector", count: splitData?.counts?.sector },
     { key: "market", label: "Market / Misc", count: splitData?.counts?.market },
@@ -241,9 +242,12 @@ export default function AINewsAnalysis({ symbol }) {
                   
                   {socialData && socialData.length > 0 && (
                     <div className="p-3 bg-blue-950/20 border border-blue-900/50 rounded mt-4">
-                      <h4 className="text-[10px] tracking-widest uppercase text-blue-400 mb-2">Live FinTwit Chatter</h4>
-                      <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                        {socialData.slice(0, 8).map((t, i) => (
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-[10px] tracking-widest uppercase text-blue-400 font-bold">Live FinTwit Highlights</h4>
+                        <button onClick={() => setTab("twitter_x")} className="text-[10px] text-blue-300 hover:underline">View All {socialData.length} Tweets &rarr;</button>
+                      </div>
+                      <div className="space-y-3">
+                        {socialData.slice(0, 4).map((t, i) => (
                           <div key={i} className="pb-2 border-b border-zinc-800/50 last:border-0 last:pb-0">
                             <div className="flex justify-between items-start mb-1">
                               <span className="text-xs font-semibold text-zinc-300">{t.author} <span className="text-zinc-500 font-normal">@{t.handle}</span></span>
@@ -269,7 +273,50 @@ export default function AINewsAnalysis({ symbol }) {
         </div>
       )}
       
-      {tab !== "ai_summary" && (
+      {tab === "twitter_x" && (
+        <div className="pt-2">
+          {!socialData || socialData.length === 0 ? (
+            <p className="text-xs text-zinc-600 py-4">No FinTwit chatter found for this ticker.</p>
+          ) : (
+            <div>
+              <div className="p-3 bg-blue-950/30 border border-blue-800/60 rounded mb-3 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-blue-300 uppercase tracking-wider">Quant FinTwit Consensus</h4>
+                  <p className="text-[11px] text-zinc-400">Sample Depth: {socialData.length} analyzed discussions</p>
+                </div>
+                {(() => {
+                  const avg = socialData.reduce((acc, t) => acc + (t.sentimentScore || 0), 0) / socialData.length;
+                  const lbl = avg > 0.15 ? "BULLISH" : avg < -0.15 ? "BEARISH" : "NEUTRAL";
+                  const col = lbl === "BULLISH" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500" : lbl === "BEARISH" ? "bg-red-500/20 text-red-400 border-red-500" : "bg-zinc-800 text-zinc-300 border-zinc-600";
+                  return <span className={`text-xs font-bold px-3 py-1 rounded border ${col}`}>{lbl} ({avg.toFixed(2)})</span>;
+                })()}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[480px] overflow-auto pr-1">
+                {socialData.map((t, i) => (
+                  <div key={i} className="border border-zinc-800/60 p-2.5 bg-zinc-900/30 rounded">
+                    <div className="flex justify-between items-start mb-1 gap-2">
+                      <span className="text-xs font-semibold text-zinc-200 truncate">{t.author} <span className="text-zinc-500 font-normal">@{t.handle}</span></span>
+                      <span className={`text-[8px] tracking-widest uppercase px-1.5 py-0.5 rounded shrink-0 font-mono ${
+                            t.sentimentLabel === 'Bullish' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' :
+                            t.sentimentLabel === 'Bearish' ? 'bg-red-950/60 text-red-400 border border-red-800' :
+                            'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                          }`}>
+                        {t.sentimentLabel} ({t.sentimentScore})
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">{t.text}</p>
+                    <div className="mt-1.5 text-right">
+                      <span className="text-[9px] text-zinc-600 font-mono">{t.createdAt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab !== "ai_summary" && tab !== "twitter_x" && (
         <div className="pt-2">
           {splitLoading ? (
             <div className="flex items-center gap-2 text-zinc-500 text-xs"><Loader2 size={12} className="animate-spin" /> Loading…</div>

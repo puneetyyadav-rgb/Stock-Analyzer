@@ -101,25 +101,61 @@ export default function SocialPanel({ symbol }) {
 
           {/* Twitter / X */}
           <div className="border border-zinc-800/60 p-2.5" data-testid="twitter-block">
-            <div className="flex items-center justify-between mb-1.5">
-              <h4 className="text-[10px] tracking-widest uppercase text-blue-400">X / Twitter</h4>
-              {data.twitter_x?.tweets ? (
-                <span className="text-[10px] text-zinc-400">{data.twitter_x.tweets.length} tweets analyzed</span>
-              ) : (
-                <span className="text-[9px] tracking-widest uppercase text-zinc-500">Unavailable</span>
-              )}
-            </div>
-            {data.twitter_x?.error && (
-               <p className="text-[11px] text-zinc-500 leading-snug">{data.twitter_x.error}</p>
-            )}
-            {data.twitter_x?.tweets && data.twitter_x.tweets.length === 0 && (
-               <p className="text-[11px] text-zinc-500 leading-snug">No recent tweets found for this ticker.</p>
-            )}
-            {data.twitter_x?.tweets && data.twitter_x.tweets.length > 0 && (
-               <p className="text-[11px] text-zinc-300 leading-snug">
-                 Live FinTwit chatter is active. View the full feed in the <span className="font-semibold text-zinc-200">News Desk</span> tab.
-               </p>
-            )}
+            {(() => {
+              const tweets = data.twitter_x?.tweets || [];
+              const twCount = tweets.length;
+              const twAvg = twCount > 0 ? tweets.reduce((acc, t) => acc + (t.sentimentScore || 0), 0) / twCount : 0;
+              const twLabel = twAvg > 0.15 ? "BULLISH" : twAvg < -0.15 ? "BEARISH" : "NEUTRAL";
+              const labelColor = twLabel === "BULLISH" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : twLabel === "BEARISH" ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-zinc-500/20 text-zinc-300 border-zinc-500/30";
+
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[10px] tracking-widest uppercase text-blue-400 font-semibold">X / Twitter</h4>
+                      {twCount > 0 && (
+                        <span className={`text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded border ${labelColor}`}>
+                          {twLabel}
+                        </span>
+                      )}
+                    </div>
+                    {twCount > 0 ? (
+                      <span className="text-[10px] text-zinc-400">{twCount} analyzed</span>
+                    ) : (
+                      <span className="text-[9px] tracking-widest uppercase text-zinc-500">Unavailable</span>
+                    )}
+                  </div>
+
+                  {data.twitter_x?.error && (
+                     <p className="text-[11px] text-zinc-500 leading-snug mb-2">{data.twitter_x.error}</p>
+                  )}
+                  {twCount === 0 && (
+                     <p className="text-[11px] text-zinc-500 leading-snug">No recent tweets found for this ticker.</p>
+                  )}
+                  {twCount > 0 && (
+                    <div className="space-y-2.5 mt-2">
+                      {tweets.slice(0, 4).map((t, idx) => (
+                        <div key={idx} className="pb-2 border-b border-zinc-800/60 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between text-[11px] mb-0.5">
+                            <span className="font-medium text-zinc-200 truncate max-w-[180px]">{t.author}</span>
+                            <span className={`text-[8px] tracking-wider uppercase px-1 py-0.2 rounded font-mono ${
+                              t.sentimentLabel === 'Bullish' ? 'text-emerald-400 bg-emerald-950/40' :
+                              t.sentimentLabel === 'Bearish' ? 'text-red-400 bg-red-950/40' : 'text-zinc-400 bg-zinc-800'
+                            }`}>
+                              {t.sentimentLabel} ({t.sentimentScore})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-2">{t.text}</p>
+                        </div>
+                      ))}
+                      <div className="pt-1 text-center">
+                        <span className="text-[10px] text-blue-400 font-medium">View all {twCount} analyzed tweets in News Desk tab &rarr;</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
