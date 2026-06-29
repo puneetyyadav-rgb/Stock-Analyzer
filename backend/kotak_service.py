@@ -110,23 +110,30 @@ async def get_market_depth(symbol: str) -> dict:
         except Exception as e:
             logger.error(f"Error fetching quotes for depth: {e}")
 
-    # Simulation logic remains
     import random
-    base_price = 100.0
-    if symbol == "RELIANCE.NS":
-        base_price = 2950.0
-    elif symbol == "TCS.NS":
-        base_price = 3800.0
-    
-    ltp = base_price + random.uniform(-5, 5)
+    import yfinance as yf
+    try:
+        def fetch_yf_price():
+            t = yf.Ticker(symbol)
+            fi = getattr(t, "fast_info", None)
+            if fi and hasattr(fi, "last_price") and fi.last_price:
+                return float(fi.last_price)
+            hist = t.history(period="1d")
+            if not hist.empty:
+                return float(hist["Close"].iloc[-1])
+            return 1000.0
+        ltp = await asyncio.to_thread(fetch_yf_price)
+    except Exception:
+        ltp = 1000.0
     
     depth = {"bids": [], "asks": [], "ltp": round(ltp, 2)}
     
-    for i in range(5):
-        bid_price = ltp - random.uniform(0.1, 2.0)
-        ask_price = ltp + random.uniform(0.1, 2.0)
-        depth["bids"].append({"price": round(bid_price, 2), "quantity": random.randint(100, 5000), "orders": random.randint(1, 20)})
-        depth["asks"].append({"price": round(ask_price, 2), "quantity": random.randint(100, 5000), "orders": random.randint(1, 20)})
+    tick_size = max(0.05, round(ltp * 0.0005, 2))
+    for i in range(1, 6):
+        bid_price = ltp - (tick_size * i) + random.uniform(-0.02, 0.02)
+        ask_price = ltp + (tick_size * i) + random.uniform(-0.02, 0.02)
+        depth["bids"].append({"price": round(bid_price, 2), "quantity": random.randint(200, 8000), "orders": random.randint(3, 45)})
+        depth["asks"].append({"price": round(ask_price, 2), "quantity": random.randint(200, 8000), "orders": random.randint(3, 45)})
         
     depth["bids"].sort(key=lambda x: x["price"], reverse=True)
     depth["asks"].sort(key=lambda x: x["price"])
