@@ -50,12 +50,12 @@ export default function WatchlistPanel({ onSelect, currentSymbol }) {
         if (!p) continue;
         const hit = (a.condition === "above" && p >= a.price) || (a.condition === "below" && p <= a.price);
         if (hit) {
-          toast.success(`Alert: ${a.symbol} ${a.condition} ₹${a.price}`, { description: `Current ₹${p.toFixed(2)}. ${a.note}` });
+          toast.success(`Alert: ${a.symbol} ${a.condition} ₹${a.price}`, { description: `Current ₹${Number(p).toFixed(2)}. ${a.note}` });
           markAlertTriggered(a.id);
           setAlerts(getAlerts());
           try {
             if (Notification && Notification.permission === "granted") {
-              new Notification(`Stock Sentinel Alert`, { body: `${a.symbol} ${a.condition} ₹${a.price} → Now ₹${p.toFixed(2)}` });
+              new Notification(`Stock Sentinel Alert`, { body: `${a.symbol} ${a.condition} ₹${a.price} → Now ₹${Number(p).toFixed(2)}` });
             }
           } catch (_) {
             // notifications not supported

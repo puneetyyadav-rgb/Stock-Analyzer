@@ -33,12 +33,12 @@ export default function InsiderPanel({ symbol }) {
         <div className="mb-4 flex items-center justify-between p-3 border border-zinc-800/60 bg-zinc-900/30">
           <div>
             <div className="text-[10px] tracking-widest uppercase text-zinc-500 mb-0.5">Promoter Holding</div>
-            <div className="text-sm font-medium text-zinc-200">{promoter.totalPercentage.toFixed(2)}%</div>
+            <div className="text-sm font-medium text-zinc-200">{Number(promoter.totalPercentage || 0).toFixed(2)}%</div>
           </div>
           <div className="text-right">
             <div className="text-[10px] tracking-widest uppercase text-zinc-500 mb-0.5">Shares Pledged</div>
             <div className={`text-sm font-medium ${promoter.pledgedPercentage > 5 ? 'text-red-400' : promoter.pledgedPercentage > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {promoter.pledgedPercentage.toFixed(2)}%
+              {Number(promoter.pledgedPercentage || 0).toFixed(2)}%
             </div>
           </div>
         </div>

@@ -57,7 +57,7 @@ export default function MarketDepthPanel({ symbol }) {
             </div>
             <div className="text-right">
               <div className="text-[10px] tracking-widest uppercase text-zinc-500">LTP</div>
-              <div className="text-lg font-mono font-medium text-zinc-100">₹{data.ltp?.toFixed(2) || "—"}</div>
+              <div className="text-lg font-mono font-medium text-zinc-100">₹{data.ltp !== undefined && data.ltp !== null ? Number(data.ltp).toFixed(2) : "—"}</div>
             </div>
           </div>
 
@@ -74,7 +74,7 @@ export default function MarketDepthPanel({ symbol }) {
                   <div key={i} className="grid grid-cols-3 gap-1 hover:bg-zinc-800/50 cursor-default">
                     <div className="text-right text-zinc-300">{b.quantity}</div>
                     <div className="text-right text-zinc-500">{b.orders}</div>
-                    <div className="text-right text-emerald-400 font-medium">₹{b.price?.toFixed(2)}</div>
+                    <div className="text-right text-emerald-400 font-medium">₹{b.price !== undefined && b.price !== null ? Number(b.price).toFixed(2) : "-"}</div>
                   </div>
                 ))}
                 {(!data.bids || data.bids.length === 0) && (
@@ -93,7 +93,7 @@ export default function MarketDepthPanel({ symbol }) {
               <div className="space-y-1">
                 {data.asks?.map((a, i) => (
                   <div key={i} className="grid grid-cols-3 gap-1 hover:bg-zinc-800/50 cursor-default">
-                    <div className="text-left text-red-400 font-medium">₹{a.price?.toFixed(2)}</div>
+                    <div className="text-left text-red-400 font-medium">₹{a.price !== undefined && a.price !== null ? Number(a.price).toFixed(2) : "-"}</div>
                     <div className="text-left text-zinc-500">{a.orders}</div>
                     <div className="text-left text-zinc-300">{a.quantity}</div>
                   </div>
