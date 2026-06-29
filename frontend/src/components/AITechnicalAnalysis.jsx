@@ -30,7 +30,7 @@ export default function AITechnicalAnalysis({ symbol }) {
 
   return (
     <Panel
-      title="AI Technical Analysis (CMT)"
+      title="AI Institutional Quant & Technical Deck"
       right={
         <button
           onClick={run}
@@ -38,7 +38,7 @@ export default function AITechnicalAnalysis({ symbol }) {
           className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] tracking-widest uppercase font-medium bg-fuchsia-700 text-white hover:bg-fuchsia-600 disabled:opacity-50 transition-colors"
         >
           {loading ? <Loader2 size={12} className="animate-spin" /> : <LineChart size={12} />}
-          {loading ? "Analyzing Charts…" : tech ? "Re-Analyze" : "Generate Technical Analysis"}
+          {loading ? "Running Quant Engine…" : tech ? "Re-Analyze Deck" : "Generate Quant Deck"}
         </button>
       }
     >
@@ -63,6 +63,58 @@ export default function AITechnicalAnalysis({ symbol }) {
       )}
       {tech && !tech.error && (
         <div className="space-y-4">
+          {tech.quantScore !== undefined && (
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-fuchsia-950/40 to-purple-950/40 border border-fuchsia-800/60 rounded">
+              <div>
+                <span className="text-[10px] uppercase tracking-widest text-fuchsia-400 font-bold block">Institutional Quant Score</span>
+                <span className="text-xs text-zinc-400">Pure Math Confidence Rating</span>
+              </div>
+              <div className="text-2xl font-mono font-black text-fuchsia-300">{tech.quantScore} <span className="text-sm text-zinc-500">/ 100</span></div>
+            </div>
+          )}
+
+          {tech.regimeClassification && (
+            <div className="p-3 bg-purple-950/20 border border-purple-900/50 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-purple-400 mb-1.5 font-bold">Signal Processing & Regime Detection (Hurst & Kalman)</h4>
+              <p className="text-sm text-zinc-200 leading-relaxed">{tech.regimeClassification}</p>
+            </div>
+          )}
+
+          {tech.riskEngineering && (
+            <div className="p-3 bg-red-950/20 border border-red-900/50 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-red-400 mb-1.5 font-bold">Risk Engineering (Fat-Tail Bootstrap Monte Carlo VaR)</h4>
+              <p className="text-sm text-zinc-200 leading-relaxed">{tech.riskEngineering}</p>
+            </div>
+          )}
+
+          {tech.microstructureFlow && (
+            <div className="p-3 bg-amber-950/20 border border-amber-900/50 rounded">
+              <h4 className="text-[10px] tracking-widest uppercase text-amber-400 mb-1.5 font-bold">Microstructure & Order Flow (Level-2 OBI & RVOL)</h4>
+              <p className="text-sm text-zinc-200 leading-relaxed">{tech.microstructureFlow}</p>
+            </div>
+          )}
+
+          {tech.keyLevelsMatrix && (
+            <div className="p-3 bg-emerald-950/20 border border-emerald-900/50 rounded grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-mono">
+              <div className="bg-black/40 p-2 rounded border border-emerald-900/30">
+                <span className="text-[9px] text-zinc-400 uppercase block">Entry Zone</span>
+                <span className="text-xs text-emerald-400 font-bold">{tech.keyLevelsMatrix.entryZone || "-"}</span>
+              </div>
+              <div className="bg-black/40 p-2 rounded border border-emerald-900/30">
+                <span className="text-[9px] text-zinc-400 uppercase block">Target ($R1/R2$)</span>
+                <span className="text-xs text-emerald-300 font-bold">₹{tech.keyLevelsMatrix.target || "-"}</span>
+              </div>
+              <div className="bg-black/40 p-2 rounded border border-red-900/30">
+                <span className="text-[9px] text-zinc-400 uppercase block">Stop Loss ($S1$)</span>
+                <span className="text-xs text-red-400 font-bold">₹{tech.keyLevelsMatrix.stopLoss || "-"}</span>
+              </div>
+              <div className="bg-black/40 p-2 rounded border border-fuchsia-900/30">
+                <span className="text-[9px] text-zinc-400 uppercase block">Risk : Reward</span>
+                <span className="text-xs text-fuchsia-300 font-bold">{tech.keyLevelsMatrix.riskRewardRatio || "-"}</span>
+              </div>
+            </div>
+          )}
+
           <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded">
             <h4 className="text-[10px] tracking-widest uppercase text-fuchsia-400 mb-2">Trend & Posture</h4>
             <p className="text-sm text-zinc-300 leading-relaxed">{tech.trend_summary}</p>

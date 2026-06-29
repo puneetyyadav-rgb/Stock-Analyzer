@@ -72,7 +72,21 @@ export default function StockDetails({ symbol, overview }) {
 
       {/* Technicals + Pros/Cons */}
       <div className="lg:col-span-4 space-y-3">
-        <Panel title="Technical Indicators" testId="technicals-panel">
+        <Panel title="Institutional Quant & Technical Deck" testId="technicals-panel">
+          {technicals?.quantDeck && !technicals.quantDeck.error && (
+            <div className="mb-3 p-2.5 bg-fuchsia-950/20 border border-fuchsia-900/40 rounded space-y-1.5">
+              <div className="flex justify-between items-center border-b border-fuchsia-900/30 pb-1">
+                <span className="text-[10px] uppercase tracking-widest text-fuchsia-400 font-bold">Quant Score</span>
+                <span className="text-sm font-mono font-bold text-fuchsia-300">{technicals.quantDeck.quantScore || 50} / 100</span>
+              </div>
+              <KV label="Hurst Exponent (H)" value={`${technicals.quantDeck.hurstRegime?.hurst || "0.50"} (${technicals.quantDeck.hurstRegime?.regime?.split(" ")[0] || "-"})`} valueClass="text-fuchsia-300" />
+              <KV label="1D Kalman State" value={technicals.quantDeck.kalmanState?.kalmanTrend || "-"} valueClass={technicals.quantDeck.kalmanState?.kalmanTrend?.includes("Bullish") ? "text-emerald-400" : "text-red-400"} />
+              <KV label="10D Fat-Tail VaR (95%)" value={`${technicals.quantDeck.monteCarloRisk?.var95Pct || 0}%`} valueClass="text-red-400 font-mono" />
+              <KV label="Expected Shortfall (CVaR)" value={`${technicals.quantDeck.monteCarloRisk?.cvar95Pct || 0}%`} valueClass="text-red-400 font-mono" />
+              <KV label="Bollinger Squeeze" value={technicals.quantDeck.bollingerSqueeze?.status || "Normal"} valueClass={technicals.quantDeck.bollingerSqueeze?.status?.includes("SQUEEZE") ? "text-amber-400 font-bold animate-pulse" : "text-zinc-300"} />
+              <KV label="Relative Volume (RVOL)" value={`${technicals.quantDeck.relativeVolumeRVOL || 1.0}x`} valueClass={technicals.quantDeck.relativeVolumeRVOL > 1.5 ? "text-emerald-400 font-bold" : "text-zinc-300"} />
+            </div>
+          )}
           <KV label="RSI (14)" value={fmtNum(technicals?.rsi)} valueClass={
             technicals?.rsi > 70 ? "text-red-400" : technicals?.rsi < 30 ? "text-emerald-400" : "text-zinc-200"
           } />

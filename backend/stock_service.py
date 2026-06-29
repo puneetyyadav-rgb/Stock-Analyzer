@@ -13,6 +13,7 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 from dateutil import parser as date_parser
 from defusedxml import ElementTree as ET
+from quant_service import compute_complete_quant_deck
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +203,15 @@ def compute_technicals(symbol: str) -> dict:
                 "outperformance_3m": _safe_float(stock_3m - nifty_3m)
             }
 
+        ohlcv_dict = {
+            "open": df["Open"].tolist() if "Open" in df.columns else [],
+            "high": df["High"].tolist() if "High" in df.columns else [],
+            "low": df["Low"].tolist() if "Low" in df.columns else [],
+            "close": df["Close"].tolist() if "Close" in df.columns else [],
+            "volume": df["Volume"].tolist() if "Volume" in df.columns else [],
+        }
+        quant_deck = compute_complete_quant_deck(sym, ohlcv_dict)
+
         return {
             "currentPrice": _safe_float(cur),
             "rsi": rsi_val,
@@ -215,6 +225,7 @@ def compute_technicals(symbol: str) -> dict:
             "resistance": _safe_float(resistance),
             "trend": "Uptrend" if cur > (_safe_float(sma50.iloc[-1]) or 0) else "Downtrend",
             "relativeStrength": rs_data,
+            "quantDeck": quant_deck,
         }
     except Exception as e:
         logger.error(f"technicals error: {e}")
