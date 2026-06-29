@@ -331,6 +331,10 @@ async def ai_technical(symbol: str):
     }
     
     verdict = await ai.generate_technical_analysis(tech_data)
+    if isinstance(verdict, dict):
+        q_deck = technicals_data.get("quantDeck", {})
+        verdict["signalBacktest"] = q_deck.get("signalBacktest")
+        verdict["quantScore"] = q_deck.get("quantScore", verdict.get("quantScore"))
     _cache_set(cache_key, verdict)
     return verdict
 

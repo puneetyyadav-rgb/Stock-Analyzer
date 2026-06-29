@@ -73,6 +73,19 @@ export default function AITechnicalAnalysis({ symbol }) {
             </div>
           )}
 
+          {tech.signalBacktest?.available && (
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-950/40 to-teal-950/40 border border-emerald-800/60 rounded">
+              <div>
+                <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold block">Walk-Forward Backtest Verification</span>
+                <span className="text-xs text-zinc-400">Tested across {tech.signalBacktest.samples} trailing {tech.signalBacktest.fwdDays}-day holding periods</span>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-mono font-black text-emerald-300">Hit Rate: {(tech.signalBacktest.hitRate * 100).toFixed(1)}%</div>
+                <div className="text-[11px] font-mono text-zinc-400">IC Edge: {tech.signalBacktest.ic}</div>
+              </div>
+            </div>
+          )}
+
           {tech.regimeClassification && (
             <div className="p-3 bg-purple-950/20 border border-purple-900/50 rounded">
               <h4 className="text-[10px] tracking-widest uppercase text-purple-400 mb-1.5 font-bold">Signal Processing & Regime Detection (Hurst & Kalman)</h4>
