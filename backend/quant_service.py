@@ -70,23 +70,26 @@ def calculate_bollinger_squeeze(closes: np.ndarray, highs: np.ndarray, lows: np.
         return {"status": "Error", "bandWidth": 0.0, "atr14": 0.0}
 
 
-def calculate_hurst_exponent(returns: np.ndarray) -> Dict[str, Any]:
+def calculate_hurst_exponent(log_prices: np.ndarray) -> Dict[str, Any]:
     """
     Computes Hurst Exponent (H) via pure numpy variance scaling.
+    Operates on the LOG-PRICE level series (NOT returns) — the std-of-lagged-
+    differences estimator is only valid on the level series; feeding returns
+    differences it twice and biases H toward the anti-persistent zone.
     Classifies regime into Mean-Reverting (<0.45), Random Walk (~0.50), or Trending (>0.55).
     """
     try:
-        clean_returns = returns[~np.isnan(returns)]
-        if len(clean_returns) < 60:
+        series = log_prices[~np.isnan(log_prices)]
+        if len(series) < 60:
             return {"hurst": 0.50, "regime": "Insufficient Data"}
-        
+
         lags = [2, 4, 8, 16, 32]
         tau = []
         for lag in lags:
-            if lag >= len(clean_returns):
+            if lag >= len(series):
                 continue
-            # Calculate standard deviation of lagged differences
-            diffs = clean_returns[lag:] - clean_returns[:-lag]
+            # Std-dev of lagged differences of the level series
+            diffs = series[lag:] - series[:-lag]
             tau.append(np.std(diffs))
             
         if len(tau) < 3:
@@ -118,77 +121,90 @@ def calculate_hurst_exponent(returns: np.ndarray) -> Dict[str, Any]:
 
 def calculate_adaptive_kalman_1d(closes: np.ndarray) -> Dict[str, Any]:
     """
-    Adaptive 1D Kalman Filter state smoother implemented in bare-metal numpy.
-    Dynamically scales process noise (Q) and measurement noise (R) from rolling variance.
+    Local-Linear-Trend Kalman filter (2-state: level + slope) in bare-metal numpy.
+    Tracks trend without the lag of a level-only filter and exposes a velocity
+    (slope) signal. Genuinely adaptive: measurement noise R is the LOCAL rolling
+    variance while process noise Q is a fixed fraction of the GLOBAL variance, so
+    the Kalman gain actually varies over time. (The old level-only filter scaled
+    both Q and R by the same rolling variance → constant Q/R ratio → it was just a
+    fixed-gain EMA, not adaptive and unable to track trends.)
     """
     try:
         n = len(closes)
         if n < 20:
-            return {"smoothedPrice": float(closes[-1]) if n > 0 else 0.0, "trendOverlay": "Unknown"}
-            
-        x_est = float(closes[0])
-        p_est = 1.0
-        
+            return {"smoothedPrice": float(closes[-1]) if n > 0 else 0.0, "kalmanTrend": "Unknown",
+                    "kalmanVelocity": 0.0, "noiseDivergence": 0.0}
+
+        F = np.array([[1.0, 1.0], [0.0, 1.0]])   # level advances by slope each step
+        global_var = float(np.var(np.diff(closes))) or 1.0
+        Q = np.array([[global_var * 0.05, 0.0], [0.0, global_var * 0.005]])
+
+        x = np.array([float(closes[0]), 0.0])     # [level, slope]
+        P = np.eye(2) * global_var
         smoothed = np.zeros(n)
-        smoothed[0] = x_est
-        
-        # Rolling variance calculation for adaptive Q and R
+        smoothed[0] = x[0]
+
         for i in range(1, n):
             window = closes[max(0, i - 20):i]
-            roll_var = float(np.var(window)) if len(window) > 1 else 1.0
-            
-            # Adaptive noise scaling
-            q = roll_var * 0.01  # Process noise
-            r = roll_var * 0.50  # Measurement noise
-            
-            # Prediction step
-            x_pred = x_est
-            p_pred = p_est + q
-            
-            # Update step
-            k_gain = p_pred / (p_pred + r) if (p_pred + r) > 0 else 0.5
-            x_est = x_pred + k_gain * (closes[i] - x_pred)
-            p_est = (1.0 - k_gain) * p_pred
-            
-            smoothed[i] = x_est
-            
+            r = max(float(np.var(window)) if len(window) > 1 else global_var, 1e-6)
+
+            # Predict
+            x = F @ x
+            P = F @ P @ F.T + Q
+            # Update (measurement matrix is [1, 0] → observed value is just the level)
+            y = float(closes[i]) - x[0]
+            S = P[0, 0] + r
+            K = P[:, 0] / S                       # Kalman gain, shape (2,)
+            x = x + K * y
+            P = P - np.outer(K, P[0, :])
+            smoothed[i] = x[0]
+
         latest_smoothed = float(smoothed[-1])
-        prev_smoothed = float(smoothed[-5]) if n >= 5 else float(smoothed[0])
-        
-        trend = "Bullish Kalman State" if latest_smoothed > prev_smoothed else "Bearish Kalman State"
-        
+        slope = float(x[1])
+        trend = "Bullish Kalman State" if slope > 0 else "Bearish Kalman State"
+
         return {
             "smoothedPrice": round(latest_smoothed, 2),
             "kalmanTrend": trend,
+            "kalmanVelocity": round(slope, 4),
             "noiseDivergence": round(float(closes[-1]) - latest_smoothed, 2)
         }
     except Exception as e:
         logger.error(f"Error calculating Kalman Filter: {e}")
-        return {"smoothedPrice": 0.0, "kalmanTrend": "Error", "noiseDivergence": 0.0}
+        return {"smoothedPrice": 0.0, "kalmanTrend": "Error", "kalmanVelocity": 0.0, "noiseDivergence": 0.0}
 
 
 def calculate_fat_tail_var(returns: np.ndarray, portfolio_val: float = 100000.0, horizon_days: int = 10) -> Dict[str, Any]:
     """
-    Empirical Bootstrap Monte Carlo simulation (1,000 paths over 10 days).
-    Samples directly from empirical returns to capture realistic fat tails (market crashes).
-    Outputs 95% and 99% Value at Risk (VaR) and Expected Shortfall (CVaR).
+    Block-bootstrap Monte Carlo simulation (10,000 paths over 10 days).
+    Samples contiguous BLOCKS of empirical LOG returns so volatility clustering
+    (GARCH-style crash persistence) survives — IID resampling destroys it and
+    understates multi-day tail risk. Deterministic (seeded) so the deck doesn't
+    jitter between calls. Outputs 95%/99% VaR and 95% Expected Shortfall (CVaR).
     """
     try:
         clean_returns = returns[~np.isnan(returns)]
         if len(clean_returns) < 30:
             return {"var95Pct": 0.0, "var99Pct": 0.0, "cvar95Pct": 0.0, "var95Cash": 0.0}
-            
-        num_sims = 1000
-        # Bootstrap resampling: shape (1000, horizon_days)
-        random_paths = np.random.choice(clean_returns, size=(num_sims, horizon_days), replace=True)
-        
-        # Compound returns across the horizon
-        cumulative_returns = np.prod(1.0 + random_paths, axis=1) - 1.0
-        
-        # Calculate empirical percentiles
+
+        rng = np.random.default_rng(12345)
+        num_sims = 10000
+        block = 5  # ponytail: fixed 5-day blocks; switch to stationary bootstrap if regimes vary widely
+        n = len(clean_returns)
+        n_blocks = -(-horizon_days // block)  # ceil
+
+        # Build (num_sims, horizon) paths from contiguous wrapped blocks → preserves clustering
+        starts = rng.integers(0, n, size=(num_sims, n_blocks))
+        idx = (starts[:, :, None] + np.arange(block)[None, None, :]) % n
+        idx = idx.reshape(num_sims, n_blocks * block)[:, :horizon_days]
+        paths = clean_returns[idx]
+
+        # Inputs are LOG returns → horizon return is exp(sum) - 1, NOT prod(1 + r)
+        cumulative_returns = np.expm1(paths.sum(axis=1))
+
         var_95 = float(np.percentile(cumulative_returns, 5.0))
         var_99 = float(np.percentile(cumulative_returns, 1.0))
-        
+
         # Expected Shortfall (CVaR) at 95%: mean of worst 5% outcomes
         tail_95 = cumulative_returns[cumulative_returns <= var_95]
         cvar_95 = float(np.mean(tail_95)) if len(tail_95) > 0 else var_95
@@ -232,6 +248,58 @@ def calculate_microstructure_obi(bid_size: float, ask_size: float) -> Dict[str, 
         return {"obiRatio": 0.0, "flowSignal": "Error"}
 
 
+def _rank_corr(a: np.ndarray, b: np.ndarray) -> float:
+    """Spearman rank correlation in pure numpy (ties broken by argsort order)."""
+    ra = np.argsort(np.argsort(a)).astype(float)
+    rb = np.argsort(np.argsort(b)).astype(float)
+    ra -= ra.mean()
+    rb -= rb.mean()
+    denom = np.sqrt((ra ** 2).sum() * (rb ** 2).sum())
+    return float((ra * rb).sum() / denom) if denom > 0 else 0.0
+
+
+def backtest_signal_ic(closes: List[float], volumes: Optional[List[float]] = None,
+                       fwd_days: int = 5, step: int = 5, lookback: int = 120) -> Dict[str, Any]:
+    """
+    Walk-forward Information Coefficient for the composite quantScore.
+    At each sampled bar it recomputes the deck on the trailing `lookback` window and
+    correlates the live quantScore with the realized forward `fwd_days` return.
+    IC is the rank correlation: >0 means real predictive edge (|IC| ~0.03-0.10 is
+    meaningful in equities); hitRate is the directional agreement of score>50 vs an up-move.
+    Without this, quantScore is an unvalidated number — same trap as the AI verdict.
+    """
+    px = np.asarray(closes, dtype=float)
+    n = len(px)
+    if n < lookback + fwd_days + step:
+        return {"available": False, "reason": "insufficient history"}
+
+    vol = np.asarray(volumes, dtype=float) if volumes is not None else None
+    scores, fwd = [], []
+    for t in range(lookback, n - fwd_days, step):
+        win = px[t - lookback:t]
+        # no intraday H/L in a close-only backtest → close proxies (ATR-driven terms degrade gracefully)
+        deck = compute_complete_quant_deck("BT", {
+            "close": win.tolist(), "high": win.tolist(), "low": win.tolist(),
+            "volume": vol[t - lookback:t].tolist() if vol is not None else [],
+        })
+        s = deck.get("quantScore")
+        if s is None:
+            continue
+        scores.append(s)
+        fwd.append(px[t + fwd_days] / px[t] - 1.0)
+
+    if len(scores) < 10:
+        return {"available": False, "reason": "too few samples"}
+    scores, fwd = np.array(scores), np.array(fwd)
+    return {
+        "available": True,
+        "ic": round(_rank_corr(scores, fwd), 4),
+        "hitRate": round(float(np.mean((scores > 50) == (fwd > 0))), 3),
+        "samples": len(scores),
+        "fwdDays": fwd_days,
+    }
+
+
 def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kotak_depth: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Master quantitative aggregator feeding the AI prompt and UI dashboard."""
     try:
@@ -247,12 +315,14 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
         latest_high = float(highs[-1])
         latest_low = float(lows[-1])
         
-        # Calculate daily log returns
-        returns = np.diff(np.log(closes[closes > 0])) if len(closes) > 1 else np.array([])
-        
+        # Log-price level series (for Hurst) + daily log returns (for VaR)
+        pos = closes[closes > 0]
+        log_prices = np.log(pos) if len(pos) > 1 else np.array([])
+        returns = np.diff(log_prices) if len(log_prices) > 1 else np.array([])
+
         pivots = calculate_fibonacci_pivots(latest_high, latest_low, latest_close)
         squeeze = calculate_bollinger_squeeze(closes, highs, lows)
-        hurst = calculate_hurst_exponent(returns)
+        hurst = calculate_hurst_exponent(log_prices)
         kalman = calculate_adaptive_kalman_1d(closes)
         var_risk = calculate_fat_tail_var(returns)
         
@@ -281,7 +351,8 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             score -= 15.0
             
         if hurst.get("regime", "").startswith("Trending"):
-            score += 10.0 if score > 50 else -10.0
+            # trending regime amplifies the Kalman directional read (no path dependence on running score)
+            score += 10.0 if kalman.get("kalmanTrend", "").startswith("Bullish") else -10.0
             
         if obi.get("obiRatio", 0) > 0.20:
             score += 15.0
@@ -293,6 +364,13 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             
         score = max(5.0, min(95.0, score))
         
+        backtest = {"available": False}
+        if symbol != "BT" and len(closes) >= 140:
+            try:
+                backtest = backtest_signal_ic(closes.tolist(), volumes.tolist() if len(volumes) == len(closes) else None, fwd_days=5, step=5, lookback=100)
+            except Exception as bte:
+                logger.warning(f"Backtest IC failed for {symbol}: {bte}")
+
         return {
             "symbol": symbol,
             "currentPrice": round(latest_close, 2),
@@ -303,8 +381,43 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             "kalmanState": kalman,
             "monteCarloRisk": var_risk,
             "orderFlowOBI": obi,
-            "relativeVolumeRVOL": round(rvol, 2)
+            "relativeVolumeRVOL": round(rvol, 2),
+            "signalBacktest": backtest
         }
     except Exception as e:
         logger.error(f"Error computing quant deck for {symbol}: {e}")
         return {"error": str(e)}
+
+
+if __name__ == "__main__":  # offline sanity check of the fixed math
+    _rng = np.random.default_rng(0)
+    _n = 300
+    # low-noise uptrend (drift dominates) → Kalman slope must read positive
+    _closes = 100 * np.exp(np.cumsum(_rng.normal(0.004, 0.0015, _n)))
+    _ohlcv = {
+        "close": _closes.tolist(),
+        "high": (_closes * 1.01).tolist(),
+        "low": (_closes * 0.99).tolist(),
+        "volume": (_rng.random(_n) * 1e6).tolist(),
+    }
+    deck = compute_complete_quant_deck("TEST", _ohlcv)
+    assert 5 <= deck["quantScore"] <= 95, deck
+    assert deck["kalmanState"]["kalmanVelocity"] > 0, deck["kalmanState"]   # uptrend → positive slope
+    _mc = deck["monteCarloRisk"]
+    # drift-independent VaR invariants: deeper percentile is worse, and CVaR ≤ VaR
+    assert _mc["var99Pct"] <= _mc["var95Pct"] and _mc["cvar95Pct"] <= _mc["var95Pct"], _mc
+    assert np.isfinite(_mc["var95Pct"]), _mc
+    assert compute_complete_quant_deck("TEST", _ohlcv)["monteCarloRisk"] == _mc, "VaR must be deterministic"
+    print("ok  score=%.1f  hurst=%.3f (%s)  vel=%.4f  var95=%.2f%%" % (
+        deck["quantScore"], deck["hurstRegime"]["hurst"], deck["hurstRegime"]["regime"],
+        deck["kalmanState"]["kalmanVelocity"], _mc["var95Pct"]))
+
+    # Backtest IC: alternating 60-day trend regimes (drift flips sign) → a momentum-
+    # following quantScore must show clearly positive predictive IC + hitRate>0.5.
+    # A pure random walk would give IC ~0; this validates the no-look-ahead machinery.
+    _drift = np.where((np.arange(900) // 60) % 2 == 0, 0.005, -0.005)
+    _reg_closes = (100 * np.exp(np.cumsum(_drift + _rng.normal(0, 0.004, 900)))).tolist()
+    _bt = backtest_signal_ic(_reg_closes, fwd_days=5, lookback=80)
+    assert _bt["available"] and _bt["samples"] >= 10, _bt
+    assert _bt["ic"] > 0 and _bt["hitRate"] > 0.5, _bt   # trend regimes → score has real edge
+    print("backtest  ic=%.4f  hitRate=%.3f  n=%d" % (_bt["ic"], _bt["hitRate"], _bt["samples"]))

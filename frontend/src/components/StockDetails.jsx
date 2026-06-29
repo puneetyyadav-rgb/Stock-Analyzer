@@ -85,6 +85,9 @@ export default function StockDetails({ symbol, overview }) {
               <KV label="Expected Shortfall (CVaR)" value={`${technicals.quantDeck.monteCarloRisk?.cvar95Pct || 0}%`} valueClass="text-red-400 font-mono" />
               <KV label="Bollinger Squeeze" value={technicals.quantDeck.bollingerSqueeze?.status || "Normal"} valueClass={technicals.quantDeck.bollingerSqueeze?.status?.includes("SQUEEZE") ? "text-amber-400 font-bold animate-pulse" : "text-zinc-300"} />
               <KV label="Relative Volume (RVOL)" value={`${technicals.quantDeck.relativeVolumeRVOL || 1.0}x`} valueClass={technicals.quantDeck.relativeVolumeRVOL > 1.5 ? "text-emerald-400 font-bold" : "text-zinc-300"} />
+              {technicals.quantDeck.signalBacktest?.available && (
+                <KV label="Walk-Forward IC Edge" value={`IC: ${technicals.quantDeck.signalBacktest.ic} · Hit Rate: ${(technicals.quantDeck.signalBacktest.hitRate * 100).toFixed(1)}%`} valueClass="text-emerald-400 font-mono font-semibold" />
+              )}
             </div>
           )}
           <KV label="RSI (14)" value={fmtNum(technicals?.rsi)} valueClass={
