@@ -241,68 +241,12 @@ async def scrape_tickertape(symbol: str) -> dict:
 async def shutdown():
     pass
 async def scrape_delivery_volume(symbol: str) -> dict:
-    from datetime import date, timedelta
-    from jugaad_data.nse import full_bhavcopy_save
-    import pandas as pd
-    import os
-    
-    clean = _strip_symbol(symbol)
+    """Delivery % from the NSE bhavcopy. Delegates to bhavcopy_service — the single
+    Scrapling-backed source of truth (replaces the old jugaad_data plain-requests path)."""
+    import asyncio
+    import bhavcopy_service as bhav
     try:
-        # Find the last valid trading day
-        d = date.today()
-        if d.weekday() >= 5: # Saturday or Sunday
-            d = d - timedelta(days=d.weekday() - 4)
-            
-        os.makedirs("bhavcopy", exist_ok=True)
-        date_str = d.strftime("%d%b%Y")
-        expected_file = f"bhavcopy/sec_bhavdata_full_{date_str}bhav.csv"
-        
-        # Try finding the latest available if today's isn't published yet
-        for i in range(5):
-            test_d = d - timedelta(days=i)
-            if test_d.weekday() >= 5:
-                continue
-            test_date_str = test_d.strftime("%d%b%Y")
-            test_file = f"bhavcopy/sec_bhavdata_full_{test_date_str}bhav.csv"
-            if os.path.exists(test_file):
-                expected_file = test_file
-                break
-        else:
-            # If not found locally, download the latest weekday
-            try:
-                full_bhavcopy_save(d, "bhavcopy")
-                expected_file = f"bhavcopy/sec_bhavdata_full_{d.strftime('%d%b%Y')}bhav.csv"
-            except Exception:
-                # Fallback to yesterday if today's is not ready
-                d = d - timedelta(days=1 if d.weekday() != 0 else 3)
-                full_bhavcopy_save(d, "bhavcopy")
-                expected_file = f"bhavcopy/sec_bhavdata_full_{d.strftime('%d%b%Y')}bhav.csv"
-                
-        if not os.path.exists(expected_file):
-             return {"available": False, "error": "Bhavcopy not found"}
-             
-        df = await asyncio.to_thread(pd.read_csv, expected_file)
-        df.columns = df.columns.str.strip()
-        df['SYMBOL'] = df['SYMBOL'].astype(str).str.strip()
-        df['SERIES'] = df['SERIES'].astype(str).str.strip()
-        
-        row = df[(df['SYMBOL'] == clean) & (df['SERIES'] == 'EQ')]
-        if row.empty:
-            return {"available": False, "error": "Symbol not found in Bhavcopy"}
-            
-        deliv_per = row['DELIV_PER'].values[0]
-        deliv_qty = row['DELIV_QTY'].values[0]
-        def safe_float(v):
-            try:
-                return float(v)
-            except:
-                return None
-        
-        return {
-            "available": True,
-            "deliveryPercentage": safe_float(deliv_per),
-            "deliveryQuantity": safe_float(deliv_qty)
-        }
+        return await asyncio.to_thread(bhav.delivery_signal, symbol)
     except Exception as e:
         logger.error(f"delivery scrape error: {e}")
         return {"available": False, "error": str(e)[:200]}

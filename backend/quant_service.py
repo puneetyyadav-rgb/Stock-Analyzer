@@ -95,24 +95,32 @@ def calculate_hurst_exponent(log_prices: np.ndarray) -> Dict[str, Any]:
         if len(tau) < 3:
             return {"hurst": 0.50, "regime": "Random Walk"}
             
-        # Fit log(lags) vs log(tau)
+        # Fit log(lags) vs log(tau); cov gives the slope's standard error → an honest CI
         log_lags = np.log(lags[:len(tau)])
         log_tau = np.log(tau)
-        poly = np.polyfit(log_lags, log_tau, 1)
+        if len(tau) >= 4:
+            poly, cov = np.polyfit(log_lags, log_tau, 1, cov=True)
+            std_err = float(np.sqrt(max(cov[0, 0], 0.0)))
+        else:
+            poly = np.polyfit(log_lags, log_tau, 1)
+            std_err = 0.10  # too few lags to estimate dispersion → treat as noisy
         hurst = float(poly[0])
-        
-        # Clamp H between 0.05 and 0.95
-        hurst = max(0.05, min(0.95, hurst))
-        
+        hurst = max(0.05, min(0.95, hurst))   # clamp
+
+        # Adaptive dead-band: only assign a regime if H is at least ~1 SE (floor 0.05) clear of
+        # 0.5, so a noisy H≈0.5 stops flip-flopping between Trending/Mean-Reverting each refresh.
+        margin = max(0.05, std_err)
         regime = "Random Walk (No Edge)"
-        if hurst < 0.45:
+        if hurst < 0.5 - margin:
             regime = "Mean-Reverting (Anti-Persistent)"
-        elif hurst > 0.55:
+        elif hurst > 0.5 + margin:
             regime = "Trending (Momentum Persistence)"
-            
+
         return {
             "hurst": round(hurst, 3),
-            "regime": regime
+            "regime": regime,
+            "stdErr": round(std_err, 3),
+            "ci95": round(1.96 * std_err, 3),
         }
     except Exception as e:
         logger.error(f"Error calculating Hurst Exponent: {e}")
@@ -174,6 +182,15 @@ def calculate_adaptive_kalman_1d(closes: np.ndarray) -> Dict[str, Any]:
         return {"smoothedPrice": 0.0, "kalmanTrend": "Error", "kalmanVelocity": 0.0, "noiseDivergence": 0.0}
 
 
+def _ewma_vol(returns: np.ndarray, lam: float = 0.94) -> np.ndarray:
+    """RiskMetrics EWMA per-step volatility series σ_t. Deterministic; σ_t depends only on the past."""
+    var = np.empty(len(returns))
+    var[0] = returns[0] ** 2
+    for i in range(1, len(returns)):
+        var[i] = lam * var[i - 1] + (1.0 - lam) * returns[i - 1] ** 2
+    return np.sqrt(np.maximum(var, 1e-12))
+
+
 def calculate_fat_tail_var(returns: np.ndarray, portfolio_val: float = 100000.0, horizon_days: int = 10) -> Dict[str, Any]:
     """
     Block-bootstrap Monte Carlo simulation (10,000 paths over 10 days).
@@ -187,17 +204,24 @@ def calculate_fat_tail_var(returns: np.ndarray, portfolio_val: float = 100000.0,
         if len(clean_returns) < 30:
             return {"var95Pct": 0.0, "var99Pct": 0.0, "cvar95Pct": 0.0, "var95Cash": 0.0}
 
+        # Volatility-adjusted historical simulation (Hull-White): re-anchor every past return to
+        # TODAY's EWMA vol, so the tail reflects the CURRENT regime — not a now-calm stock's
+        # year-old crash — while block sampling still preserves clustering. Ratio clipped so a
+        # tiny early-sample σ can't blow up a return.
+        ewv = _ewma_vol(clean_returns)
+        adj_returns = clean_returns * np.clip(ewv[-1] / ewv, 0.25, 4.0)
+
         rng = np.random.default_rng(12345)
         num_sims = 10000
         block = 5  # ponytail: fixed 5-day blocks; switch to stationary bootstrap if regimes vary widely
-        n = len(clean_returns)
+        n = len(adj_returns)
         n_blocks = -(-horizon_days // block)  # ceil
 
         # Build (num_sims, horizon) paths from contiguous wrapped blocks → preserves clustering
         starts = rng.integers(0, n, size=(num_sims, n_blocks))
         idx = (starts[:, :, None] + np.arange(block)[None, None, :]) % n
         idx = idx.reshape(num_sims, n_blocks * block)[:, :horizon_days]
-        paths = clean_returns[idx]
+        paths = adj_returns[idx]
 
         # Inputs are LOG returns → horizon return is exp(sum) - 1, NOT prod(1 + r)
         cumulative_returns = np.expm1(paths.sum(axis=1))
@@ -215,7 +239,9 @@ def calculate_fat_tail_var(returns: np.ndarray, portfolio_val: float = 100000.0,
             "cvar95Pct": round(cvar_95 * 100.0, 2),
             "var95Cash": round(abs(var_95) * portfolio_val, 2),
             "cvar95Cash": round(abs(cvar_95) * portfolio_val, 2),
-            "horizonDays": horizon_days
+            "horizonDays": horizon_days,
+            "currentVolPct": round(float(ewv[-1]) * 100.0, 2),
+            "volAdjusted": True
         }
     except Exception as e:
         logger.error(f"Error calculating Monte Carlo VaR: {e}")
@@ -281,7 +307,7 @@ def backtest_signal_ic(closes: List[float], volumes: Optional[List[float]] = Non
         deck = compute_complete_quant_deck("BT", {
             "close": win.tolist(), "high": win.tolist(), "low": win.tolist(),
             "volume": vol[t - lookback:t].tolist() if vol is not None else [],
-        })
+        }, skip_montecarlo=True)   # IC needs only the score; VaR doesn't feed it → skip 10k sims/step
         s = deck.get("quantScore")
         if s is None:
             continue
@@ -300,23 +326,131 @@ def backtest_signal_ic(closes: List[float], volumes: Optional[List[float]] = Non
     }
 
 
-def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kotak_depth: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def cross_sectional_rank(symbol: str, universe_df) -> Dict[str, Any]:
+    """
+    Percentile-rank this name's single-day factors against the WHOLE NSE universe (bhavcopy).
+    A desk reads relative, not absolute: 80%ile delivery means more than "55% delivery". Pure
+    numpy on the passed DataFrame (no pandas import here). composite = accumulation+strength read.
+    """
+    clean = symbol.replace(".NS", "").replace(".BO", "").upper()
+    try:
+        if universe_df is None or clean not in universe_df.index:
+            return {"available": False}
+
+        def pctile(col: str) -> Optional[float]:
+            vals = np.asarray(universe_df[col].values, dtype=float)
+            vals = vals[np.isfinite(vals)]
+            v = float(universe_df.loc[clean, col])
+            if not np.isfinite(v) or len(vals) == 0:
+                return None
+            return round(float((vals < v).mean()) * 100.0, 1)
+
+        deliv = pctile("delivPct")
+        turn = pctile("turnover")
+        rng_ = pctile("rangePct")
+        ret = pctile("oneDayRet")
+        # composite: delivery (quality) + turnover (institutional liquidity) + 1-day strength
+        parts = [p for p in (deliv, turn, ret) if p is not None]
+        composite = round(float(np.mean(parts)), 1) if parts else None
+        return {
+            "available": True,
+            "deliveryPctile": deliv,
+            "turnoverPctile": turn,
+            "rangePctile": rng_,
+            "oneDayRetPctile": ret,
+            "composite": composite,
+            "universeSize": int(len(universe_df)),
+        }
+    except Exception as e:
+        logger.error(f"Error in cross-sectional rank for {symbol}: {e}")
+        return {"available": False}
+
+
+def _logistic(x: float) -> float:
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def _composite_score(kalman: Dict[str, Any], hurst: Dict[str, Any], obi: Dict[str, Any],
+                     rvol: float, squeeze: Dict[str, Any], delivery: Optional[Dict[str, Any]],
+                     cross_sectional: Optional[Dict[str, Any]], latest_close: float,
+                     has_depth: bool) -> tuple:
+    """
+    Regime-conditional factor model → 0-100. Each factor is a signed strength in ~[-1,1]; weights
+    shift with the Hurst regime; RVOL is a symmetric conviction multiplier; logistic squash maps to
+    a score. Missing factors (no depth/bhavcopy, e.g. in the backtest) drop out and the remaining
+    weights renormalize — they do NOT silently bias the score toward neutral. Returns (score, factors).
+    """
+    f: Dict[str, float] = {}
+
+    # Momentum — Kalman velocity, vol-normalized by ATR; tanh gives a built-in dead-band
+    vel = kalman.get("kalmanVelocity")
+    scale = max(float(squeeze.get("atr14") or 0.0), 1e-9)
+    if vel is not None and latest_close:
+        f["momentum"] = float(np.tanh(vel / (0.5 * scale)))
+
+    # Mean-reversion — price stretch vs the SMA20 band → expect snap-back (only weighted in MR regime)
+    sma20, upper, lower = squeeze.get("sma20"), squeeze.get("upperBand"), squeeze.get("lowerBand")
+    if sma20 and upper and lower and upper > lower and latest_close:
+        z = (latest_close - sma20) / ((upper - lower) / 2.0)
+        f["meanrev"] = float(np.clip(-z, -1.0, 1.0))
+
+    # Order-flow imbalance (already [-1,1]) — only when real Level-2 depth was supplied
+    if has_depth and obi.get("obiRatio") is not None:
+        f["obi"] = float(np.clip(obi["obiRatio"], -1.0, 1.0))
+
+    # Delivery quality — high delivery % = real ownership transfer, not intraday churn
+    if delivery and delivery.get("available") and delivery.get("deliveryPercentage") is not None:
+        f["delivery"] = float(np.clip((delivery["deliveryPercentage"] - 50.0) / 30.0, -1.0, 1.0))
+
+    # Cross-sectional standing vs the whole market
+    if cross_sectional and cross_sectional.get("available") and cross_sectional.get("composite") is not None:
+        f["crosssec"] = float(np.clip((cross_sectional["composite"] - 50.0) / 50.0, -1.0, 1.0))
+
+    # meanrev is ONLY weighted in the Mean-Reverting regime — that's the only regime where fading a
+    # stretch has statistical edge. Note Hurst variance-scaling can't see drift (it reads the noise
+    # structure), so a drift-up stock often lands in Random Walk; there we ride momentum (which DOES
+    # see the drift) + flow + quality, and never short the stretch.
+    regime = hurst.get("regime", "")
+    if regime.startswith("Trending"):
+        W = {"momentum": 0.45, "obi": 0.22, "crosssec": 0.20, "delivery": 0.13}
+    elif regime.startswith("Mean-Reverting"):
+        W = {"momentum": 0.12, "obi": 0.25, "crosssec": 0.13, "delivery": 0.10, "meanrev": 0.40}
+    else:                                        # random walk / unknown → momentum + flow + quality
+        W = {"momentum": 0.34, "obi": 0.28, "crosssec": 0.20, "delivery": 0.18}
+
+    used = {k: W[k] for k in f if k in W}
+    wsum = sum(used.values()) or 1.0
+    signal = sum(f[k] * used[k] for k in used) / wsum        # weighted mean of available factors ~[-1,1]
+
+    # RVOL = symmetric conviction multiplier: thin participation pulls the read toward neutral 50
+    conf = float(np.clip(0.6 + 0.4 * rvol, 0.6, 1.6))
+    signal = float(np.clip(signal * conf, -1.5, 1.5))
+
+    score = float(np.clip(100.0 * _logistic(3.0 * signal), 2.0, 98.0))
+    return round(score, 1), {k: round(v, 3) for k, v in f.items()}
+
+
+def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kotak_depth: Optional[Dict[str, Any]] = None,
+                                delivery: Optional[Dict[str, Any]] = None, cross_sectional: Optional[Dict[str, Any]] = None,
+                                skip_montecarlo: bool = False) -> Dict[str, Any]:
     """Master quantitative aggregator feeding the AI prompt and UI dashboard."""
     try:
-        closes = np.array(ohlcv.get("close", []), dtype=float)
+        closes = np.array(ohlcv.get("close", []), dtype=float)   # RAW prices → levels/pivots/bands/RVOL
         highs = np.array(ohlcv.get("high", []), dtype=float)
         lows = np.array(ohlcv.get("low", []), dtype=float)
         volumes = np.array(ohlcv.get("volume", []), dtype=float)
-        
+        # Adjusted (total-return) closes → return-based stats only; falls back to raw if not supplied
+        adj = np.array(ohlcv.get("adj_close", ohlcv.get("close", [])), dtype=float)
+
         if len(closes) < 5:
             return {"status": "Insufficient Data"}
-            
+
         latest_close = float(closes[-1])
         latest_high = float(highs[-1])
         latest_low = float(lows[-1])
-        
-        # Log-price level series (for Hurst) + daily log returns (for VaR)
-        pos = closes[closes > 0]
+
+        # Log-price level series (for Hurst) + daily log returns (for VaR) — both on the ADJUSTED series
+        pos = adj[adj > 0]
         log_prices = np.log(pos) if len(pos) > 1 else np.array([])
         returns = np.diff(log_prices) if len(log_prices) > 1 else np.array([])
 
@@ -324,46 +458,34 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
         squeeze = calculate_bollinger_squeeze(closes, highs, lows)
         hurst = calculate_hurst_exponent(log_prices)
         kalman = calculate_adaptive_kalman_1d(closes)
-        var_risk = calculate_fat_tail_var(returns)
-        
+        var_risk = {"skipped": True} if skip_montecarlo else calculate_fat_tail_var(returns)
+
         # Calculate Relative Volume (RVOL)
         rvol = 1.0
         if len(volumes) >= 20:
             avg_vol = float(np.mean(volumes[-20:]))
             rvol = float(volumes[-1]) / avg_vol if avg_vol > 0 else 1.0
             
-        # Extract OBI from Kotak depth if available
+        # Extract OBI from Kotak depth — prefer the exchange's FULL-book totals over the 5 visible levels
         bid_qty = 0.0
         ask_qty = 0.0
+        has_depth = False
         if kotak_depth and isinstance(kotak_depth, dict):
-            bids = kotak_depth.get("bids", [])
-            asks = kotak_depth.get("asks", [])
-            bid_qty = sum(float(b.get("quantity", 0)) for b in bids if isinstance(b, dict))
-            ask_qty = sum(float(a.get("quantity", 0)) for a in asks if isinstance(a, dict))
-            
+            bid_qty = float(kotak_depth.get("totalBidQty") or 0.0)
+            ask_qty = float(kotak_depth.get("totalAskQty") or 0.0)
+            if bid_qty <= 0 and ask_qty <= 0:        # fall back to summing the visible levels
+                bids = kotak_depth.get("bids", [])
+                asks = kotak_depth.get("asks", [])
+                bid_qty = sum(float(b.get("quantity", 0)) for b in bids if isinstance(b, dict))
+                ask_qty = sum(float(a.get("quantity", 0)) for a in asks if isinstance(a, dict))
+            has_depth = (bid_qty + ask_qty) > 0
+
         obi = calculate_microstructure_obi(bid_qty, ask_qty)
-        
-        # Compute overall Institutional Quant Score (0 - 100)
-        score = 50.0
-        if kalman.get("kalmanTrend", "").startswith("Bullish"):
-            score += 15.0
-        elif kalman.get("kalmanTrend", "").startswith("Bearish"):
-            score -= 15.0
-            
-        if hurst.get("regime", "").startswith("Trending"):
-            # trending regime amplifies the Kalman directional read (no path dependence on running score)
-            score += 10.0 if kalman.get("kalmanTrend", "").startswith("Bullish") else -10.0
-            
-        if obi.get("obiRatio", 0) > 0.20:
-            score += 15.0
-        elif obi.get("obiRatio", 0) < -0.20:
-            score -= 15.0
-            
-        if rvol > 1.5 and score > 50:
-            score += 10.0
-            
-        score = max(5.0, min(95.0, score))
-        
+
+        # Institutional Quant Score (0-100): regime-conditional factor model, RVOL conviction, logistic squash
+        score, score_factors = _composite_score(kalman, hurst, obi, rvol, squeeze,
+                                                 delivery, cross_sectional, latest_close, has_depth)
+
         backtest = {"available": False}
         if symbol != "BT" and len(closes) >= 80:
             try:
@@ -375,6 +497,7 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             "symbol": symbol,
             "currentPrice": round(latest_close, 2),
             "quantScore": round(score, 1),
+            "scoreFactors": score_factors,
             "pivots": pivots,
             "bollingerSqueeze": squeeze,
             "hurstRegime": hurst,
@@ -382,6 +505,8 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             "monteCarloRisk": var_risk,
             "orderFlowOBI": obi,
             "relativeVolumeRVOL": round(rvol, 2),
+            "deliverySignal": delivery,
+            "crossSectional": cross_sectional,
             "signalBacktest": backtest
         }
     except Exception as e:
@@ -401,16 +526,40 @@ if __name__ == "__main__":  # offline sanity check of the fixed math
         "volume": (_rng.random(_n) * 1e6).tolist(),
     }
     deck = compute_complete_quant_deck("TEST", _ohlcv)
-    assert 5 <= deck["quantScore"] <= 95, deck
+    assert 0 <= deck["quantScore"] <= 100, deck
+    assert deck["quantScore"] > 55, ("uptrend must read bullish", deck["quantScore"], deck["scoreFactors"])
     assert deck["kalmanState"]["kalmanVelocity"] > 0, deck["kalmanState"]   # uptrend → positive slope
+    assert deck["hurstRegime"]["ci95"] >= 0, deck["hurstRegime"]            # Hurst now reports a CI
     _mc = deck["monteCarloRisk"]
     # drift-independent VaR invariants: deeper percentile is worse, and CVaR ≤ VaR
     assert _mc["var99Pct"] <= _mc["var95Pct"] and _mc["cvar95Pct"] <= _mc["var95Pct"], _mc
-    assert np.isfinite(_mc["var95Pct"]), _mc
+    assert np.isfinite(_mc["var95Pct"]) and _mc["volAdjusted"] and _mc["currentVolPct"] > 0, _mc
     assert compute_complete_quant_deck("TEST", _ohlcv)["monteCarloRisk"] == _mc, "VaR must be deterministic"
-    print("ok  score=%.1f  hurst=%.3f (%s)  vel=%.4f  var95=%.2f%%" % (
-        deck["quantScore"], deck["hurstRegime"]["hurst"], deck["hurstRegime"]["regime"],
-        deck["kalmanState"]["kalmanVelocity"], _mc["var95Pct"]))
+    assert compute_complete_quant_deck("TEST", _ohlcv, skip_montecarlo=True)["monteCarloRisk"] == {"skipped": True}
+    print("ok  score=%.1f  hurst=%.3f±%.3f (%s)  vel=%.4f  var95=%.2f%%  vol=%.2f%%" % (
+        deck["quantScore"], deck["hurstRegime"]["hurst"], deck["hurstRegime"]["ci95"],
+        deck["hurstRegime"]["regime"], deck["kalmanState"]["kalmanVelocity"],
+        _mc["var95Pct"], _mc["currentVolPct"]))
+
+    # Cross-sectional rank on a tiny synthetic universe → percentiles bounded, missing name → unavailable
+    import pandas as _pd
+    _uni = _pd.DataFrame({
+        "delivPct":  [10, 30, 55, 90],
+        "turnover":  [5,  50, 200, 1000],
+        "rangePct":  [1,  2,  3,   4],
+        "oneDayRet": [-2, 0,  1,   3],
+    }, index=["A", "B", "TEST", "Z"])
+    _cs = cross_sectional_rank("TEST.NS", _uni)
+    assert _cs["available"] and 0 <= _cs["composite"] <= 100, _cs
+    assert _cs["deliveryPctile"] == 50.0, _cs                          # 2 of 4 names below 55 → 50th pctile
+    assert cross_sectional_rank("NOPE.NS", _uni)["available"] is False
+    # folding delivery + cross-sectional into the deck score must not error and stays in range
+    _deck2 = compute_complete_quant_deck("TEST", _ohlcv,
+                                         delivery={"available": True, "deliveryPercentage": 85.0},
+                                         cross_sectional=_cs)
+    assert 0 <= _deck2["quantScore"] <= 100 and _deck2["deliverySignal"]["deliveryPercentage"] == 85.0, _deck2
+    print("cross-sectional  composite=%.1f  deliveryPctile=%.1f  score(+factors)=%.1f" % (
+        _cs["composite"], _cs["deliveryPctile"], _deck2["quantScore"]))
 
     # Backtest IC: alternating 60-day trend regimes (drift flips sign) → a momentum-
     # following quantScore must show clearly positive predictive IC + hitRate>0.5.

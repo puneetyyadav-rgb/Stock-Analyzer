@@ -13,7 +13,7 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 from dateutil import parser as date_parser
 from defusedxml import ElementTree as ET
-from quant_service import compute_complete_quant_deck
+from quant_service import compute_complete_quant_deck, cross_sectional_rank
 
 logger = logging.getLogger(__name__)
 
@@ -154,13 +154,31 @@ def get_chart(symbol: str, period: str = "1y") -> dict:
         return {"symbol": sym, "period": period, "data": []}
 
 
+def _is_live_partial_bar(df) -> bool:
+    """True if the last daily bar is today's still-forming candle (IST session not yet settled)."""
+    try:
+        last = df.index[-1]
+        last_date = last.date() if hasattr(last, "date") else None
+        now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        return last_date == now_ist.date() and (now_ist.hour * 60 + now_ist.minute) < 940  # before 15:40 IST
+    except Exception:
+        return False
+
+
 def compute_technicals(symbol: str) -> dict:
     sym = normalize_symbol(symbol)
     try:
-        df = yf.Ticker(sym).history(period="1y", interval="1d", auto_adjust=True)
+        # auto_adjust=False → raw Close (price levels a trader compares to the broker chart) PLUS
+        # Adj Close (total-return series) so split/dividend jumps don't distort return-based stats.
+        df = yf.Ticker(sym).history(period="1y", interval="1d", auto_adjust=False)
         if df.empty or len(df) < 30:
             return {}
-        close = df["Close"]
+        df = df.dropna(subset=["Close"])
+        current_price_display = float(df["Close"].iloc[-1])   # live price (may be today's partial bar)
+        # Analytics run on COMPLETED bars only — strip today's live candle so RVOL/pivots/bands aren't
+        # computed off a mid-session bar (RVOL especially reads artificially low intraday otherwise).
+        a = df.iloc[:-1] if _is_live_partial_bar(df) else df
+        close = a["Adj Close"] if "Adj Close" in a.columns else a["Close"]   # adjusted → indicators
         # RSI 14
         delta = close.diff()
         gain = delta.where(delta > 0, 0).rolling(14).mean()
@@ -175,10 +193,11 @@ def compute_technicals(symbol: str) -> dict:
         # SMA
         sma50 = close.rolling(50).mean()
         sma200 = close.rolling(200).mean() if len(close) >= 200 else None
-        # Support/resistance approximations (recent 6m)
-        support = float(close.tail(60).min())
-        resistance = float(close.tail(60).max())
-        cur = float(close.iloc[-1])
+        # Support/resistance on RAW completed prices (the levels a trader actually sees on the chart)
+        raw_close = a["Close"]
+        support = float(raw_close.tail(60).min())
+        resistance = float(raw_close.tail(60).max())
+        cur = float(close.iloc[-1])   # last COMPLETED adjusted close (for trend/RS comparisons)
         rsi_val = _safe_float(rsi.iloc[-1])
         signal_text = "Neutral"
         if rsi_val and rsi_val > 70:
@@ -204,16 +223,40 @@ def compute_technicals(symbol: str) -> dict:
             }
 
         ohlcv_dict = {
-            "open": df["Open"].tolist() if "Open" in df.columns else [],
-            "high": df["High"].tolist() if "High" in df.columns else [],
-            "low": df["Low"].tolist() if "Low" in df.columns else [],
-            "close": df["Close"].tolist() if "Close" in df.columns else [],
-            "volume": df["Volume"].tolist() if "Volume" in df.columns else [],
+            "open": a["Open"].tolist() if "Open" in a.columns else [],
+            "high": a["High"].tolist() if "High" in a.columns else [],
+            "low": a["Low"].tolist() if "Low" in a.columns else [],
+            "close": a["Close"].tolist() if "Close" in a.columns else [],          # RAW → levels
+            "adj_close": a["Adj Close"].tolist() if "Adj Close" in a.columns else a["Close"].tolist(),
+            "volume": a["Volume"].tolist() if "Volume" in a.columns else [],
         }
-        quant_deck = compute_complete_quant_deck(sym, ohlcv_dict)
+
+        # Live order-flow (Kotak Level-2) + official NSE bhavcopy context. Best-effort: any failure
+        # degrades gracefully (the deck still computes, just without that factor).
+        depth = delivery = cross = integrity = None
+        try:
+            import kotak_service as ks
+            depth = ks._fetch_depth_sync(sym)
+        except Exception as e:
+            logger.info(f"depth fetch skipped for {sym}: {e}")
+        try:
+            import bhavcopy_service as bhav
+            delivery = bhav.delivery_signal(sym)
+            cross = cross_sectional_rank(sym, bhav.universe_factors())
+            comp_date = a.index[-1].date() if hasattr(a.index[-1], "date") else None
+            integrity = bhav.cross_check(
+                sym, float(a["Close"].iloc[-1]),
+                float(a["Volume"].iloc[-1]) if "Volume" in a.columns else None, comp_date)
+        except Exception as e:
+            logger.info(f"bhavcopy context skipped for {sym}: {e}")
+
+        quant_deck = compute_complete_quant_deck(sym, ohlcv_dict, kotak_depth=depth,
+                                                 delivery=delivery, cross_sectional=cross)
+        if isinstance(quant_deck, dict):
+            quant_deck["dataIntegrity"] = integrity
 
         return {
-            "currentPrice": _safe_float(cur),
+            "currentPrice": _safe_float(current_price_display),
             "rsi": rsi_val,
             "rsiSignal": signal_text,
             "macd": _safe_float(macd.iloc[-1]),

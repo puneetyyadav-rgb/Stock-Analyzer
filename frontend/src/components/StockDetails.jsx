@@ -79,12 +79,32 @@ export default function StockDetails({ symbol, overview }) {
                 <span className="text-[10px] uppercase tracking-widest text-fuchsia-400 font-bold">Quant Score</span>
                 <span className="text-sm font-mono font-bold text-fuchsia-300">{technicals.quantDeck.quantScore || 50} / 100</span>
               </div>
-              <KV label="Hurst Exponent (H)" value={`${technicals.quantDeck.hurstRegime?.hurst || "0.50"} (${technicals.quantDeck.hurstRegime?.regime?.split(" ")[0] || "-"})`} valueClass="text-fuchsia-300" />
+              <KV label="Hurst Exponent (H)" value={`${technicals.quantDeck.hurstRegime?.hurst || "0.50"}${technicals.quantDeck.hurstRegime?.ci95 != null ? ` ±${technicals.quantDeck.hurstRegime.ci95}` : ""} (${technicals.quantDeck.hurstRegime?.regime?.split(" ")[0] || "-"})`} valueClass="text-fuchsia-300" />
               <KV label="1D Kalman State" value={technicals.quantDeck.kalmanState?.kalmanTrend || "-"} valueClass={technicals.quantDeck.kalmanState?.kalmanTrend?.includes("Bullish") ? "text-emerald-400" : "text-red-400"} />
               <KV label="10D Fat-Tail VaR (95%)" value={`${technicals.quantDeck.monteCarloRisk?.var95Pct || 0}%`} valueClass="text-red-400 font-mono" />
               <KV label="Expected Shortfall (CVaR)" value={`${technicals.quantDeck.monteCarloRisk?.cvar95Pct || 0}%`} valueClass="text-red-400 font-mono" />
               <KV label="Bollinger Squeeze" value={technicals.quantDeck.bollingerSqueeze?.status || "Normal"} valueClass={technicals.quantDeck.bollingerSqueeze?.status?.includes("SQUEEZE") ? "text-amber-400 font-bold animate-pulse" : "text-zinc-300"} />
               <KV label="Relative Volume (RVOL)" value={`${technicals.quantDeck.relativeVolumeRVOL || 1.0}x`} valueClass={technicals.quantDeck.relativeVolumeRVOL > 1.5 ? "text-emerald-400 font-bold" : "text-zinc-300"} />
+              {technicals.quantDeck.orderFlowOBI?.flowSignal && !technicals.quantDeck.orderFlowOBI.flowSignal.includes("No Data") && (
+                <KV label="Order-Flow OBI (L2)" value={technicals.quantDeck.orderFlowOBI.flowSignal} valueClass={technicals.quantDeck.orderFlowOBI.obiRatio > 0 ? "text-emerald-400" : "text-red-400"} />
+              )}
+              {technicals.quantDeck.deliverySignal?.available && (
+                <KV label="Delivery % (NSE)" value={`${technicals.quantDeck.deliverySignal.deliveryPercentage}% · ${technicals.quantDeck.deliverySignal.signal}`} valueClass={technicals.quantDeck.deliverySignal.deliveryPercentage >= 45 ? "text-emerald-400" : "text-zinc-300"} />
+              )}
+              {technicals.quantDeck.crossSectional?.available && (
+                <KV label="Cross-Sectional Rank" value={`${technicals.quantDeck.crossSectional.composite}%ile vs ${technicals.quantDeck.crossSectional.universeSize}`} valueClass="text-fuchsia-300 font-mono" />
+              )}
+              {technicals.quantDeck.dataIntegrity?.status && (
+                <KV label="Data Integrity" value={
+                  technicals.quantDeck.dataIntegrity.status === "ok" ? "✓ NSE-Verified" :
+                  technicals.quantDeck.dataIntegrity.status === "mismatch" ? `⚠ Mismatch ${technicals.quantDeck.dataIntegrity.closeDeltaPct}%` :
+                  technicals.quantDeck.dataIntegrity.status === "stale-reference" ? "Stale bhavcopy ref" :
+                  technicals.quantDeck.dataIntegrity.status
+                } valueClass={
+                  technicals.quantDeck.dataIntegrity.status === "ok" ? "text-emerald-400 font-semibold" :
+                  technicals.quantDeck.dataIntegrity.status === "mismatch" ? "text-amber-400 font-bold" : "text-zinc-400"
+                } />
+              )}
               {technicals.quantDeck.signalBacktest?.available && (
                 <KV label="Walk-Forward IC Edge" value={`IC: ${technicals.quantDeck.signalBacktest.ic} · Hit Rate: ${(technicals.quantDeck.signalBacktest.hitRate * 100).toFixed(1)}%`} valueClass="text-emerald-400 font-mono font-semibold" />
               )}
