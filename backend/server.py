@@ -32,6 +32,9 @@ import twitter_service as ts
 import sector_service as sec
 import scraper_service as scr
 import validation_service as vs
+import pairs_service as prs
+import portfolio_service as ports
+from pydantic import BaseModel
 
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
@@ -118,6 +121,42 @@ async def technicals(symbol: str):
     if cached:
         return cached
     data = await asyncio.to_thread(ss.compute_technicals, symbol)
+    _cache_set(key, data)
+    return data
+
+
+# --- Cross-sectional factor model (literal routes declared before /factors/{symbol}) ---
+@api_router.get("/factors/leaders")
+async def factor_leaders(n: int = 15):
+    key = f"factor_leaders:{n}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    import factor_service as fsvc
+    data = await asyncio.to_thread(fsvc.get_factor_leaders, n)
+    _cache_set(key, data)
+    return data
+
+
+@api_router.get("/factors/ic")
+async def factor_ic_endpoint():
+    cached = _cache_get("factor_ic")
+    if cached:
+        return cached
+    import factor_service as fsvc
+    data = await asyncio.to_thread(fsvc.factor_ic)
+    _cache_set("factor_ic", data)
+    return data
+
+
+@api_router.get("/factors/{symbol}")
+async def factor_profile(symbol: str):
+    key = f"factors:{symbol}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    import factor_service as fsvc
+    data = await asyncio.to_thread(fsvc.get_factor_profile, symbol)
     _cache_set(key, data)
     return data
 
@@ -869,6 +908,23 @@ async def verdict_history(symbol: str):
         "correct": correct,
         "total": len(records),
     }
+
+
+class PortfolioReq(BaseModel):
+    symbols: list[str]
+    capital: float = 1000000.0
+
+
+@api_router.get("/quant/pairs")
+async def get_stat_arb_pairs():
+    data = await asyncio.to_thread(prs.scan_market_pairs)
+    return {"pairs": data, "count": len(data)}
+
+
+@api_router.post("/quant/portfolio")
+async def build_hrp_portfolio(req: PortfolioReq):
+    data = await asyncio.to_thread(ports.calculate_portfolio_metrics, req.symbols, req.capital)
+    return data
 
 
 app.include_router(api_router)

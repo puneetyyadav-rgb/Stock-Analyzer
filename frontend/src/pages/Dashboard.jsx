@@ -25,6 +25,8 @@ import PatternsPanel from "../components/PatternsPanel";
 import SectorAnalysisPanel from "../components/SectorAnalysisPanel";
 import RatioAnalysisPanel from "../components/RatioAnalysisPanel";
 import AIRatioAnalysisPanel from "../components/AIRatioAnalysisPanel";
+import PairsTradingPanel from "../components/PairsTradingPanel";
+import PortfolioAllocPanel from "../components/PortfolioAllocPanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -42,6 +44,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [regime, setRegime] = useState(null);
   const [pdfData, setPdfData] = useState(null);
+  const [activeTab, setActiveTab] = useState("stock");
 
   useEffect(() => {
     if (!symbol) return;
@@ -119,7 +122,45 @@ export default function Dashboard() {
 
         {/* Main */}
         <main className="flex-1 min-w-0 p-3 lg:p-4 space-y-3" id="dashboard-main" data-testid="dashboard-main">
-          {!symbol && !loading && (
+          <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
+            <button
+              onClick={() => setActiveTab("stock")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "stock"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:text-white"
+              }`}
+            >
+              📊 Stock Terminal
+            </button>
+            <button
+              onClick={() => setActiveTab("pairs")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "pairs"
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:text-white"
+              }`}
+            >
+              ⚡ Stat-Arb Pairs Scanner
+            </button>
+            <button
+              onClick={() => setActiveTab("hrp")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "hrp"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:text-white"
+              }`}
+            >
+              🏛️ Institutional HRP Allocator
+            </button>
+          </div>
+
+          {activeTab === "pairs" && <PairsTradingPanel />}
+          {activeTab === "hrp" && <PortfolioAllocPanel />}
+
+          {activeTab === "stock" && (
+            <>
+              {!symbol && !loading && (
             <EmptyState onPick={setSymbol} />
           )}
 
@@ -279,15 +320,17 @@ export default function Dashboard() {
             </>
           )}
 
-          {!symbol && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-4">
-              <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <MacroPanel />
-              </div>
-              <div className="lg:col-span-5">
-                <FiiDiiPanel />
-              </div>
-            </div>
+              {!symbol && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-4">
+                  <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <MacroPanel />
+                  </div>
+                  <div className="lg:col-span-5">
+                    <FiiDiiPanel />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>

@@ -127,15 +127,21 @@ def _download(d: date) -> Optional[str]:
         logger.info(f"Bhavcopy downloaded via Scrapling for {d}: {path}")
         return path
 
-    # Last-resort fallback: jugaad_data (plain requests — often blocked, hence Scrapling above)
+    # Last-resort fallback: jugaad_data (plain requests — often blocked, hence Scrapling above).
+    # jugaad does NOT validate the response, so it can save an NSE HTML 404 page as the CSV →
+    # validate what it wrote and discard garbage, else it poisons the factor panel.
     try:
         from jugaad_data.nse import full_bhavcopy_save
         full_bhavcopy_save(d, _DIR)
         path = os.path.join(_DIR, _fname(d))
-        return path if os.path.exists(path) else None
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                if _looks_like_bhavcopy(fh.read(400)):
+                    return path
+            os.remove(path)                 # jugaad saved an HTML error page → discard
     except Exception as e:
         logger.info(f"jugaad_data fallback failed for {d}: {e}")
-        return None
+    return None
 
 
 def _ensure() -> Tuple[Optional[str], Optional[date]]:

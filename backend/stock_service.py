@@ -242,7 +242,16 @@ def compute_technicals(symbol: str) -> dict:
         try:
             import bhavcopy_service as bhav
             delivery = bhav.delivery_signal(sym)
-            cross = cross_sectional_rank(sym, bhav.universe_factors())
+            # Prefer the multi-day factor model's percentile; fall back to today's single-day rank.
+            try:
+                import factor_service as fsvc
+                fp = fsvc.get_factor_profile(sym)
+                cross = ({"available": True, "composite": fp["percentile"], "decile": fp["decile"],
+                          "percentile": fp["percentile"], "universeSize": fp["universeSize"],
+                          "factors": fp["factors"], "source": "multi-day-factor-model"}
+                         if fp.get("available") else cross_sectional_rank(sym, bhav.universe_factors()))
+            except Exception:
+                cross = cross_sectional_rank(sym, bhav.universe_factors())
             comp_date = a.index[-1].date() if hasattr(a.index[-1], "date") else None
             integrity = bhav.cross_check(
                 sym, float(a["Close"].iloc[-1]),

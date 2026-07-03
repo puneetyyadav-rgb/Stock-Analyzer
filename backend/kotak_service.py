@@ -247,8 +247,8 @@ def _fetch_depth_sync(symbol: str) -> Dict[str, Any]:
             quote_type="depth",
         )
     except Exception as e:
-        logger.error(f"Kotak quotes(depth) failed for {symbol}: {e}")
-        base["reason"] = f"quotes error: {str(e)[:120]}"
+        logger.error(f"Kotak quotes(depth) failed for {symbol}: {repr(e)}")
+        base["reason"] = f"quotes error: {repr(e)[:120]}"
         return base
 
     parsed = _parse_depth(raw)
@@ -345,7 +345,19 @@ async def get_option_chain(symbol: str) -> dict:
         rows.sort(key=lambda x: x["strike"])
         
         pcr = (pe_total_oi / ce_total_oi) if ce_total_oi else None
-        
+
+        # Dealer positioning (max-pain / OI walls always; GEX/IV when premiums are live). Best-effort.
+        positioning = None
+        try:
+            import time as _time
+            import options_analytics as oa
+            exp_ts = near_expiry_timestamp
+            if exp_ts and exp_ts > 1e11:      # normalize ms → s if Kotak returns millis
+                exp_ts = exp_ts / 1000.0
+            positioning = oa.compute_positioning(rows, underlying, exp_ts, _time.time())
+        except Exception as e:
+            logger.warning(f"options positioning failed for {symbol}: {e}")
+
         return {
             "available": True,
             "underlying": underlying,
@@ -355,6 +367,7 @@ async def get_option_chain(symbol: str) -> dict:
             "peTotalOI": pe_total_oi,
             "pcr": pcr,
             "rows": rows,
+            "positioning": positioning,
         }
     except Exception as e:
         logger.error(f"Kotak options chain error: {e}")

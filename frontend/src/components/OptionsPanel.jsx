@@ -80,6 +80,32 @@ export default function OptionsPanel({ symbol }) {
         </button>
       </div>
 
+      {data.positioning?.available && (
+        <div className="mb-4 p-2.5 rounded bg-indigo-950/20 border border-indigo-900/40">
+          <div className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold mb-1.5">Dealer Positioning</div>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+            <div><span className="text-zinc-500">Max Pain </span><span className="font-mono text-amber-300">₹{fmtNum(data.positioning.maxPain)}</span></div>
+            <div><span className="text-zinc-500">OI Supp </span><span className="font-mono text-emerald-400">₹{fmtNum(data.positioning.oiSupport)}</span></div>
+            <div><span className="text-zinc-500">OI Resist </span><span className="font-mono text-red-400">₹{fmtNum(data.positioning.oiResistance)}</span></div>
+            {data.positioning.dataQuality === "full" && data.positioning.gex && (
+              <>
+                <div className="col-span-3 leading-snug">
+                  <span className="text-zinc-500">Gamma </span>
+                  <span className={data.positioning.gex.net >= 0 ? "text-emerald-400" : "text-red-400"}>{data.positioning.gex.regime}</span>
+                  {data.positioning.gex.flipStrike ? <span className="text-zinc-500"> · flip ₹{fmtNum(data.positioning.gex.flipStrike)}</span> : null}
+                </div>
+                {data.positioning.iv?.atmPct != null && (
+                  <div><span className="text-zinc-500">ATM IV </span><span className="font-mono text-fuchsia-300">{fmtNum(data.positioning.iv.atmPct)}%</span></div>
+                )}
+                {data.positioning.iv?.skewPct != null && (
+                  <div><span className="text-zinc-500">Skew </span><span className={`font-mono ${data.positioning.iv.skewPct > 0 ? "text-red-400" : "text-emerald-400"}`}>{fmtNum(data.positioning.iv.skewPct)}%</span></div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {analysis && (
         <div className="mb-4 p-3 rounded bg-zinc-800/40 border border-zinc-700/50">
           {analysis.error ? (

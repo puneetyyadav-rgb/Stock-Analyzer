@@ -94,6 +94,13 @@ export default function StockDetails({ symbol, overview }) {
               {technicals.quantDeck.crossSectional?.available && (
                 <KV label="Cross-Sectional Rank" value={`${technicals.quantDeck.crossSectional.composite}%ile vs ${technicals.quantDeck.crossSectional.universeSize}`} valueClass="text-fuchsia-300 font-mono" />
               )}
+              {technicals.quantDeck.crossSectional?.source === "multi-day-factor-model" && technicals.quantDeck.crossSectional.factors && (
+                <KV label={`Factor Alpha (Decile ${technicals.quantDeck.crossSectional.decile})`}
+                  value={Object.entries(technicals.quantDeck.crossSectional.factors)
+                    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3)
+                    .map(([k, v]) => `${k} ${v > 0 ? "+" : ""}${v}`).join("  ")}
+                  valueClass="text-fuchsia-300 font-mono text-[10px]" />
+              )}
               {technicals.quantDeck.dataIntegrity?.status && (
                 <KV label="Data Integrity" value={
                   technicals.quantDeck.dataIntegrity.status === "ok" ? "✓ NSE-Verified" :
