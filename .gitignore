@@ -64,6 +64,28 @@ chainlit.md
 
 # Data and databases
 agenthub/agents/youtube/db
+backend/sector_map_cache.json
+
+# Archive files and large assets
+**/*.zip
+**/*.tar.gz
+**/*.tar
+**/*.tgz
+*.pack
+*.deb
+*.dylib
+
+# Build caches
+.cache/
+
+memory/test_credentials.md
+
+# Mobile development
+android-sdk/frontend/node_modules/.cache/default-development/0.pack
+frontend/node_modules/.cache/default-development/7.pack
+.env
+.env.*
+*.env
 
 # Archive files and large assets
 **/*.zip
@@ -93,3 +115,4 @@ backend/vendor/
 .gemini/
 .pytest_cache/
 RELIABILITY_ROADMAP.md
+future plans/
