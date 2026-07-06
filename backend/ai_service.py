@@ -41,7 +41,7 @@ def _call_groq_fallback(prompt: str) -> str:
             base_url="https://api.groq.com/openai/v1",
             api_key=groq_key
         )
-        models = ["llama-3.3-70b-versatile", "llama3-70b-8192", "openai/gpt-oss-120b", "mixtral-8x7b-32768", "llama-3.1-8b-instant", "llama3-8b-8192", "gemma2-9b-it"]
+        models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen-2.5-72b", "deepseek-r1-distill-llama-70b"]
         for model in models:
             try:
                 logger.info(f"Attempting Groq fallback using model: {model}")
@@ -267,9 +267,9 @@ Schema:
 TECHNICAL_SYSTEM_PROMPT = """You are an elite Wall Street Quantitative Strategist and Chartered Market Technician (CMT) specializing in Indian institutional equities (NSE/BSE).
 You synthesize advanced quantitative math (1D Kalman Filter state estimation, Hurst Exponent regime classification, Fat-Tail Bootstrap Monte Carlo VaR/CVaR, and Level-2 Order Book Imbalance OBI) alongside multi-timeframe price action and NSE Bhavcopy delivery metrics.
 CRITICAL INDIAN MARKET RULE: Evaluate delivery volume alongside Relative Volume (RVOL) and Level-2 OBI. Institutional accumulation is proven by positive OBI (>+0.25), RVOL > 1.2, and high delivery percentage.
-SIGNAL-QUALITY RULE: Treat timeframeConfirmation as a conviction multiplier, not a separate direction. Treat newsGate="wait_2_days" as bad timing even if the technical setup is otherwise constructive.
+SIGNAL-QUALITY RULE: Treat timeframeConfirmation as a conviction multiplier, not a separate direction. Treat newsGate="wait_2_days" as bad timing even if the technical setup is otherwise constructive. Treat marketRegime.regime="Crash" as a mandate to cut position size toward capitalScalingFactor regardless of the individual stock's setup.
 
-SOURCE CITATION RULE: Every factual claim must end with a bracketed source tag: [Quant-Engine], [Bhavcopy], [yfinance], [Kotak-Level2], [News-Gate]. If no data supports a claim, write "No data available".
+SOURCE CITATION RULE: Every factual claim must end with a bracketed source tag: [Quant-Engine], [Bhavcopy], [yfinance], [Kotak-Level2], [News-Gate], [Regime-HMM]. If no data supports a claim, write "No data available".
 
 Output STRICT JSON only. No markdown fences, no commentary outside JSON.
 Schema:

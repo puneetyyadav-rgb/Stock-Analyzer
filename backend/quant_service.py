@@ -623,7 +623,8 @@ def _composite_score(kalman: Dict[str, Any], hurst: Dict[str, Any], obi: Dict[st
 def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kotak_depth: Optional[Dict[str, Any]] = None,
                                 delivery: Optional[Dict[str, Any]] = None, cross_sectional: Optional[Dict[str, Any]] = None,
                                 skip_montecarlo: bool = False,
-                                timeframes: Optional[Dict[str, List[float]]] = None) -> Dict[str, Any]:
+                                timeframes: Optional[Dict[str, List[float]]] = None,
+                                market_regime: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Master quantitative aggregator feeding the AI prompt and UI dashboard."""
     try:
         closes = np.array(ohlcv.get("close", []), dtype=float)   # RAW prices → levels/pivots/bands/RVOL
@@ -711,7 +712,8 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             "relativeVolumeRVOL": round(rvol, 2),
             "deliverySignal": delivery,
             "crossSectional": cross_sectional,
-            "signalBacktest": backtest
+            "signalBacktest": backtest,
+            "marketRegime": market_regime
         }
     except Exception as e:
         logger.error(f"Error computing quant deck for {symbol}: {e}")

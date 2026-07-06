@@ -88,6 +88,9 @@ export default function StockDetails({ symbol, overview }) {
               {technicals.quantDeck.newsGate?.status && (technicals.quantDeck.newsGate.available || technicals.quantDeck.newsGate.status === "wait_2_days") && (
                 <KV label="News Gate" value={technicals.quantDeck.newsGate.status === "wait_2_days" ? `Wait 2 days | ${technicals.quantDeck.newsGate.drivingHeadline?.title || "negative fresh news"}` : "OK to trade"} valueClass={technicals.quantDeck.newsGate.status === "wait_2_days" ? "text-red-400 font-semibold" : "text-emerald-400"} />
               )}
+              {technicals.quantDeck.marketRegime?.available && (
+                <KV label="Market Regime (Nifty)" value={`${technicals.quantDeck.marketRegime.regime} | ${Math.round(technicals.quantDeck.marketRegime.capitalScalingFactor * 100)}% capital`} valueClass={technicals.quantDeck.marketRegime.regime === "Crash" ? "text-red-400 font-bold animate-pulse" : technicals.quantDeck.marketRegime.regime === "Choppy" ? "text-amber-400 font-semibold" : "text-emerald-400"} />
+              )}
               <KV label="Hurst Exponent (H)" value={`${technicals.quantDeck.hurstRegime?.hurst || "0.50"}${technicals.quantDeck.hurstRegime?.ci95 != null ? ` ±${technicals.quantDeck.hurstRegime.ci95}` : ""} (${technicals.quantDeck.hurstRegime?.regime?.split(" ")[0] || "-"})`} valueClass="text-fuchsia-300" />
               <KV label="1D Kalman State" value={technicals.quantDeck.kalmanState?.kalmanTrend || "-"} valueClass={technicals.quantDeck.kalmanState?.kalmanTrend?.includes("Bullish") ? "text-emerald-400" : "text-red-400"} />
               <KV label="10D Fat-Tail VaR (95%)" value={`${technicals.quantDeck.monteCarloRisk?.var95Pct || 0}%`} valueClass="text-red-400 font-mono" />

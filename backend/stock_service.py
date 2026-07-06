@@ -300,6 +300,15 @@ def compute_technicals(symbol: str) -> dict:
         if os.environ.get("ENABLE_NEWS_GATE", "true").lower() != "false":
             news_gate = _recent_news_gate(sym)
 
+        market_regime = {"available": False, "reason": "disabled"}
+        if os.environ.get("ENABLE_REGIME_OVERLAY", "true").lower() != "false":
+            try:
+                import crash_regime_service as crsvc
+                market_regime = crsvc.classify_market_regime()
+            except Exception as e:
+                logger.info(f"market regime skipped for {sym}: {e}")
+                market_regime = {"available": False, "reason": str(e)}
+
         # Live order-flow (Kotak Level-2) + official NSE bhavcopy context. Best-effort: any failure
         # degrades gracefully (the deck still computes, just without that factor).
         depth = delivery = cross = integrity = None
@@ -336,7 +345,7 @@ def compute_technicals(symbol: str) -> dict:
 
         quant_deck = compute_complete_quant_deck(sym, ohlcv_dict, kotak_depth=depth,
                                                  delivery=delivery, cross_sectional=cross,
-                                                 timeframes=timeframes)
+                                                 timeframes=timeframes, market_regime=market_regime)
         if isinstance(quant_deck, dict):
             quant_deck["dataIntegrity"] = integrity
             quant_deck["newsGate"] = news_gate

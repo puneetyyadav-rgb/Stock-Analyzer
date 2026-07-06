@@ -17,6 +17,7 @@ pymongo
 yfinance
 pandas
 numpy
+hmmlearn
 vaderSentiment
 python-dateutil
 defusedxml
