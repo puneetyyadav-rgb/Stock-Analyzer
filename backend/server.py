@@ -127,13 +127,13 @@ async def technicals(symbol: str):
 
 # --- Cross-sectional factor model (literal routes declared before /factors/{symbol}) ---
 @api_router.get("/factors/leaders")
-async def factor_leaders(n: int = 15):
-    key = f"factor_leaders:{n}"
+async def factor_leaders(n: int = 15, min_adv_turnover_cr: float = 5.0):
+    key = f"factor_leaders:{n}:{min_adv_turnover_cr}"
     cached = _cache_get(key)
     if cached:
         return cached
     import factor_service as fsvc
-    data = await asyncio.to_thread(fsvc.get_factor_leaders, n)
+    data = await asyncio.to_thread(fsvc.get_factor_leaders, n, min_adv_turnover_cr)
     _cache_set(key, data)
     return data
 
@@ -149,14 +149,37 @@ async def factor_ic_endpoint():
     return data
 
 
+@api_router.get("/factors/param-validation")
+async def factor_param_validation(symbol: str = None, max_symbols: int = 20, train: int = 252,
+                                  test: int = 42, step: int = 42, fwd_days: int = 5,
+                                  min_adv_turnover_cr: float = 5.0):
+    key = f"factor_param_validation:{symbol}:{max_symbols}:{train}:{test}:{step}:{fwd_days}:{min_adv_turnover_cr}"
+    cached = _cache_get(key, custom_ttl=3600)
+    if cached:
+        return cached
+    import factor_service as fsvc
+    data = await asyncio.to_thread(
+        fsvc.param_validation,
+        symbol,
+        max_symbols,
+        train,
+        test,
+        step,
+        fwd_days,
+        min_adv_turnover_cr,
+    )
+    _cache_set(key, data)
+    return data
+
+
 @api_router.get("/factors/{symbol}")
-async def factor_profile(symbol: str):
-    key = f"factors:{symbol}"
+async def factor_profile(symbol: str, min_adv_turnover_cr: float = 5.0):
+    key = f"factors:{symbol}:{min_adv_turnover_cr}"
     cached = _cache_get(key)
     if cached:
         return cached
     import factor_service as fsvc
-    data = await asyncio.to_thread(fsvc.get_factor_profile, symbol)
+    data = await asyncio.to_thread(fsvc.get_factor_profile, symbol, min_adv_turnover_cr)
     _cache_set(key, data)
     return data
 

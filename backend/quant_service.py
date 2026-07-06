@@ -182,6 +182,93 @@ def calculate_adaptive_kalman_1d(closes: np.ndarray) -> Dict[str, Any]:
         return {"smoothedPrice": 0.0, "kalmanTrend": "Error", "kalmanVelocity": 0.0, "noiseDivergence": 0.0}
 
 
+def _tf_close_array(values) -> np.ndarray:
+    try:
+        arr = np.asarray([] if values is None else values, dtype=float)
+        return arr[np.isfinite(arr)]
+    except Exception:
+        return np.array([], dtype=float)
+
+
+def _timeframe_state(name: str, closes) -> Dict[str, Any]:
+    arr = _tf_close_array(closes)
+    if len(arr) < 20:
+        return {"timeframe": name, "available": False, "reason": "insufficient bars"}
+    kalman = calculate_adaptive_kalman_1d(arr)
+    pos = arr[arr > 0]
+    hurst = calculate_hurst_exponent(np.log(pos)) if len(pos) >= 2 else {"hurst": 0.50, "regime": "Insufficient Data"}
+    velocity = float(kalman.get("kalmanVelocity") or 0.0)
+    noise = float(np.std(np.diff(arr[-20:]))) if len(arr) >= 21 else 0.0
+    deadband = max(noise * 0.03, 1e-9)
+    if velocity > deadband:
+        direction = "bullish"
+    elif velocity < -deadband:
+        direction = "bearish"
+    else:
+        direction = "neutral"
+    return {
+        "timeframe": name,
+        "available": True,
+        "bars": int(len(arr)),
+        "direction": direction,
+        "kalmanVelocity": round(velocity, 4),
+        "kalmanTrend": kalman.get("kalmanTrend"),
+        "hurst": hurst.get("hurst"),
+        "hurstRegime": hurst.get("regime"),
+    }
+
+
+def timeframe_confirmation(daily, h1=None, m15=None) -> Dict[str, Any]:
+    """
+    Weighted agreement across daily / 60m / 15m trends.
+    Score is conviction, not direction: 100 means the available timeframes agree,
+    50 means mixed or neutral, and unavailable means no multiplier should be applied.
+    """
+    weights = {"daily": 0.5, "60m": 0.3, "15m": 0.2}
+    states = {
+        "daily": _timeframe_state("daily", daily),
+        "60m": _timeframe_state("60m", h1),
+        "15m": _timeframe_state("15m", m15),
+    }
+    available = [s for s in states.values() if s.get("available")]
+    directional = [s for s in available if s.get("direction") in ("bullish", "bearish")]
+    if len(directional) < 2:
+        return {
+            "available": False,
+            "confirmationScore": 50.0,
+            "convictionMultiplier": 1.0,
+            "label": "insufficient multi-timeframe data",
+            "states": states,
+        }
+
+    bull_w = sum(weights[s["timeframe"]] for s in directional if s["direction"] == "bullish")
+    bear_w = sum(weights[s["timeframe"]] for s in directional if s["direction"] == "bearish")
+    used_w = bull_w + bear_w
+    dominant_w = max(bull_w, bear_w)
+    opposing_w = min(bull_w, bear_w)
+    direction = "bullish" if bull_w > bear_w else "bearish" if bear_w > bull_w else "mixed"
+    aligned_count = sum(1 for s in directional if s["direction"] == direction) if direction != "mixed" else 0
+    total_count = len(directional)
+    agreement = (dominant_w - opposing_w) / used_w if used_w else 0.0
+    score = 50.0 + 50.0 * agreement
+    if direction == "mixed":
+        score = 50.0
+        label = "conflicting timeframes"
+    elif aligned_count == total_count:
+        label = f"{total_count}/{total_count} aligned {direction}"
+    else:
+        label = f"{aligned_count}/{total_count} aligned {direction}"
+
+    return {
+        "available": True,
+        "confirmationScore": round(float(np.clip(score, 50.0, 100.0)), 1),
+        "convictionMultiplier": round(float(np.clip(score / 100.0, 0.5, 1.0)), 3),
+        "direction": direction,
+        "label": label,
+        "states": states,
+    }
+
+
 def _ewma_vol(returns: np.ndarray, lam: float = 0.94) -> np.ndarray:
     """RiskMetrics EWMA per-step volatility series σ_t. Deterministic; σ_t depends only on the past."""
     var = np.empty(len(returns))
@@ -326,6 +413,109 @@ def backtest_signal_ic(closes: List[float], volumes: Optional[List[float]] = Non
     }
 
 
+def _score_forward_pairs(px: np.ndarray, volumes: Optional[np.ndarray], start: int, stop: int,
+                         lookback: int, fwd_days: int, step: int) -> tuple:
+    scores, fwd = [], []
+    last_t = min(stop, len(px) - fwd_days)
+    for t in range(max(start, lookback), last_t, step):
+        win = px[t - lookback:t]
+        if len(win) < 20:
+            continue
+        deck = compute_complete_quant_deck("WF", {
+            "close": win.tolist(),
+            "high": win.tolist(),
+            "low": win.tolist(),
+            "volume": volumes[t - lookback:t].tolist() if volumes is not None and len(volumes) >= t else [],
+        }, skip_montecarlo=True)
+        score = deck.get("quantScore")
+        if score is None:
+            continue
+        ret = px[t + fwd_days] / px[t] - 1.0 if px[t] else np.nan
+        if np.isfinite(ret):
+            scores.append(float(score))
+            fwd.append(float(ret))
+    return np.asarray(scores, dtype=float), np.asarray(fwd, dtype=float)
+
+
+def _ic_summary(scores: np.ndarray, fwd: np.ndarray) -> Dict[str, Any]:
+    if len(scores) < 5 or len(fwd) < 5:
+        return {"available": False, "samples": int(min(len(scores), len(fwd)))}
+    return {
+        "available": True,
+        "ic": round(_rank_corr(scores, fwd), 4),
+        "hitRate": round(float(np.mean((scores > 50) == (fwd > 0))), 3),
+        "samples": int(len(scores)),
+    }
+
+
+def walk_forward_validate(closes: List[float], volumes: Optional[List[float]] = None,
+                          train: int = 252, test: int = 42, step: int = 42,
+                          fwd_days: int = 5) -> Dict[str, Any]:
+    """
+    Out-of-sample validation for the quant deck score.
+    Each window estimates score/return behavior on a train slice, then scores only
+    holdout bars for OOS IC and hit rate. A large IS-minus-OOS gap is overfit risk.
+    """
+    px = np.asarray(closes, dtype=float)
+    px = px[np.isfinite(px)]
+    if len(px) < train + test + fwd_days:
+        return {"available": False, "reason": "insufficient history", "bars": int(len(px))}
+
+    vol = None
+    if volumes is not None:
+        raw_vol = np.asarray(volumes, dtype=float)
+        if len(raw_vol) == len(closes):
+            vol = raw_vol[np.isfinite(np.asarray(closes, dtype=float))]
+
+    lookback = min(120, max(60, train // 2))
+    windows = []
+    for start in range(0, len(px) - train - test - fwd_days + 1, step):
+        train_end = start + train
+        test_end = train_end + test
+        is_scores, is_fwd = _score_forward_pairs(px, vol, start + lookback, train_end, lookback, fwd_days, max(1, fwd_days))
+        oos_scores, oos_fwd = _score_forward_pairs(px, vol, train_end, test_end, lookback, fwd_days, max(1, fwd_days))
+        is_summary = _ic_summary(is_scores, is_fwd)
+        oos_summary = _ic_summary(oos_scores, oos_fwd)
+        if not oos_summary.get("available"):
+            continue
+        windows.append({
+            "trainStart": int(start),
+            "trainEnd": int(train_end - 1),
+            "testStart": int(train_end),
+            "testEnd": int(test_end - 1),
+            "inSampleIC": is_summary.get("ic"),
+            "inSampleHitRate": is_summary.get("hitRate"),
+            "inSampleSamples": is_summary.get("samples", 0),
+            "oosIC": oos_summary.get("ic"),
+            "oosHitRate": oos_summary.get("hitRate"),
+            "oosSamples": oos_summary.get("samples", 0),
+        })
+
+    if not windows:
+        return {"available": False, "reason": "too few holdout samples", "bars": int(len(px))}
+
+    is_vals = [w["inSampleIC"] for w in windows if w.get("inSampleIC") is not None]
+    oos_vals = [w["oosIC"] for w in windows if w.get("oosIC") is not None]
+    mean_is = float(np.mean(is_vals)) if is_vals else None
+    mean_oos = float(np.mean(oos_vals)) if oos_vals else None
+    decay = (mean_is - mean_oos) if mean_is is not None and mean_oos is not None else None
+    return {
+        "available": True,
+        "trainBars": int(train),
+        "testBars": int(test),
+        "stepBars": int(step),
+        "fwdDays": int(fwd_days),
+        "lookbackBars": int(lookback),
+        "windows": windows,
+        "meanIS_IC": round(mean_is, 4) if mean_is is not None else None,
+        "meanOOS_IC": round(mean_oos, 4) if mean_oos is not None else None,
+        "meanOOSHitRate": round(float(np.mean([w["oosHitRate"] for w in windows])), 3),
+        "isMinusOosDecay": round(float(decay), 4) if decay is not None else None,
+        "overfitWarning": bool(decay is not None and mean_is is not None and decay > max(0.05, abs(mean_is) * 0.5)),
+        "samples": int(sum(w["oosSamples"] for w in windows)),
+    }
+
+
 def cross_sectional_rank(symbol: str, universe_df) -> Dict[str, Any]:
     """
     Percentile-rank this name's single-day factors against the WHOLE NSE universe (bhavcopy).
@@ -432,7 +622,8 @@ def _composite_score(kalman: Dict[str, Any], hurst: Dict[str, Any], obi: Dict[st
 
 def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kotak_depth: Optional[Dict[str, Any]] = None,
                                 delivery: Optional[Dict[str, Any]] = None, cross_sectional: Optional[Dict[str, Any]] = None,
-                                skip_montecarlo: bool = False) -> Dict[str, Any]:
+                                skip_montecarlo: bool = False,
+                                timeframes: Optional[Dict[str, List[float]]] = None) -> Dict[str, Any]:
     """Master quantitative aggregator feeding the AI prompt and UI dashboard."""
     try:
         closes = np.array(ohlcv.get("close", []), dtype=float)   # RAW prices → levels/pivots/bands/RVOL
@@ -485,6 +676,17 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
         # Institutional Quant Score (0-100): regime-conditional factor model, RVOL conviction, logistic squash
         score, score_factors = _composite_score(kalman, hurst, obi, rvol, squeeze,
                                                  delivery, cross_sectional, latest_close, has_depth)
+        raw_score = score
+        tf_confirmation = {"available": False}
+        if timeframes:
+            tf_confirmation = timeframe_confirmation(
+                timeframes.get("daily") or closes.tolist(),
+                timeframes.get("60m") or timeframes.get("h1"),
+                timeframes.get("15m") or timeframes.get("m15"),
+            )
+            if tf_confirmation.get("available"):
+                mult = float(tf_confirmation.get("convictionMultiplier") or 1.0)
+                score = round(float(np.clip(50.0 + (score - 50.0) * mult, 2.0, 98.0)), 1)
 
         backtest = {"available": False}
         if symbol != "BT" and len(closes) >= 80:
@@ -497,7 +699,9 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             "symbol": symbol,
             "currentPrice": round(latest_close, 2),
             "quantScore": round(score, 1),
+            "rawQuantScore": round(raw_score, 1),
             "scoreFactors": score_factors,
+            "timeframeConfirmation": tf_confirmation,
             "pivots": pivots,
             "bollingerSqueeze": squeeze,
             "hurstRegime": hurst,
@@ -570,3 +774,26 @@ if __name__ == "__main__":  # offline sanity check of the fixed math
     assert _bt["available"] and _bt["samples"] >= 10, _bt
     assert _bt["ic"] > 0 and _bt["hitRate"] > 0.5, _bt   # trend regimes → score has real edge
     print("backtest  ic=%.4f  hitRate=%.3f  n=%d" % (_bt["ic"], _bt["hitRate"], _bt["samples"]))
+
+    _aligned = timeframe_confirmation(_closes, _closes[-140:], _closes[-120:])
+    assert _aligned["available"] and _aligned["confirmationScore"] >= 95, _aligned
+    _conflict = timeframe_confirmation(_closes, _closes[-140:][::-1], _closes[-120:])
+    assert _conflict["available"] and _conflict["confirmationScore"] < _aligned["confirmationScore"], _conflict
+    _tf_deck = compute_complete_quant_deck("TEST", _ohlcv,
+                                           timeframes={"daily": _closes.tolist(),
+                                                       "60m": _closes[-140:][::-1].tolist(),
+                                                       "15m": _closes[-120:].tolist()},
+                                           skip_montecarlo=True)
+    assert _tf_deck["quantScore"] <= _tf_deck["rawQuantScore"], _tf_deck
+    print("timeframes  aligned=%.1f  conflict=%.1f  adjustedScore=%.1f raw=%.1f" % (
+        _aligned["confirmationScore"], _conflict["confirmationScore"],
+        _tf_deck["quantScore"], _tf_deck["rawQuantScore"]))
+
+    _wf = walk_forward_validate(_reg_closes, train=180, test=45, step=45, fwd_days=5)
+    assert _wf["available"] and _wf["samples"] > 0 and _wf["meanOOS_IC"] is not None, _wf
+    _noise = (100 * np.exp(np.cumsum(_rng.normal(0, 0.01, 700)))).tolist()
+    _wf_noise = walk_forward_validate(_noise, train=180, test=45, step=45, fwd_days=5)
+    assert _wf_noise["available"], _wf_noise
+    assert abs(_wf_noise["meanOOS_IC"]) < 0.5, _wf_noise
+    print("walk-forward  oosIC=%.4f  hitRate=%.3f  decay=%s  noiseOOS=%.4f" % (
+        _wf["meanOOS_IC"], _wf["meanOOSHitRate"], _wf["isMinusOosDecay"], _wf_noise["meanOOS_IC"]))

@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -165,6 +166,65 @@ def _is_live_partial_bar(df) -> bool:
         return False
 
 
+def _intraday_closes(sym: str, period: str, interval: str) -> list:
+    """Best-effort intraday closes for multi-timeframe confirmation."""
+    try:
+        hist = yf.Ticker(sym).history(period=period, interval=interval, auto_adjust=False)
+        if hist.empty or "Close" not in hist.columns:
+            return []
+        close = pd.to_numeric(hist["Close"], errors="coerce").dropna()
+        return close.tolist()
+    except Exception as e:
+        logger.info(f"intraday {interval} fetch skipped for {sym}: {e}")
+        return []
+
+
+def _recent_news_gate(symbol: str, window_hours: int = 4, threshold: float = -0.6) -> dict:
+    """Gate fresh strongly negative headlines; stale/absent news does not block trades."""
+    try:
+        now = datetime.now(timezone.utc)
+        recent = []
+        for item in get_news(symbol) or []:
+            published = _parse_news_datetime(item.get("publishedAt"))
+            if not published or (now - published) > timedelta(hours=window_hours):
+                continue
+            score = _safe_float(item.get("sentimentScore"))
+            if score is None:
+                continue
+            recent.append({**item, "_published": published, "_score": score})
+
+        if not recent:
+            return {
+                "available": False,
+                "status": "ok_to_trade",
+                "windowHours": window_hours,
+                "threshold": threshold,
+                "reason": "no recent sentiment-scored headlines",
+            }
+
+        mean_score = float(np.mean([item["_score"] for item in recent]))
+        driver = min(recent, key=lambda item: item["_score"])
+        status = "wait_2_days" if mean_score < threshold else "ok_to_trade"
+        return {
+            "available": True,
+            "status": status,
+            "windowHours": window_hours,
+            "threshold": threshold,
+            "meanSentiment": round(mean_score, 3),
+            "recentCount": len(recent),
+            "drivingHeadline": {
+                "title": driver.get("title"),
+                "source": driver.get("source"),
+                "publishedAt": driver.get("_published").isoformat() if driver.get("_published") else driver.get("publishedAt"),
+                "sentimentScore": round(float(driver.get("_score", 0.0)), 3),
+                "url": driver.get("url"),
+            },
+        }
+    except Exception as e:
+        logger.info(f"news gate skipped for {symbol}: {e}")
+        return {"available": False, "status": "ok_to_trade", "reason": str(e)}
+
+
 def compute_technicals(symbol: str) -> dict:
     sym = normalize_symbol(symbol)
     try:
@@ -231,6 +291,15 @@ def compute_technicals(symbol: str) -> dict:
             "volume": a["Volume"].tolist() if "Volume" in a.columns else [],
         }
 
+        timeframes = {"daily": ohlcv_dict["close"]}
+        if os.environ.get("ENABLE_INTRADAY_CONFIRMATION", "true").lower() != "false":
+            timeframes["60m"] = _intraday_closes(sym, "1mo", "60m")
+            timeframes["15m"] = _intraday_closes(sym, "5d", "15m")
+
+        news_gate = {"available": False, "status": "ok_to_trade", "reason": "disabled"}
+        if os.environ.get("ENABLE_NEWS_GATE", "true").lower() != "false":
+            news_gate = _recent_news_gate(sym)
+
         # Live order-flow (Kotak Level-2) + official NSE bhavcopy context. Best-effort: any failure
         # degrades gracefully (the deck still computes, just without that factor).
         depth = delivery = cross = integrity = None
@@ -248,6 +317,12 @@ def compute_technicals(symbol: str) -> dict:
                 fp = fsvc.get_factor_profile(sym)
                 cross = ({"available": True, "composite": fp["percentile"], "decile": fp["decile"],
                           "percentile": fp["percentile"], "universeSize": fp["universeSize"],
+                          "tradableUniverse": fp.get("tradableUniverse"),
+                          "liquidityFilter": fp.get("liquidityFilter"),
+                          "advTurnoverCr": fp.get("advTurnoverCr"),
+                          "rawComposite": fp.get("rawComposite"),
+                          "sectorAdjustedComposite": fp.get("sectorAdjustedComposite"),
+                          "sectorOverlay": fp.get("sectorOverlay"),
                           "factors": fp["factors"], "source": "multi-day-factor-model"}
                          if fp.get("available") else cross_sectional_rank(sym, bhav.universe_factors()))
             except Exception:
@@ -260,9 +335,11 @@ def compute_technicals(symbol: str) -> dict:
             logger.info(f"bhavcopy context skipped for {sym}: {e}")
 
         quant_deck = compute_complete_quant_deck(sym, ohlcv_dict, kotak_depth=depth,
-                                                 delivery=delivery, cross_sectional=cross)
+                                                 delivery=delivery, cross_sectional=cross,
+                                                 timeframes=timeframes)
         if isinstance(quant_deck, dict):
             quant_deck["dataIntegrity"] = integrity
+            quant_deck["newsGate"] = news_gate
 
         return {
             "currentPrice": _safe_float(current_price_display),

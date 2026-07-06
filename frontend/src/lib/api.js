@@ -19,6 +19,8 @@ export const getAIVerdict = (sym) => client.post(`/stock/${sym}/ai-verdict`).the
 export const getAITechnical = (sym) => client.post(`/stock/${sym}/ai-technical`).then((r) => r.data);
 export const getAINews = (sym) => client.post(`/stock/${sym}/ai-news`).then((r) => r.data);
 export const getAIRatios = (sym, force = false, pdfData = null) => client.post(`/stock/${sym}/ai-ratios`, pdfData, { params: { force } }).then((r) => r.data);
+export const getFactorLeaders = (n = 15, minAdvTurnoverCr = 5.0) => client.get(`/factors/leaders`, { params: { n, min_adv_turnover_cr: minAdvTurnoverCr } }).then((r) => r.data);
+export const getFactorParamValidation = (params = {}) => client.get(`/factors/param-validation`, { params }).then((r) => r.data);
 export const getMacro = () => client.get(`/macro`).then((r) => r.data);
 export const getSectors = () => client.get(`/sectors`).then((r) => r.data);
 export const getMarketDepth = (sym) => client.get(`/stock/${sym}/depth`).then((r) => r.data);

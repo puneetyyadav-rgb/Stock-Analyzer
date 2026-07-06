@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import logging
+from functools import lru_cache
 from extra_service import HEADERS, _strip_symbol, _safe_float
 
 logger = logging.getLogger(__name__)
@@ -224,6 +225,35 @@ def _index_snapshot(ticker: str, period: str = "1mo") -> dict:
     except Exception as e:
         logger.error(f"index snapshot error: {e}")
         return {"price": None, "changePercent": None, "perf_1m": None, "perf_3m": None}
+
+
+@lru_cache(maxsize=4)
+def sector_momentum() -> dict:
+    """1M/3M sector-index momentum relative to Nifty 50, keyed by Yahoo sector name."""
+    nifty = _index_snapshot("^NSEI")
+    out = {}
+    for yahoo_sector, (ticker, label) in YAHOO_TO_NSE_INDEX.items():
+        snap = nifty if ticker == "^NSEI" else _index_snapshot(ticker)
+        excess_1m = None
+        excess_3m = None
+        if snap.get("perf_1m") is not None and nifty.get("perf_1m") is not None:
+            excess_1m = snap["perf_1m"] - nifty["perf_1m"]
+        if snap.get("perf_3m") is not None and nifty.get("perf_3m") is not None:
+            excess_3m = snap["perf_3m"] - nifty["perf_3m"]
+        out[yahoo_sector] = {
+            "sector": yahoo_sector,
+            "ticker": ticker,
+            "label": label,
+            "perf_1m": snap.get("perf_1m"),
+            "perf_3m": snap.get("perf_3m"),
+            "excess_1m": excess_1m,
+            "excess_3m": excess_3m,
+        }
+    return {
+        "available": any(v.get("excess_1m") is not None for v in out.values()),
+        "benchmark": {"ticker": "^NSEI", "label": "NIFTY 50", **nifty},
+        "sectors": out,
+    }
 
 
 def get_sector_analysis(symbol: str, sector: str | None = None) -> dict:

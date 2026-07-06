@@ -79,6 +79,15 @@ export default function StockDetails({ symbol, overview }) {
                 <span className="text-[10px] uppercase tracking-widest text-fuchsia-400 font-bold">Quant Score</span>
                 <span className="text-sm font-mono font-bold text-fuchsia-300">{technicals.quantDeck.quantScore || 50} / 100</span>
               </div>
+              {technicals.quantDeck.rawQuantScore != null && technicals.quantDeck.rawQuantScore !== technicals.quantDeck.quantScore && (
+                <KV label="TF-Adjusted Score" value={`${technicals.quantDeck.rawQuantScore} to ${technicals.quantDeck.quantScore}`} valueClass="text-fuchsia-300 font-mono" />
+              )}
+              {technicals.quantDeck.timeframeConfirmation?.available && (
+                <KV label="Timeframe Confirm" value={`${technicals.quantDeck.timeframeConfirmation.label} | ${technicals.quantDeck.timeframeConfirmation.confirmationScore}/100`} valueClass={technicals.quantDeck.timeframeConfirmation.confirmationScore >= 80 ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"} />
+              )}
+              {technicals.quantDeck.newsGate?.status && (technicals.quantDeck.newsGate.available || technicals.quantDeck.newsGate.status === "wait_2_days") && (
+                <KV label="News Gate" value={technicals.quantDeck.newsGate.status === "wait_2_days" ? `Wait 2 days | ${technicals.quantDeck.newsGate.drivingHeadline?.title || "negative fresh news"}` : "OK to trade"} valueClass={technicals.quantDeck.newsGate.status === "wait_2_days" ? "text-red-400 font-semibold" : "text-emerald-400"} />
+              )}
               <KV label="Hurst Exponent (H)" value={`${technicals.quantDeck.hurstRegime?.hurst || "0.50"}${technicals.quantDeck.hurstRegime?.ci95 != null ? ` ±${technicals.quantDeck.hurstRegime.ci95}` : ""} (${technicals.quantDeck.hurstRegime?.regime?.split(" ")[0] || "-"})`} valueClass="text-fuchsia-300" />
               <KV label="1D Kalman State" value={technicals.quantDeck.kalmanState?.kalmanTrend || "-"} valueClass={technicals.quantDeck.kalmanState?.kalmanTrend?.includes("Bullish") ? "text-emerald-400" : "text-red-400"} />
               <KV label="10D Fat-Tail VaR (95%)" value={`${technicals.quantDeck.monteCarloRisk?.var95Pct || 0}%`} valueClass="text-red-400 font-mono" />
@@ -100,6 +109,9 @@ export default function StockDetails({ symbol, overview }) {
                     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3)
                     .map(([k, v]) => `${k} ${v > 0 ? "+" : ""}${v}`).join("  ")}
                   valueClass="text-fuchsia-300 font-mono text-[10px]" />
+              )}
+              {technicals.quantDeck.crossSectional?.sectorOverlay?.sector && (
+                <KV label="Sector Overlay" value={`${technicals.quantDeck.crossSectional.sectorOverlay.sector} | ${technicals.quantDeck.crossSectional.sectorOverlay.sectorMultiplier}x${technicals.quantDeck.crossSectional.sectorOverlay.sectorExcess1m != null ? ` | ${technicals.quantDeck.crossSectional.sectorOverlay.sectorExcess1m}% vs Nifty` : ""}`} valueClass={technicals.quantDeck.crossSectional.sectorOverlay.sectorMultiplier >= 1 ? "text-emerald-400 font-mono text-[10px]" : "text-amber-400 font-mono text-[10px]"} />
               )}
               {technicals.quantDeck.dataIntegrity?.status && (
                 <KV label="Data Integrity" value={
