@@ -161,6 +161,20 @@ async def factor_profile(symbol: str):
     return data
 
 
+@api_router.post("/backtest")
+async def backtest(config: dict):
+    """Decile long/short + long-only backtest net of Indian STT & market impact. Heavy; cached 1h by config."""
+    import json, hashlib
+    key = "backtest:" + hashlib.md5(json.dumps(config or {}, sort_keys=True).encode()).hexdigest()[:12]
+    cached = _cache_get(key, custom_ttl=3600)
+    if cached:
+        return cached
+    import backtest_engine as bt
+    data = await asyncio.to_thread(bt.run_backtest, config or {})
+    _cache_set(key, data)
+    return data
+
+
 @api_router.get("/stock/{symbol}/financials")
 async def financials(symbol: str):
     key = f"fin:{symbol}"

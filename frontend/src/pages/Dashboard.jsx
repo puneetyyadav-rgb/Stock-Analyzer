@@ -12,6 +12,7 @@ import FiiDiiPanel from "../components/FiiDiiPanel";
 import ConcallsPanel from "../components/ConcallsPanel";
 import PeersPanel from "../components/PeersPanel";
 import OptionsPanel from "../components/OptionsPanel";
+import BacktestPanel from "../components/BacktestPanel";
 import InsiderPanel from "../components/InsiderPanel";
 import SocialPanel from "../components/SocialPanel";
 import LegalPanel from "../components/LegalPanel";
@@ -153,10 +154,21 @@ export default function Dashboard() {
             >
               🏛️ Institutional HRP Allocator
             </button>
+            <button
+              onClick={() => setActiveTab("backtest")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "backtest"
+                  ? "bg-fuchsia-600 text-white shadow-md shadow-fuchsia-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:text-white"
+              }`}
+            >
+              🧪 Decile Backtest
+            </button>
           </div>
 
           {activeTab === "pairs" && <PairsTradingPanel />}
           {activeTab === "hrp" && <PortfolioAllocPanel />}
+          {activeTab === "backtest" && <BacktestPanel />}
 
           {activeTab === "stock" && (
             <>
