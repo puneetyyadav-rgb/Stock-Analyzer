@@ -1,15 +1,21 @@
 import React, { useState } from "react";
 import axios from "axios";
+import StockSearch from "./StockSearch";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const POPULAR_TICKERS = [
-  "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN",
-  "BHARTIARTL", "ITC", "LT", "TATAMOTORS", "SUNPHARMA", "MARUTI"
-];
+const STOCK_CATEGORIES = {
+  "Banking & NBFC": ["HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK", "KOTAKBANK", "BAJFINANCE", "CHOLAFIN", "IDFCFIRSTB", "AUBANK"],
+  "IT & Tech": ["TCS", "INFY", "WIPRO", "HCLTECH", "TECHM", "LTIM", "PERSISTENT", "COFORGE", "ZOMATO"],
+  "Energy & Power": ["RELIANCE", "ONGC", "NTPC", "POWERGRID", "TATAPOWER", "COALINDIA", "BPCL", "IOC"],
+  "Auto & EV": ["TATAMOTORS", "M&M", "MARUTI", "BAJAJ-AUTO", "EICHERMOT", "TVSMOTOR", "HEROMOTOCO", "BOSCHLTD"],
+  "Pharma & Healthcare": ["SUNPHARMA", "CIPLA", "DRREDDY", "DIVISLAB", "LUPIN", "AUROPHARMA", "APOLLOHOSP", "MAXHEALTH"],
+  "Metals, Cement & Infra": ["LT", "TATASTEEL", "JSWSTEEL", "HINDALCO", "ULTRACEMCO", "GRASIM", "HAL", "BEL", "ABB"]
+};
 
 export default function PortfolioAllocPanel() {
   const [selected, setSelected] = useState(["RELIANCE", "TCS", "HDFCBANK", "TATAMOTORS"]);
+  const [activeCategory, setActiveCategory] = useState("Banking & NBFC");
   const [capital, setCapital] = useState(1000000);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -21,6 +27,17 @@ export default function PortfolioAllocPanel() {
     } else {
       setSelected([...selected, t]);
     }
+  };
+
+  const addCustomTicker = (sym) => {
+    const clean = sym.replace(".NS", "").replace(".BO", "").toUpperCase();
+    if (clean && !selected.includes(clean)) {
+      setSelected([...selected, clean]);
+    }
+  };
+
+  const removeTicker = (t) => {
+    setSelected(selected.filter((s) => s !== t));
   };
 
   const handleBuild = async () => {
@@ -65,11 +82,53 @@ export default function PortfolioAllocPanel() {
 
         <div className="mt-6 p-4 bg-black/40 rounded-xl border border-zinc-800/80 space-y-4">
           <div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+              <label className="text-xs font-semibold text-zinc-300">
+                1. Add ANY Indian Stock to Watchlist:
+              </label>
+              <div className="w-full md:w-72">
+                <StockSearch onSelect={addCustomTicker} />
+              </div>
+            </div>
+
+            <div className="mb-4 p-3 bg-zinc-950/60 rounded-lg border border-zinc-800">
+              <span className="text-xs font-semibold text-purple-300 block mb-2">
+                Currently Selected Universe ({selected.length} stocks):
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {selected.length === 0 && <span className="text-xs text-zinc-500 italic">No stocks selected yet.</span>}
+                {selected.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-900/40 border border-purple-500/50 text-purple-200 text-xs font-bold rounded-lg shadow-sm">
+                    {t}
+                    <button onClick={() => removeTicker(t)} className="text-purple-400 hover:text-white font-black ml-1">
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
             <label className="text-xs font-semibold text-zinc-300 block mb-2">
-              Select Watchlist Universe (Pick 2 to 10 Stocks):
+              2. Or Quick-Select from Major Indian Market Sectors:
             </label>
+            <div className="flex flex-wrap gap-1.5 mb-3 border-b border-zinc-800 pb-3">
+              {Object.keys(STOCK_CATEGORIES).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    activeCategory === cat
+                      ? "bg-zinc-800 text-white border border-zinc-600"
+                      : "bg-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
             <div className="flex flex-wrap gap-2">
-              {POPULAR_TICKERS.map((t) => {
+              {STOCK_CATEGORIES[activeCategory].map((t) => {
                 const active = selected.includes(t);
                 return (
                   <button

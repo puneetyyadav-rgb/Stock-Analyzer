@@ -935,6 +935,12 @@ async def get_stat_arb_pairs():
     return {"pairs": data, "count": len(data)}
 
 
+@api_router.get("/quant/pairs/custom")
+async def get_custom_pair(symA: str, symB: str):
+    data = await asyncio.to_thread(prs.scan_custom_pair, symA, symB)
+    return data
+
+
 @api_router.post("/quant/portfolio")
 async def build_hrp_portfolio(req: PortfolioReq):
     data = await asyncio.to_thread(ports.calculate_portfolio_metrics, req.symbols, req.capital)

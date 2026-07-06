@@ -21,23 +21,83 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Core NSE Sector Peer Pairs for Statistical Arbitrage Scanning
+# Comprehensive NSE Sector Peer Pairs for Statistical Arbitrage Scanning across Indian Market
 SECTOR_PAIRS = [
+    # Banking & Financial Services
     ("HDFCBANK.NS", "ICICIBANK.NS", "Banking"),
     ("SBIN.NS", "AXISBANK.NS", "Banking"),
     ("KOTAKBANK.NS", "INDUSINDBK.NS", "Banking"),
+    ("BANKBARODA.NS", "PNB.NS", "Banking"),
+    ("CANBK.NS", "UNIONBANK.NS", "Banking"),
+    ("IDFCFIRSTB.NS", "FEDERALBNK.NS", "Banking"),
+    ("AUBANK.NS", "BANDHANBNK.NS", "Banking"),
+    # NBFCs & Wealth
+    ("BAJFINANCE.NS", "BAJAJFINSV.NS", "NBFC / Finance"),
+    ("CHOLAFIN.NS", "SHRIRAMFIN.NS", "NBFC / Finance"),
+    ("MUTHOOTFIN.NS", "MANAPPURAM.NS", "NBFC / Finance"),
+    ("M&MFIN.NS", "SUNDARMFIN.NS", "NBFC / Finance"),
+    ("HDFCAMC.NS", "NAM-INDIA.NS", "NBFC / Finance"),
+    # IT Services & Tech
     ("TCS.NS", "INFY.NS", "IT Services"),
     ("WIPRO.NS", "HCLTECH.NS", "IT Services"),
     ("TECHM.NS", "LTIM.NS", "IT Services"),
-    ("RELIANCE.NS", "ONGC.NS", "Energy"),
-    ("TATAMOTORS.NS", "M&M.NS", "Auto"),
-    ("MARUTI.NS", "BAJAJ-AUTO.NS", "Auto"),
+    ("PERSISTENT.NS", "COFORGE.NS", "IT Services"),
+    ("MPHASIS.NS", "LTTS.NS", "IT Services"),
+    ("TATAELXSI.NS", "KPITTECH.NS", "IT Services"),
+    # Energy, Oil & Gas, Power
+    ("RELIANCE.NS", "ONGC.NS", "Energy & Oil"),
+    ("BPCL.NS", "HPCL.NS", "Energy & Oil"),
+    ("IOC.NS", "GAIL.NS", "Energy & Oil"),
+    ("NTPC.NS", "POWERGRID.NS", "Power & Utilities"),
+    ("TATAPOWER.NS", "ADANIPOWER.NS", "Power & Utilities"),
+    ("COALINDIA.NS", "JSWENERGY.NS", "Power & Utilities"),
+    # Auto & EV
+    ("TATAMOTORS.NS", "M&M.NS", "Auto & EV"),
+    ("MARUTI.NS", "BAJAJ-AUTO.NS", "Auto & EV"),
+    ("EICHERMOT.NS", "TVSMOTOR.NS", "Auto & EV"),
+    ("HEROMOTOCO.NS", "ASHOKLEY.NS", "Auto & EV"),
+    ("MOTHERSON.NS", "BOSCHLTD.NS", "Auto Ancillary"),
+    ("BALKRISIND.NS", "MRF.NS", "Auto Ancillary"),
+    # Pharma & Healthcare
     ("SUNPHARMA.NS", "CIPLA.NS", "Pharma"),
     ("DRREDDY.NS", "DIVISLAB.NS", "Pharma"),
+    ("LUPIN.NS", "AUROPHARMA.NS", "Pharma"),
+    ("TORNTPHARM.NS", "ALKEM.NS", "Pharma"),
+    ("BIOCON.NS", "ZYDUSLIFE.NS", "Pharma"),
+    ("APOLLOHOSP.NS", "MAXHEALTH.NS", "Healthcare"),
+    # Metals & Mining
+    ("TATASTEEL.NS", "JSWSTEEL.NS", "Metals & Mining"),
+    ("HINDALCO.NS", "VEDL.NS", "Metals & Mining"),
+    ("NATIONALUM.NS", "HINDZINC.NS", "Metals & Mining"),
+    ("NMDC.NS", "SAIL.NS", "Metals & Mining"),
+    # Cement & Building Materials
+    ("ULTRACEMCO.NS", "GRASIM.NS", "Cement"),
+    ("SHREECEM.NS", "AMBUJACEM.NS", "Cement"),
+    ("ACC.NS", "DALBHARAT.NS", "Cement"),
+    ("RAMCOCEM.NS", "JKCEMENT.NS", "Cement"),
+    # FMCG & Consumer
+    ("HINDUNILVR.NS", "ITC.NS", "FMCG"),
+    ("NESTLEIND.NS", "BRITANNIA.NS", "FMCG"),
+    ("DABUR.NS", "MARICO.NS", "FMCG"),
+    ("GODREJCP.NS", "COLPAL.NS", "FMCG"),
+    ("TATACONSUM.NS", "VARROC.NS", "FMCG"),
+    # Capital Goods, Defense & Infrastructure
     ("LT.NS", "SIEMENS.NS", "Capital Goods"),
-    ("ULTRACEMCO.NS", "GRASIM.NS", "Cement/Materials"),
-    ("TATASTEEL.NS", "JSWSTEEL.NS", "Metals"),
+    ("ABB.NS", "THERMAX.NS", "Capital Goods"),
+    ("HAL.NS", "BEL.NS", "Defense"),
+    ("BDL.NS", "MAZDOCK.NS", "Defense"),
+    ("CUMMINSIND.NS", "BHEL.NS", "Capital Goods"),
+    # Telecom, Media & Consumer Tech
+    ("BHARTIARTL.NS", "INDUSTOWER.NS", "Telecom"),
+    ("ZOMATO.NS", "FSNKRNY.NS", "New-Age Tech"),
+    ("PAYTM.NS", "POLICYBZR.NS", "New-Age Tech"),
+    ("TITAN.NS", "KALYANKJIL.NS", "Consumer & Retail"),
+    ("TRENT.NS", "ABFRL.NS", "Consumer & Retail"),
+    ("ASIANPAINT.NS", "BERGEPAINT.NS", "Paints"),
+    ("PIDILITIND.NS", "SRF.NS", "Chemicals"),
+    ("ASTRAL.NS", "SUPREMEIND.NS", "Building Materials"),
 ]
+
 
 
 def calculate_cointegration(series_a: List[float], series_b: List[float]) -> Dict[str, Any]:
@@ -178,6 +238,36 @@ def scan_market_pairs() -> List[Dict[str, Any]]:
     _cache_pairs = {"results": results}
     _cache_ts = now
     return results
+
+
+def scan_custom_pair(sym_a: str, sym_b: str) -> Dict[str, Any]:
+    """
+    Evaluates cointegration and half-life for ANY custom pair of Indian symbols on demand.
+    """
+    import yfinance as yf
+    sym_a = sym_a.strip().upper()
+    sym_b = sym_b.strip().upper()
+    if not sym_a.endswith(".NS") and not sym_a.endswith(".BO"):
+        sym_a = f"{sym_a}.NS"
+    if not sym_b.endswith(".NS") and not sym_b.endswith(".BO"):
+        sym_b = f"{sym_b}.NS"
+    
+    try:
+        data = yf.download([sym_a, sym_b], period="1y", interval="1d", auto_adjust=True, progress=False)["Close"]
+        if sym_a not in data or sym_b not in data:
+            return {"error": f"Could not fetch historical prices for {sym_a} or {sym_b}"}
+        df_pair = data[[sym_a, sym_b]].dropna()
+        if len(df_pair) < 60:
+            return {"error": f"Insufficient overlapping history ({len(df_pair)} days) for {sym_a} and {sym_b}"}
+        res = calculate_cointegration(df_pair[sym_a].tolist(), df_pair[sym_b].tolist())
+        res["pair"] = f"{sym_a.replace('.NS','')} / {sym_b.replace('.NS','')}"
+        res["symbolA"] = sym_a
+        res["symbolB"] = sym_b
+        res["sector"] = "Custom / Watchlist"
+        return res
+    except Exception as e:
+        logger.error(f"Custom pair scan failed for {sym_a}/{sym_b}: {e}")
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":

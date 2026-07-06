@@ -82,7 +82,7 @@ def calculate_portfolio_metrics(symbols: List[str], capital: float = 1000000.0) 
         return {"error": "Select at least 2 stocks to build an HRP portfolio."}
 
     data = yf.download(clean_syms, period="1y", interval="1d", auto_adjust=True, progress=False)["Close"]
-    data = data.dropna(axis=1, how="all").fillna(method="ffill").dropna()
+    data = data.dropna(axis=1, how="all").ffill().bfill().dropna()
 
     if data.shape[1] < 2 or len(data) < 60:
         return {"error": "Insufficient overlapping historical data for selected stocks."}

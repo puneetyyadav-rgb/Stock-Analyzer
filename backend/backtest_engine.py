@@ -206,7 +206,7 @@ def run_backtest(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
             ndf = yf.Ticker("^NSEI").history(start=str(wc.index[0].date()), interval="1d", auto_adjust=True)
             nclose = ndf["Close"]
             nclose.index = nclose.index.tz_localize(None) if nclose.index.tz else nclose.index
-            aligned = nclose.reindex(wc.index, method="ffill")
+            aligned = nclose.reindex(wc.index).ffill()
             for i in idxs:
                 if i + h < len(aligned):
                     nifty_rets.append(float(aligned.iloc[i + h] / aligned.iloc[i] - 1.0))
