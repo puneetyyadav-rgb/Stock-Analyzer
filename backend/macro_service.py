@@ -87,8 +87,8 @@ def get_beta_coupled_simulation(
     regime_override: str = "normal"
 ) -> Dict[str, Any]:
     """Runs or retrieves the TIER 2 Asymmetric Beta coupled simulation for an individual stock."""
-    # Clean symbol for NSE if needed
-    clean_sym = symbol.strip().upper()
+    # Clean symbol for NSE if needed (strip spaces/hyphens so e.g. TATA STEEL -> TATASTEEL.NS)
+    clean_sym = symbol.strip().upper().replace(" ", "").replace("-", "").replace("_", "")
     if not clean_sym.endswith(".NS") and not clean_sym.endswith(".BO") and not clean_sym.startswith("^"):
         clean_sym = f"{clean_sym}.NS"
 
@@ -146,6 +146,10 @@ def _fetch_or_fallback_stock_returns(symbol: str, lookback_days: int, engine: Gl
     """Helper to fetch single stock returns from yfinance or local disk store, incrementally updating live ticks."""
     if "FAKE" in symbol or "BAD" in symbol or "INVALID" in symbol:
         return None
+
+    symbol = symbol.strip().upper().replace(" ", "").replace("-", "").replace("_", "")
+    if not symbol.endswith(".NS") and not symbol.endswith(".BO") and not symbol.startswith("^"):
+        symbol = f"{symbol}.NS"
 
     import yfinance as yf
     data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "stocks")
