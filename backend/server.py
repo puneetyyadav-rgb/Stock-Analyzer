@@ -13,7 +13,6 @@ import os
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
-import asyncio
 
 ROOT_DIR = Path(__file__).parent
 
@@ -35,8 +34,8 @@ import validation_service as vs
 import pairs_service as prs
 import portfolio_service as ports
 import macro_service as ms
+import qlib_service as qs
 from pydantic import BaseModel
-
 
 mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=2000)
@@ -47,7 +46,6 @@ api_router = APIRouter(prefix="/api")
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
 
 # Simple in-memory cache to avoid hammering data sources
 _CACHE: dict = {}
@@ -1018,6 +1016,15 @@ async def get_beta_coupled_simulation_endpoint(
         vol_scale,
         regime_override
     )
+    return data
+
+
+@api_router.get("/qlib/predict/{symbol}")
+async def get_qlib_prediction_endpoint(
+    symbol: str,
+    lookback_days: int = 500
+):
+    data = await asyncio.to_thread(qs.get_qlib_alpha_prediction, symbol, lookback_days)
     return data
 
 
