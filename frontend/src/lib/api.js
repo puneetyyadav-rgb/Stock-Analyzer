@@ -3,7 +3,7 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
-const client = axios.create({ baseURL: API, timeout: 180000 });
+export const client = axios.create({ baseURL: API, timeout: 180000 });
 
 export const searchStocks = (q) => client.get(`/search`, { params: { q } }).then((r) => r.data);
 export const getOverview = (sym) => client.get(`/stock/${sym}/overview`).then((r) => r.data);
@@ -39,4 +39,74 @@ export const uploadSourceMaterial = (sym, file) => {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 600000
   }).then((r) => r.data);
+};
+
+export const getGlobalMacroMonteCarlo = async (params = {}, options = {}) => {
+  try {
+    const response = await client.get(`/macro/global-monte-carlo`, {
+      params: {
+        horizon_days: params.horizon_days ?? 20,
+        paths: params.paths ?? 10000,
+        lookback: params.lookback ?? 252,
+        seed: params.seed ?? 12345,
+        vol_scale: params.vol_scale ?? 1.0,
+        regime_override: params.regime_override || "normal"
+      },
+      signal: options.signal,
+      timeout: options.timeout ?? 180000
+    });
+    const data = response.data || {};
+    if (!data.status) {
+      data.status = "success";
+    }
+    return data;
+  } catch (err) {
+    if (axios.isCancel(err) || err.name === "AbortError") {
+      return { status: "canceled", message: "Request was aborted by the user or timed out." };
+    }
+    return {
+      status: "error",
+      message: err.response?.data?.detail || err.message || "Failed to fetch global macro Monte Carlo simulation."
+    };
+  }
+};
+
+export const getBetaCoupledSimulation = async (sym, params = {}, options = {}) => {
+  try {
+    const response = await client.get(`/stock/${sym}/beta-coupled-simulation`, {
+      params: {
+        sector: params.sector || "Conglomerate",
+        horizon_days: params.horizon_days ?? 20,
+        paths: params.paths ?? 10000,
+        lookback: params.lookback ?? 252,
+        seed: params.seed ?? 12345,
+        vol_scale: params.vol_scale ?? 1.0,
+        regime_override: params.regime_override || "normal"
+      },
+      signal: options.signal,
+      timeout: options.timeout ?? 180000
+    });
+    const data = response.data || {};
+    if (!data.status) {
+      data.status = "success";
+    }
+    return data;
+  } catch (err) {
+    if (axios.isCancel(err) || err.name === "AbortError") {
+      return { status: "canceled", symbol: sym, message: "Request was aborted by the user or timed out." };
+    }
+    return {
+      status: "error",
+      symbol: sym,
+      message: err.response?.data?.detail || err.message || "Failed to fetch stock beta-coupled simulation.",
+      expected_stock_move: 0.0,
+      downside_var: { var95: 0.0, var99: 0.0 },
+      downside_cvar: 0.0,
+      upside_beta: 1.0,
+      downside_beta: 1.0,
+      macro_factor_contribution: {},
+      probability_of_loss: 0.0,
+      probability_of_large_drawdown: 0.0
+    };
+  }
 };

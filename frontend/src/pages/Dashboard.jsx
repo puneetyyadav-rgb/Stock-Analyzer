@@ -28,6 +28,8 @@ import RatioAnalysisPanel from "../components/RatioAnalysisPanel";
 import AIRatioAnalysisPanel from "../components/AIRatioAnalysisPanel";
 import PairsTradingPanel from "../components/PairsTradingPanel";
 import PortfolioAllocPanel from "../components/PortfolioAllocPanel";
+import GlobalMacroSimulationPanel from "../components/GlobalMacroSimulationPanel";
+import StockMacroCouplingWidget from "../components/StockMacroCouplingWidget";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -164,11 +166,23 @@ export default function Dashboard() {
             >
               🧪 Decile Backtest
             </button>
+            <button
+              onClick={() => setActiveTab("macro-sim")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "macro-sim"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:text-white"
+              }`}
+              data-testid="macro-sim-tab-btn"
+            >
+              🌐 Global Macro Simulation Deck
+            </button>
           </div>
 
           {activeTab === "pairs" && <PairsTradingPanel />}
           {activeTab === "hrp" && <PortfolioAllocPanel />}
           {activeTab === "backtest" && <BacktestPanel />}
+          {activeTab === "macro-sim" && <GlobalMacroSimulationPanel symbol={symbol || "RELIANCE"} sector={overview?.sector || "Conglomerate"} />}
 
           {activeTab === "stock" && (
             <>
@@ -260,6 +274,13 @@ export default function Dashboard() {
                   <MacroPanel />
                 </div>
               </div>
+
+              {/* Phase 6: Asymmetric Beta & Macro Tail Risk Coupling Widget */}
+              <StockMacroCouplingWidget
+                symbol={overview.symbol}
+                sector={overview.sector || "Conglomerate"}
+                onSwitchToMacro={() => setActiveTab("macro-sim")}
+              />
 
               {/* Mathematical Predictor */}
               <MLPredictor symbol={overview.symbol} />

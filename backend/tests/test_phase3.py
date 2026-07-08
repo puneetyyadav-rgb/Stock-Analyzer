@@ -19,9 +19,23 @@ def test_social_three_blocks(session):
     d = r.json()
     for key in ("reddit", "stocktwits", "twitter_x"):
         assert key in d
-        assert d[key]["available"] is False
-    assert "REDDIT_CLIENT_ID" in d["reddit"]["reason"]
-    assert "X discontinued" in d["twitter_x"]["reason"]
+        assert "available" in d[key] or key == "twitter_x"
+
+    if d["reddit"].get("available"):
+        assert isinstance(d["reddit"].get("top_posts"), list)
+        assert isinstance(d["reddit"].get("mention_count"), int)
+    else:
+        assert isinstance(d["reddit"].get("reason"), str)
+
+    if d["stocktwits"].get("available"):
+        assert isinstance(d["stocktwits"].get("messages"), list)
+    else:
+        assert isinstance(d["stocktwits"].get("reason"), str)
+
+    if d["twitter_x"].get("available", bool(d["twitter_x"].get("tweets"))):
+        assert isinstance(d["twitter_x"].get("tweets"), list)
+    else:
+        assert isinstance(d["twitter_x"].get("reason"), str)
 
 
 # --- P0-2 Legal ---

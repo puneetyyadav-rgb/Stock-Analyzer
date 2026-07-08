@@ -34,6 +34,7 @@ import scraper_service as scr
 import validation_service as vs
 import pairs_service as prs
 import portfolio_service as ports
+import macro_service as ms
 from pydantic import BaseModel
 
 
@@ -66,6 +67,18 @@ def _cache_get(key: str, custom_ttl: float = None):
 
 def _cache_set(key: str, val):
     _CACHE[key] = (datetime.now(timezone.utc), val)
+
+
+def _items_list(value):
+    """Normalize legacy/list and AI-wrapped item payloads to a list."""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        for key in ("items", "tagged_announcements", "announcements", "data"):
+            nested = value.get(key)
+            if isinstance(nested, list):
+                return nested
+    return []
 
 
 @api_router.get("/")
@@ -440,7 +453,7 @@ async def ai_news(symbol: str):
             "source": "news"
         })
         
-    announcements = legal_data.get("items", [])
+    announcements = _items_list(legal_data.get("items", []))
     for l in (announcements or [])[:10]:
         formatted_items.append({
             "title": l.get("summary") or l.get("announcement") or "",
@@ -618,7 +631,7 @@ async def legal(symbol: str):
         return cached
     raw = await asyncio.to_thread(ls.get_nse_announcements, symbol)
     relevant = ls.filter_legal_relevant(raw)
-    classified = await ls.classify_legal_announcements(relevant)
+    classified = _items_list(await ls.classify_legal_announcements(relevant))
     result = {
         "items": classified,
         "source": "NSE corporate-announcements (scraped — not an official SEBI or NSE API)",
@@ -653,7 +666,7 @@ async def red_flags(symbol: str):
     screener = await asyncio.to_thread(ss.get_screener_data, symbol)
     news_items = await asyncio.to_thread(ss.get_news, symbol)
     legal_data = await legal(symbol)
-    classified = legal_data.get("items", [])
+    classified = _items_list(legal_data.get("items", []))
     special = ss.get_special_news_tags(news_items)
 
     flags = []
@@ -967,6 +980,44 @@ async def get_custom_pair(symA: str, symB: str):
 @api_router.post("/quant/portfolio")
 async def build_hrp_portfolio(req: PortfolioReq):
     data = await asyncio.to_thread(ports.calculate_portfolio_metrics, req.symbols, req.capital)
+    return data
+
+
+@api_router.get("/macro/global-monte-carlo")
+async def get_global_macro_monte_carlo_endpoint(
+    horizon_days: int = 20,
+    paths: int = 10000,
+    lookback: int = 252,
+    seed: int = 12345,
+    vol_scale: float = 1.0,
+    regime_override: str = "normal"
+):
+    data = await asyncio.to_thread(ms.get_global_macro_monte_carlo, horizon_days, paths, lookback, seed, vol_scale, regime_override)
+    return data
+
+
+@api_router.get("/stock/{symbol}/beta-coupled-simulation")
+async def get_beta_coupled_simulation_endpoint(
+    symbol: str,
+    sector: str = "Conglomerate",
+    horizon_days: int = 20,
+    paths: int = 10000,
+    lookback: int = 252,
+    seed: int = 12345,
+    vol_scale: float = 1.0,
+    regime_override: str = "normal"
+):
+    data = await asyncio.to_thread(
+        ms.get_beta_coupled_simulation,
+        symbol,
+        sector,
+        horizon_days,
+        paths,
+        lookback,
+        seed,
+        vol_scale,
+        regime_override
+    )
     return data
 
 
