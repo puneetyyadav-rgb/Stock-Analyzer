@@ -1028,6 +1028,38 @@ async def get_qlib_prediction_endpoint(
     return data
 
 
+@api_router.get("/qlib/rankings")
+async def get_qlib_rankings_endpoint():
+    cache_file = os.path.join(ROOT_DIR, "data", "latest_nse_rankings.json")
+    if os.path.exists(cache_file):
+        try:
+            import json
+            with open(cache_file, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            return {"error": str(e), "top_buys": [], "bottom_avoids": []}
+    return {"status": "not_trained", "message": "Run train_nse_qlib.py to generate live rankings.", "top_buys": [], "bottom_avoids": []}
+
+
+@api_router.get("/qlib/diagnostics")
+async def get_qlib_diagnostics_endpoint():
+    """Returns the latest Closed-Loop Prediction Error Log, SHAP Attributions, and Adaptive Factor Weights."""
+    error_log_path = os.path.join(ROOT_DIR, "data", "prediction_error_log.json")
+    if os.path.exists(error_log_path):
+        try:
+            import json
+            with open(error_log_path, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            pass
+    # If not run yet, trigger a fresh check
+    try:
+        import self_learning_service as sls
+        return await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
+    except Exception as e:
+        return {"error": str(e), "status": "failed_diagnostics"}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1043,3 +1075,8 @@ app.add_middleware(
 async def shutdown_db_client():
     await scr.shutdown()
     client.close()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, loop="asyncio")

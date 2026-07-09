@@ -286,17 +286,47 @@ export default function StockMacroCouplingWidget({ symbol, sector = "Conglomerat
                       <ReferenceLine x={0} stroke="#3f3f46" strokeDasharray="3 3" />
                       <ReferenceLine y={0} stroke="#3f3f46" strokeDasharray="3 3" />
                       
-                      {/* Regression Reference Slopes */}
-                      <ReferenceLine
-                        segment={[{ x: 0, y: (data.alpha || 0) * 100 }, { x: 5, y: ((data.alpha || 0) + (data.upside_beta || 1) * 0.05) * 100 }]}
-                        stroke="#10b981"
-                        strokeWidth={2}
-                      />
-                      <ReferenceLine
-                        segment={[{ x: -5, y: ((data.alpha || 0) - (data.downside_beta || 1) * 0.05) * 100 }, { x: 0, y: (data.alpha || 0) * 100 }]}
-                        stroke="#ef4444"
-                        strokeWidth={2}
-                      />
+                      {/* Bounded Regression Reference Slopes within [-5, 5] and [-8, 8] domain so Recharts never clips them */}
+                      {(() => {
+                        const alphaPct = (data.alpha || 0) * 100;
+                        const upBeta = data.upside_beta || 1;
+                        const downBeta = data.downside_beta || 1;
+                        
+                        const upMaxX = upBeta > 0 ? Math.min(4.8, (7.8 - alphaPct) / upBeta) : 4.8;
+                        const upMaxY = alphaPct + upBeta * upMaxX;
+                        
+                        const downMinX = downBeta > 0 ? Math.max(-4.8, (-7.8 - alphaPct) / downBeta) : -4.8;
+                        const downMinY = alphaPct + downBeta * downMinX;
+
+                        return (
+                          <>
+                            <Scatter
+                              name="Up Slope (β+)"
+                              data={[{ nifty: 0, stock: alphaPct }, { nifty: upMaxX, stock: upMaxY }]}
+                              line={{ stroke: "#10b981", strokeWidth: 2.5 }}
+                              shape={() => null}
+                              legendType="none"
+                            />
+                            <Scatter
+                              name="Down Slope (β-)"
+                              data={[{ nifty: downMinX, stock: downMinY }, { nifty: 0, stock: alphaPct }]}
+                              line={{ stroke: "#ef4444", strokeWidth: 2.5 }}
+                              shape={() => null}
+                              legendType="none"
+                            />
+                            <ReferenceLine
+                              segment={[{ x: 0, y: alphaPct }, { x: upMaxX, y: upMaxY }]}
+                              stroke="#10b981"
+                              strokeWidth={2.5}
+                            />
+                            <ReferenceLine
+                              segment={[{ x: downMinX, y: downMinY }, { x: 0, y: alphaPct }]}
+                              stroke="#ef4444"
+                              strokeWidth={2.5}
+                            />
+                          </>
+                        );
+                      })()}
 
                       <Scatter name="Daily Returns" data={data.scatter_data || []}>
                         {(data.scatter_data || []).map((entry, index) => (
@@ -373,10 +403,29 @@ export default function StockMacroCouplingWidget({ symbol, sector = "Conglomerat
 
             {/* TAB 3: Macro Factor Sensitivities & Contributions */}
             {activeTab === "factors" && (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {/* Sector Index Coupling Banner */}
+                {data.sector_coupling && Object.keys(data.sector_coupling).length > 0 && (
+                  <div className="bg-gradient-to-r from-zinc-900 via-indigo-950/40 to-zinc-900 border border-indigo-500/30 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-md">
+                    {Object.entries(data.sector_coupling).map(([secName, secData]) => (
+                      <div key={secName} className="flex items-center gap-6 w-full justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/40 rounded uppercase text-[11px]">{secName}</span>
+                          <span className="text-zinc-400 text-[11px]">Primary Equity Sector Coupling</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[11px]">
+                          <div>Sector Beta: <span className="font-bold text-emerald-400">{secData.beta}</span></div>
+                          <div>Correlation: <span className="font-bold text-sky-400">{secData.correlation_pct}%</span></div>
+                          <div>Variance Explained: <span className="font-bold text-amber-400">{secData.variance_explained_pct}%</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
-                  <span>Macro Factor Regression Sensitivities (Beta to Driver) &amp; Variance Contribution</span>
-                  <span className="text-[10px] text-zinc-500 uppercase">OLS Regression against 6-Asset Cholesky Universe</span>
+                  <span>Pure Macro Factor Regression Sensitivities (Commodities, FX &amp; Rates)</span>
+                  <span className="text-[10px] text-zinc-500 uppercase">Sector Index Excluded (See Banner Above)</span>
                 </div>
                 <div className="h-64 w-full bg-zinc-950/60 border border-zinc-800/60 rounded-lg p-2">
                   <ResponsiveContainer width="100%" height="100%">

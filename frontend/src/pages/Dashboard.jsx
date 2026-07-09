@@ -30,6 +30,7 @@ import PairsTradingPanel from "../components/PairsTradingPanel";
 import PortfolioAllocPanel from "../components/PortfolioAllocPanel";
 import GlobalMacroSimulationPanel from "../components/GlobalMacroSimulationPanel";
 import StockMacroCouplingWidget from "../components/StockMacroCouplingWidget";
+import QlibAlphaLeaderboardPanel from "../components/QlibAlphaLeaderboardPanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -177,12 +178,24 @@ export default function Dashboard() {
             >
               🌐 Global Macro Simulation Deck
             </button>
+            <button
+              onClick={() => setActiveTab("qlib")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "qlib"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40 border border-emerald-400/30 animate-pulse"
+                  : "bg-zinc-900 text-emerald-400 hover:text-white border border-emerald-900/40"
+              }`}
+              data-testid="qlib-alpha-tab-btn"
+            >
+              🔥 Quant AI Alpha (Qlib & SHAP)
+            </button>
           </div>
 
           {activeTab === "pairs" && <PairsTradingPanel />}
           {activeTab === "hrp" && <PortfolioAllocPanel />}
           {activeTab === "backtest" && <BacktestPanel />}
           {activeTab === "macro-sim" && <GlobalMacroSimulationPanel symbol={symbol || "RELIANCE"} sector={overview?.sector || "Conglomerate"} />}
+          {activeTab === "qlib" && <QlibAlphaLeaderboardPanel onSelectStock={(sym) => { setSymbol(sym); setActiveTab("stock"); }} />}
 
           {activeTab === "stock" && (
             <>

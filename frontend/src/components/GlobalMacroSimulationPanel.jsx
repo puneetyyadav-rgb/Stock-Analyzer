@@ -198,6 +198,15 @@ export default function GlobalMacroSimulationPanel({ symbol: parentSymbol = "", 
       case "INDIA_VIX": return "bg-red-950/60 text-red-400 border-red-800/80";
       case "GOLD": return "bg-yellow-950/60 text-yellow-400 border-yellow-800/80";
       case "US10Y": return "bg-purple-950/60 text-purple-400 border-purple-800/80";
+      case "BANKNIFTY": return "bg-emerald-950/60 text-emerald-400 border-emerald-800/80";
+      case "NIFTY_IT": return "bg-sky-950/60 text-sky-400 border-sky-800/80";
+      case "NIFTY_AUTO": return "bg-rose-950/60 text-rose-400 border-rose-800/80";
+      case "NIFTY_PHARMA": return "bg-teal-950/60 text-teal-400 border-teal-800/80";
+      case "NIFTY_METAL": return "bg-amber-950/60 text-amber-300 border-amber-700/80";
+      case "NIFTY_FMCG": return "bg-lime-950/60 text-lime-400 border-lime-800/80";
+      case "NIFTY_ENERGY": return "bg-fuchsia-950/60 text-fuchsia-400 border-fuchsia-800/80";
+      case "COPPER": return "bg-orange-950/60 text-orange-400 border-orange-800/80";
+      case "DXY": return "bg-indigo-950/60 text-indigo-400 border-indigo-800/80";
       default: return "bg-blue-950/60 text-blue-400 border-blue-800/80";
     }
   };
@@ -221,7 +230,7 @@ export default function GlobalMacroSimulationPanel({ symbol: parentSymbol = "", 
                 </span>
               </h3>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Simulates 10,000+ correlated multi-asset trajectories across Nifty 50, USD/INR, Brent Crude, Gold, VIX, & US 10Y Treasury.
+                Simulates 10,000+ correlated multi-asset trajectories across Nifty 50, Bank Nifty, USD/INR, Brent Crude, Gold, Copper, DXY, VIX, & US 10Y Treasury.
               </p>
             </div>
           </div>

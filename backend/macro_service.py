@@ -107,8 +107,60 @@ def get_beta_coupled_simulation(
         macro_paths = engine.run_simulation_paths()
         _set_cache(f"engine_paths:l={lookback}:s={seed}:v={vol_scale}:r={regime_override}", (engine, macro_paths))
 
-    # Determine sector factors
-    assigned_factors = SECTOR_FACTOR_MAPPINGS.get(sector, ["CRUDE", "USDINR"])
+    # Universal 2,000+ Stock Dynamic Sector & Driver Resolution
+    def _resolve_dynamic_sector(symbol_str: str, sector_input: str) -> tuple[str, list]:
+        clean_s = symbol_str.strip().upper().replace(".NS", "").replace(".BO", "")
+        s_text = (sector_input or "").lower()
+        
+        # If sector_input is generic/unknown/conglomerate, query exact yfinance metadata dynamically
+        if not sector_input or any(g in s_text for g in ["conglomerate", "unknown", "other", "general"]):
+            try:
+                t_info = yf.Ticker(f"{clean_s}.NS").info or {}
+                yf_sec = str(t_info.get("sector", "")).lower()
+                yf_ind = str(t_info.get("industry", "")).lower()
+                s_text = f"{yf_sec} {yf_ind} {clean_s.lower()}"
+            except Exception:
+                s_text = clean_s.lower()
+        else:
+            s_text = f"{s_text} {clean_s.lower()}"
+
+        # Universal Semantic & Sector Classification across 2,000+ NSE stocks (Claude's 15 Institutional Sectors)
+        if any(k in s_text for k in ["financial", "bank", "insurance", "credit", "lending", "nbfc", "fin", "hdfc", "icici", "kotak", "sbin", "axis", "bajajfin", "pfc", "rec", "cholafin"]):
+            sec_key = "Banking & Finance"
+        elif any(k in s_text for k in ["technology", "software", "it services", "computer", "infy", "tcs", "wipro", "hcl", "techm", "coforge", "mphasis", "ltim", "persistent"]):
+            sec_key = "IT Services"
+        elif any(k in s_text for k in ["auto", "vehicle", "motor", "tyre", "tire", "tatamotors", "maruti", "m&m", "heromoto", "bajaj-auto", "eicher", "tvsmotor", "mrf", "balkrisind", "ashokley"]):
+            sec_key = "Automobile"
+        elif any(k in s_text for k in ["healthcare", "pharma", "biotech", "drug", "hospital", "sunpharma", "cipla", "drreddy", "lupin", "biocon", "divis", "auro-pharma", "torentpharm", "zydus", "apollohosp", "maxhealth"]):
+            sec_key = "Pharma & Healthcare"
+        elif any(k in s_text for k in ["basic materials", "steel", "metal", "mining", "aluminium", "zinc", "tatasteel", "hindalco", "jswsteel", "vedl", "nmdc", "sail", "nationalum", "hindzinc"]):
+            sec_key = "Metals & Mining"
+        elif any(k in s_text for k in ["chemical", "agrochemical", "fertilizer", "pesticide", "pidilite", "srf", "upl", "piind", "tata-chem", "aartiind", "deepaknt", "atulp"]):
+            sec_key = "Chemicals & Agrochemicals"
+        elif any(k in s_text for k in ["textile", "apparel", "cotton", "garment", "yarn", "pageind", "raymond", "kprmill", "welspun", "trident", "gokex", "luxind"]):
+            sec_key = "Textiles & Apparel"
+        elif any(k in s_text for k in ["consumer defensive", "fmcg", "food", "beverage", "tobacco", "household", "itc", "hindunilvr", "nestle", "britannia", "dabur", "marico", "godrejcp", "tata-consumer", "varun-beverages", "colpal"]):
+            sec_key = "FMCG"
+        elif any(k in s_text for k in ["aviation", "airline", "airport", "indigo", "spicejet", "jetairways", "interglobe"]):
+            sec_key = "Aviation"
+        elif any(k in s_text for k in ["wind", "solar", "renewable", "green", "turbine", "suzlon", "ireda", "power", "utility", "nhpc", "sjvn", "tata-power", "adani-power"]):
+            sec_key = "Power & Utilities"
+        elif any(k in s_text for k in ["energy", "oil", "gas", "petroleum", "refining", "coal", "reliance", "ongc", "bpcl", "hpcl", "ioc", "coalindia", "ntpc", "powergrid"]):
+            sec_key = "Energy & Oil"
+        elif any(k in s_text for k in ["industrials", "construction", "infrastructure", "engineering", "capital goods", "electrical", "machinery", "cement", "defense", "aerospace", "copper", "relinfra", "lt", "l&t", "adani", "bhel", "siemens", "abb", "bel", "hal", "polycab", "dixon", "thermax", "cumminsind", "ultracemco", "ambujacem"]):
+            sec_key = "Infrastructure & Capital Goods"
+        elif any(k in s_text for k in ["real estate", "realty", "dlf", "godrejprop", "oberoirlty", "lodha", "prestige"]):
+            sec_key = "Real Estate & Construction"
+        elif any(k in s_text for k in ["communication", "telecom", "media", "bhartiartl", "idea", "pvrino", "sun-tv"]):
+            sec_key = "Telecom & Media"
+        elif any(k in s_text for k in ["conglomerate", "diversified", "holding", "adanient", "grasim"]):
+            sec_key = "Conglomerate"
+        else:
+            sec_key = "General & Diversified"
+
+        return sec_key, SECTOR_FACTOR_MAPPINGS.get(sec_key, SECTOR_FACTOR_MAPPINGS["General & Diversified"])
+
+    effective_sector, assigned_factors = _resolve_dynamic_sector(clean_sym, sector)
 
     # Attempt to load stock historical returns via yfinance or use synthetic if offline / invalid symbol
     stock_returns = _fetch_or_fallback_stock_returns(clean_sym, lookback_days=lookback, engine=engine)
@@ -168,19 +220,25 @@ def _fetch_or_fallback_stock_returns(symbol: str, lookback_days: int, engine: Gl
                     local_s = local_df["Close"].dropna()
                     last_dt = pd.to_datetime(local_s.index[-1]).date()
                     today_dt = end_dt.date()
-                    if today_dt > last_dt:
-                        start_fetch = last_dt + timedelta(days=1)
-                        logger.info(f"Incrementally fetching new stock data for {symbol} from {start_fetch} to {today_dt}...")
-                        new_df = yf.download(symbol, start=start_fetch.strftime("%Y-%m-%d"), end=end_dt.strftime("%Y-%m-%d"), progress=False)["Close"]
+                    if today_dt >= last_dt:
+                        start_fetch = max(last_dt - timedelta(days=7), pd.to_datetime(local_s.index[0]).date())
+                        logger.info(f"Incrementally fetching self-healing stock data for {symbol} from {start_fetch} to {today_dt}...")
+                        new_df = yf.download(symbol, start=start_fetch.strftime("%Y-%m-%d"), end=(today_dt + timedelta(days=1)).strftime("%Y-%m-%d"), progress=False)["Close"]
                         if isinstance(new_df, pd.DataFrame):
                             new_df = new_df.iloc[:, 0]
                         new_s = new_df.dropna()
                         if not new_s.empty:
-                            combined_s = pd.concat([local_s, new_s]).drop_duplicates().sort_index()
+                            new_s.index = pd.to_datetime(new_s.index).tz_localize(None).normalize()
+                            combined_s = local_s.reindex(local_s.index.union(new_s.index).sort_values())
+                            combined_s.update(new_s)
+                            combined_s = combined_s.ffill().bfill().dropna()
+                            combined_s = combined_s[~combined_s.index.duplicated(keep="last")].sort_index()
                             combined_s.to_frame(name="Close").to_csv(local_store_path)
                             local_s = combined_s
-                            logger.info(f"Locally updated stock store for {symbol}: {len(local_s)} total rows.")
+                            logger.info(f"Locally updated self-healed stock store for {symbol}: {len(local_s)} total rows.")
                     else:
+                        local_s.index = pd.to_datetime(local_s.index).tz_localize(None).normalize()
+                        local_s = local_s[~local_s.index.duplicated(keep="last")].sort_index()
                         logger.info(f"Loaded {len(local_s)} historical stock ticks for {symbol} directly from local disk store.")
                 else:
                     local_s = None
@@ -197,11 +255,16 @@ def _fetch_or_fallback_stock_returns(symbol: str, lookback_days: int, engine: Gl
                 df = df.iloc[:, 0]
             local_s = df.dropna()
             if len(local_s) >= 20:
+                local_s.index = pd.to_datetime(local_s.index).tz_localize(None).normalize()
+                local_s = local_s[~local_s.index.duplicated(keep="last")].sort_index()
                 local_s.to_frame(name="Close").to_csv(local_store_path)
                 logger.info(f"Saved {len(local_s)} initial historical ticks to local disk store: {local_store_path}")
 
         if local_s is None or len(local_s) < 20:
             return None
+
+        # Ensure index uniqueness and sorting before shift/diff
+        local_s = local_s[~local_s.index.duplicated(keep="last")].sort_index()
 
         # Slice based on lookback window
         if lookback_days >= 4000:
@@ -210,6 +273,8 @@ def _fetch_or_fallback_stock_returns(symbol: str, lookback_days: int, engine: Gl
             sliced = local_s.iloc[-min(lookback_days + 30, len(local_s)):]
 
         log_ret = np.log(sliced / sliced.shift(1)).dropna()
+        log_ret.index = pd.to_datetime(log_ret.index).tz_localize(None).normalize()
+        log_ret = log_ret[~log_ret.index.duplicated(keep="last")].sort_index()
         log_ret.name = symbol
         return log_ret
 

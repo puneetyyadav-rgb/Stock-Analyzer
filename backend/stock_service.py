@@ -47,23 +47,65 @@ def _safe_float(v):
 
 
 def search_stocks(query: str) -> list:
-    """Search NSE listed stocks via yfinance lookup."""
+    """Search NSE listed stocks via instant directory + yfinance lookup."""
+    q_clean = query.strip().lower()
+    out = []
+    seen_symbols = set()
+
+    # 1. Instant Priority Indian Stock Directory (Resolves company aliases where Yahoo text search misses symbol vs longname)
+    PRIORITY_ALIASES = {
+        "indigo": [
+            {"symbol": "INDIGO.NS", "name": "InterGlobe Aviation Ltd. (Indigo Airlines)", "exchange": "NSI", "type": "EQUITY"},
+            {"symbol": "INDIGOPAINTS.NS", "name": "Indigo Paints Limited", "exchange": "NSI", "type": "EQUITY"}
+        ],
+        "aviation": [
+            {"symbol": "INDIGO.NS", "name": "InterGlobe Aviation Ltd. (Indigo Airlines)", "exchange": "NSI", "type": "EQUITY"},
+            {"symbol": "SPICEJET.NS", "name": "SpiceJet Limited", "exchange": "NSI", "type": "EQUITY"}
+        ],
+        "airline": [
+            {"symbol": "INDIGO.NS", "name": "InterGlobe Aviation Ltd. (Indigo Airlines)", "exchange": "NSI", "type": "EQUITY"},
+            {"symbol": "SPICEJET.NS", "name": "SpiceJet Limited", "exchange": "NSI", "type": "EQUITY"}
+        ],
+        "infy": [{"symbol": "INFY.NS", "name": "Infosys Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "infosys": [{"symbol": "INFY.NS", "name": "Infosys Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "tcs": [{"symbol": "TCS.NS", "name": "Tata Consultancy Services Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "reliance": [{"symbol": "RELIANCE.NS", "name": "Reliance Industries Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "zomato": [{"symbol": "ZOMATO.NS", "name": "Zomato Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "paytm": [{"symbol": "PAYTM.NS", "name": "One 97 Communications Ltd. (Paytm)", "exchange": "NSI", "type": "EQUITY"}],
+        "suzlon": [{"symbol": "SUZLON.NS", "name": "Suzlon Energy Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "ireda": [{"symbol": "IREDA.NS", "name": "Indian Renewable Energy Development Agency Ltd.", "exchange": "NSI", "type": "EQUITY"}],
+    }
+
+    # Check exact/partial aliases first
+    for k, entries in PRIORITY_ALIASES.items():
+        if k in q_clean or q_clean in k:
+            for e in entries:
+                if e["symbol"] not in seen_symbols:
+                    out.append(e)
+                    seen_symbols.add(e["symbol"])
+
+    # Check if query itself looks like a direct symbol or shortcode
+    sym_guess = f"{query.strip().upper()}.NS" if not query.strip().upper().endswith(".NS") else query.strip().upper()
+    if len(query.strip()) >= 2 and sym_guess not in seen_symbols:
+        out.append({"symbol": sym_guess, "name": f"{query.strip().upper()} (Direct Symbol Lookup)", "exchange": "NSI", "type": "EQUITY"})
+        seen_symbols.add(sym_guess)
+
     try:
-        results = yf.Search(query, max_results=8).quotes
-        out = []
+        results = yf.Search(query, max_results=12).quotes
         for r in results:
             sym = r.get("symbol", "")
-            if sym.endswith(".NS") or sym.endswith(".BO") or r.get("exchange") in ("NSI", "BSE"):
+            if (sym.endswith(".NS") or sym.endswith(".BO") or r.get("exchange") in ("NSI", "BSE")) and sym not in seen_symbols:
                 out.append({
                     "symbol": sym,
                     "name": r.get("longname") or r.get("shortname") or sym,
                     "exchange": r.get("exchange", ""),
                     "type": r.get("quoteType", ""),
                 })
-        return out[:8]
+                seen_symbols.add(sym)
+        return out[:10]
     except Exception as e:
         logger.error(f"search error: {e}")
-        return []
+        return out[:10]
 
 
 def get_overview(symbol: str) -> dict:

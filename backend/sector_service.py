@@ -157,6 +157,157 @@ def categorize_news(news_items: list, company_name: str, sector: str) -> dict:
 def get_sector_news(sector: str) -> list:
     """Fetch sector-tagged news from Moneycontrol tag pages (server-rendered)."""
     slug, _ = SECTOR_NEWS_SLUGS.get(sector or "", ("market", ""))
+
+logger = logging.getLogger(__name__)
+
+
+# Yahoo sector → Moneycontrol tag URL (uses /news/tags/SLUG.html, which renders server-side)
+SECTOR_NEWS_SLUGS = {
+    "Energy": ("oil-and-gas", "Oil & Gas"),
+    "Financial Services": ("banking", "Banking & Finance"),
+    "Technology": ("it-sector", "IT / Technology"),
+    "Healthcare": ("pharma", "Pharma & Healthcare"),
+    "Consumer Cyclical": ("automobile", "Auto & Auto Ancillaries"),
+    "Consumer Defensive": ("fmcg", "FMCG"),
+    "Basic Materials": ("metals", "Metals & Mining"),
+    "Industrials": ("capital-goods", "Capital Goods"),
+    "Communication Services": ("telecom", "Telecom"),
+    "Utilities": ("power", "Power"),
+    "Real Estate": ("real-estate", "Real Estate"),
+}
+
+
+def _strip_html(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip()
+
+
+def categorize_news(news_items: list, company_name: str, sector: str) -> dict:
+    """Split a news list into company / sector / market buckets using name & sector keywords."""
+    if not company_name:
+        company_name = ""
+
+    # Build company keyword set
+    base = company_name.lower()
+    base = re.sub(r"\b(limited|ltd|corporation|corp|inc|company|industries|industries\.?)\b", "", base).strip()
+    company_keywords = [kw for kw in re.split(r"[\s,&-]+", base) if len(kw) > 2]
+    sector_label = (sector or "").lower()
+
+    sector_keyword_map = {
+        "energy": [
+            "oil", "gas", "crude", "petrol", "diesel", "refinery", "refining", "lng", "lpg",
+            "petroleum", "opec", "brent", "wti", "gasoline", "shale", "fuel", "city gas",
+            "compressed natural gas", "cng", "downstream", "upstream", "e&p", "exploration",
+            "hydrogen", "biofuel", "ethanol",
+        ],
+        "financial services": [
+            "bank", "nbfc", "rbi", "loan", "deposit", "casa", "fintech", "insurance",
+            "mutual fund", "amc", "asset management", "broking", "broker", "exchange",
+            "stockbroker", "credit card", "housing finance", "microfinance", "ifsc",
+            "gold loan", "consumer finance", "wealth management", "merchant banker",
+            "card network", "upi", "payment gateway", "psu bank", "private bank",
+            "yield", "npa", "credit cost", "provisioning", "slr",
+        ],
+        "technology": [
+            "it ", "it sector", "software", "tech ", "saas", "cloud", "ai ", "infosys",
+            "wipro", "tcs", "hcl", "tech mahindra", "ltimindtree", "mphasis", "persistent",
+            "outsourcing", "digital transformation", "engineering r&d", "cybersecurity",
+            "data center", "data centre", "semiconductor", "chip", "fab",
+            "ai labor", "machine learning",
+        ],
+        "healthcare": [
+            "pharma", "drug", "medical", "hospital", "diagnostic", "vaccine", "biosimilar",
+            "generic", "api ", "usfda", "cdsco", "clinical trial", "molecule", "pipeline",
+            "oncology", "cardiology", "biotech", "lab ", "pathology", "fertility",
+            "medical device", "cipla", "lupin", "sun pharma", "dr reddy",
+        ],
+        "consumer cyclical": [
+            "auto", "automobile", "two-wheeler", "ev ", "electric vehicle", "passenger vehicle",
+            "commercial vehicle", "tractor", "car ", "scooter", "bike sales", "auto sales",
+            "tata motors", "maruti", "mahindra", "bajaj", "hero motocorp", "tvs motor",
+            "eicher", "auto ancillary", "battery", "lithium", "tyre", "tyres", "lubricants",
+            "hotel", "hotels", "leisure", "tourism", "airline", "aviation", "jewellery",
+            "gold jewellery", "diamond", "qsr", "quick service restaurant", "apparel",
+            "footwear", "luxury", "premium",
+        ],
+        "consumer defensive": [
+            "fmcg", "consumer", "groceries", "grocery", "retail", "supermarket",
+            "kirana", "biscuit", "soap", "detergent", "shampoo", "toothpaste",
+            "noodles", "instant food", "dairy", "milk", "tea", "coffee", "agri",
+            "agriculture", "tobacco", "cigarette", "edible oil", "sugar", "wheat",
+            "fertilizer", "fertiliser", "pesticide", "seed", "agrochemicals",
+            "nestle", "hindustan unilever", "itc", "dabur", "marico", "britannia",
+            "godrej consumer", "tata consumer",
+        ],
+        "basic materials": [
+            "steel", "metal", "iron ore", "aluminium", "aluminum", "copper",
+            "zinc", "lead", "mining", "miner", "cement", "limestone",
+            "carbon black", "specialty chemicals", "specialty chemical",
+            "agrochemicals", "petrochemical", "polymer", "plastics", "paint",
+            "paints", "pigment", "dye", "fluorochemicals", "graphite",
+            "tata steel", "jsw steel", "hindalco", "vedanta", "nmdc", "sail",
+            "ultratech", "shree cement", "ambuja",
+        ],
+        "industrials": [
+            "capital goods", "engineering", "construction", "infrastructure", "defence",
+            "defense", "drone", "shipyard", "shipbuilding", "ports", "logistics",
+            "warehousing", "container", "shipping", "freight", "railway", "rail wagon",
+            "wind turbine", "transformer", "switchgear", "boiler", "valve", "pump",
+            "cables", "abrasive", "bearings", "casting", "forging", "electrical equipment",
+            "l&t", "siemens", "abb", "bhel", "bel", "hal", "cummins",
+        ],
+        "communication services": [
+            "telecom", "5g", "spectrum", "agr", "airtel", "jio", "vodafone", "vi ",
+            "broadband", "fiber", "fibre", "tower", "isp", "ott", "broadcast",
+            "media", "newspaper", "magazine", "publishing", "radio", "podcast",
+            "entertainment", "film", "movie", "exhibition", "multiplex", "pvr inox",
+            "zee", "sun tv",
+        ],
+        "utilities": [
+            "power", "electricity", "thermal", "hydro", "nuclear", "solar",
+            "renewable", "wind power", "discom", "transmission", "powergrid",
+            "ntpc", "tata power", "adani power", "jsw energy", "nhpc",
+            "energy storage", "battery storage", "grid",
+        ],
+        "real estate": [
+            "realty", "real estate", "housing", "property", "developer", "builder",
+            "luxury housing", "premium homes", "rera", "land bank", "pre-sales",
+            "leasing", "office space", "warehousing", "reit", "dlf", "oberoi",
+            "godrej properties", "prestige", "phoenix", "brigade", "macrotech", "lodha",
+        ],
+    }
+    sector_keywords = sector_keyword_map.get(sector_label, [])
+
+    company = []
+    sector_news = []
+    market = []
+
+    for n in news_items:
+        title = (n.get("title") or "").lower()
+        summary = (n.get("summary") or "").lower()
+        blob = f"{title} {summary}"
+
+        if any(kw and kw in blob for kw in company_keywords):
+            company.append(n)
+        elif sector_keywords and any(kw in blob for kw in sector_keywords):
+            sector_news.append(n)
+        else:
+            market.append(n)
+
+    return {
+        "company": company,
+        "sector": sector_news,
+        "market": market,
+        "_meta": {
+            "company_keywords": company_keywords,
+            "sector_label": sector_label,
+            "sector_keywords": sector_keywords,
+        },
+    }
+
+
+def get_sector_news(sector: str) -> list:
+    """Fetch sector-tagged news from Moneycontrol tag pages (server-rendered)."""
+    slug, _ = SECTOR_NEWS_SLUGS.get(sector or "", ("market", ""))
     url = f"https://www.moneycontrol.com/news/tags/{slug}.html"
     try:
         r = requests.get(url, headers=HEADERS, timeout=10)
@@ -184,11 +335,10 @@ def get_sector_news(sector: str) -> list:
                 })
         return out
     except Exception as e:
-        logger.error(f"sector news error: {e}")
+        logger.warning(f"Error scraping Moneycontrol news: {e}")
         return []
 
 
-# Sector → NSE sector index ticker (already exists in stock_service but mapped by Yahoo sector here)
 YAHOO_TO_NSE_INDEX = {
     "Energy": ("^CNXENERGY", "NIFTY ENERGY"),
     "Financial Services": ("^NSEBANK", "NIFTY BANK"),
@@ -199,8 +349,11 @@ YAHOO_TO_NSE_INDEX = {
     "Basic Materials": ("^CNXMETAL", "NIFTY METAL"),
     "Communication Services": ("^CNXMEDIA", "NIFTY MEDIA"),
     "Real Estate": ("^CNXREALTY", "NIFTY REALTY"),
-    "Industrials": ("^NSEI", "NIFTY 50"),
-    "Utilities": ("^NSEI", "NIFTY 50"),
+    "Industrials": ("^CNXENERGY", "NIFTY INFRA & ENERGY"),
+    "Utilities": ("^CNXENERGY", "NIFTY ENERGY & UTILITIES"),
+    "Aviation": ("^CNXAUTO", "NIFTY TRANSPORT & AUTO"),
+    "Power & Utilities": ("^CNXENERGY", "NIFTY ENERGY & UTILITIES"),
+    "Metals & Mining": ("^CNXMETAL", "NIFTY METAL"),
 }
 
 
