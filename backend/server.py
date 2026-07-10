@@ -33,6 +33,7 @@ import scraper_service as scr
 import validation_service as vs
 import pairs_service as prs
 import portfolio_service as ports
+from institutional_flow_service import institutional_flow_service as ifs
 import macro_service as ms
 import qlib_service as qs
 from pydantic import BaseModel
@@ -494,8 +495,22 @@ async def fii_dii():
     if cached:
         return cached
     data = await asyncio.to_thread(ex.get_fii_dii)
+    # Update institutional flow logbook and attach Alpha 24 positioning diagnostics
+    alpha24_metrics = await asyncio.to_thread(ifs.fetch_and_update_flows, ex)
+    if isinstance(data, dict):
+        data["alpha24_metrics"] = alpha24_metrics
     _cache_set(key, data)
     return data
+
+
+@api_router.get("/quant/self-learning/institutional-flow")
+async def get_institutional_flow_metrics():
+    """Phase C / Alpha 24: Returns active FII/DII whale flow imbalance and conviction multipliers."""
+    try:
+        metrics = await asyncio.to_thread(ifs.fetch_and_update_flows, ex)
+        return {"status": "success", "metrics": metrics}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "metrics": ifs.compute_institutional_flow_metrics()}
 
 
 @api_router.get("/stock/{symbol}/concalls")
@@ -1221,6 +1236,7 @@ async def get_quant_governance_audit_logbook():
 
     ledger_stats = pls.get_ledger_summary()
     calib_status = ics.calibrate_alpha_score(75.0)
+    flow_status = ifs.compute_institutional_flow_metrics()
 
     # Determine T-1 Completed-Bar Guard enforcement status
     now = datetime.now()
@@ -1246,6 +1262,7 @@ async def get_quant_governance_audit_logbook():
         "prediction_ledger_stats": ledger_stats,
         "isotonic_calibration_status": calib_status,
         "factor_health_summary": meta_weights,
+        "institutional_flow_status": flow_status,
         "historical_diagnostics_audit": error_log
     }
 

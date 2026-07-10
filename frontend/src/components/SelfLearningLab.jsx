@@ -31,6 +31,7 @@ export default function SelfLearningLab() {
   const [shapMemoryData, setShapMemoryData] = useState(null);
   const [calibrationData, setCalibrationData] = useState(null);
   const [auditData, setAuditData] = useState(null);
+  const [flowData, setFlowData] = useState(null);
   const [rebuildingMemory, setRebuildingMemory] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState("overview");
 
@@ -38,12 +39,13 @@ export default function SelfLearningLab() {
     setLoading(true);
     setError(null);
     try {
-      const [ledgerRes, rankIcRes, shapRes, calibRes, auditRes] = await Promise.all([
+      const [ledgerRes, rankIcRes, shapRes, calibRes, auditRes, flowRes] = await Promise.all([
         client.get("/quant/ledger").catch(() => ({ data: { status: "error", summary: {} } })),
         client.get("/quant/rank-ic").catch(() => ({ data: { status: "error", factors: [] } })),
         client.get("/quant/shap-memory").catch(() => ({ data: { status: "error", failures: [] } })),
         client.get("/quant/calibration?score=75.0").catch(() => ({ data: { calibrated: false, sample_count: 5, threshold_required: 50 } })),
-        client.get("/quant/self-learning/audit").catch(() => ({ data: { status: "error", governance_metadata: {} } }))
+        client.get("/quant/self-learning/audit").catch(() => ({ data: { status: "error", governance_metadata: {} } })),
+        client.get("/quant/self-learning/institutional-flow").catch(() => ({ data: { status: "error", metrics: {} } }))
       ]);
 
       setLedgerData(ledgerRes.data || {});
@@ -51,6 +53,7 @@ export default function SelfLearningLab() {
       setShapMemoryData(shapRes.data || {});
       setCalibrationData(calibRes.data || {});
       setAuditData(auditRes.data || {});
+      setFlowData(flowRes.data?.metrics || auditRes.data?.institutional_flow_status || {});
     } catch (err) {
       console.error("Error loading Self-Learning Lab data:", err);
       setError("Failed to connect to Quant Control engine endpoints.");
@@ -180,7 +183,8 @@ export default function SelfLearningLab() {
           { key: "factor_health", label: "Phase A2: Rank IC Factor Health (" + factors.length + ")", icon: <BarChart2 size={14} />, color: "blue" },
           { key: "shap_memory", label: "Phase A3: Ternary SHAP Memory (" + failures.length + ")", icon: <Layers size={14} />, color: "purple" },
           { key: "ledger_feed", label: "Phase A1: Prediction Ledger", icon: <Database size={14} />, color: "amber" },
-          { key: "audit", label: "Governance Audit & Safety Guards", icon: <ShieldCheck size={14} />, color: "cyan" }
+          { key: "audit", label: "Governance Audit & Safety Guards", icon: <ShieldCheck size={14} />, color: "cyan" },
+          { key: "alpha24", label: "Phase C: Alpha 24 Institutional Flow (" + (flowData?.regime_signal || "NEUTRAL") + ")", icon: <TrendingUp size={14} />, color: "emerald" }
         ].map(({ key, label, icon, color }) => (
           <button
             key={key}
@@ -667,6 +671,79 @@ export default function SelfLearningLab() {
                   <div><span className="text-zinc-500">SHAP Failure Fingerprints:</span> <span className="text-purple-400 font-bold">{failures.length} Pattern Vectors Active</span></div>
                   <div><span className="text-zinc-500">Schedule Lock:</span> <span className="text-emerald-400 font-bold">Daily at 15:45:00 IST</span></div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUB-TAB 6: PHASE C / ALPHA 24 INSTITUTIONAL FLOW ── */}
+      {!loading && activeSubTab === "alpha24" && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-zinc-900/90 border border-emerald-500/30 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+              <div>
+                <h3 className="text-lg font-mono font-extrabold text-white flex items-center gap-2">
+                  <TrendingUp className="text-emerald-400" size={20} />
+                  Alpha 24: Institutional Whale Flow &amp; FII/DII Net Absorption
+                </h3>
+                <p className="text-xs font-mono text-zinc-400 mt-1">
+                  Bayesian Return Drift Calibration (\(\Delta \mu_{{\text{{whale}}}}\)) &amp; Cross-Sectional Alpha Conviction Multiplier
+                </p>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-bold flex items-center gap-2 self-start">
+                <Activity size={14} className="text-emerald-400 animate-pulse" />
+                Regime: {flowData?.regime_signal || "NEUTRAL_FLOW"}
+              </div>
+            </div>
+
+            {/* 4 Cards for Flow KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col justify-center">
+                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">FII Cash Net Flow</span>
+                <div className={"text-xl font-mono font-extrabold mt-1 " + ((flowData?.fii_cash_net_cr || 0) >= 0 ? "text-emerald-400" : "text-red-400")}>
+                  {fmtSigned(flowData?.fii_cash_net_cr || 0)} Cr
+                </div>
+                <div className="text-[11px] font-mono text-zinc-500 mt-0.5">Latest: {String(flowData?.latest_date || "N/A").slice(0, 10)}</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col justify-center">
+                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">DII Cash Net Flow</span>
+                <div className={"text-xl font-mono font-extrabold mt-1 " + ((flowData?.dii_cash_net_cr || 0) >= 0 ? "text-emerald-400" : "text-red-400")}>
+                  {fmtSigned(flowData?.dii_cash_net_cr || 0)} Cr
+                </div>
+                <div className="text-[11px] font-mono text-zinc-500 mt-0.5">Domestic Institutional Support</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col justify-center">
+                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Bayesian Drift (\(\Delta \mu\))</span>
+                <div className={"text-xl font-mono font-extrabold mt-1 " + ((flowData?.whale_drift_bps || 0) >= 0 ? "text-emerald-400" : "text-red-400")}>
+                  {fmtSigned(flowData?.whale_drift_bps || 0)} bps
+                </div>
+                <div className="text-[11px] font-mono text-zinc-500 mt-0.5">Expected Return Adjustment</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col justify-center">
+                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Conviction Multiplier</span>
+                <div className="text-xl font-mono font-extrabold text-white mt-1">
+                  {(flowData?.institutional_conviction_multiplier || 1.0).toFixed(2)}x
+                </div>
+                <div className="text-[11px] font-mono text-emerald-400 mt-0.5">Scaled onto Alpha Score</div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-950/90 border border-zinc-800 space-y-2">
+              <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Info size={14} /> Institutional Regime Evaluation &amp; Formula Overlay
+              </span>
+              <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+                {flowData?.regime_description || "Balanced or mixed institutional positioning. Baseline 1.00x conviction applied."}
+              </p>
+              <div className="pt-2 border-t border-zinc-800/80 grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] font-mono text-zinc-400">
+                <div><span className="text-zinc-500">Net Combined Absorption:</span> <span className="text-white font-bold">{fmtSigned(flowData?.net_institutional_cash_cr || 0)} Cr</span></div>
+                <div><span className="text-zinc-500">Derivatives Futures Imbalance:</span> <span className="text-white font-bold">{fmtSigned(flowData?.fii_derivatives_imbalance_cr || 0)} Cr</span></div>
+                <div><span className="text-zinc-500">FII 5-Day Cash Momentum:</span> <span className="text-white font-bold">{fmtSigned(flowData?.fii_5d_cash_momentum_cr || 0)} Cr</span></div>
+                <div><span className="text-zinc-500">Historical Sample Depth:</span> <span className="text-emerald-400 font-bold">{flowData?.historical_sample_days || 0} Trading Days Logged</span></div>
               </div>
             </div>
           </div>

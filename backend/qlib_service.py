@@ -192,6 +192,18 @@ def calculate_qlib_alpha_factors(df: pd.DataFrame) -> Dict[str, Any]:
     except Exception as ex:
         logger.warning(f"Error executing SHAP memory risk check: {ex}")
 
+    # Phase C: Institutional Whale Flow & Conviction Multiplier Overlay (Alpha 24)
+    institutional_flow_info = {"regime_signal": "NEUTRAL_FLOW", "institutional_conviction_multiplier": 1.0, "whale_drift_bps": 0.0}
+    try:
+        from institutional_flow_service import institutional_flow_service as ifs_engine
+        institutional_flow_info = ifs_engine.compute_institutional_flow_metrics()
+        flow_mult = float(institutional_flow_info.get("institutional_conviction_multiplier", 1.0))
+        if flow_mult != 1.0:
+            composite_ai_score = float(np.clip(np.round(composite_ai_score * flow_mult, 2), 0.0, 100.0))
+            logger.info(f"[{symbol}] Applied {flow_mult}x Alpha 24 Institutional Flow multiplier -> new score: {composite_ai_score}")
+    except Exception as ex:
+        logger.warning(f"Error executing Alpha 24 institutional flow overlay: {ex}")
+
     # Phase B: Isotonic Probability Calibration against SETTLED OOS Ledger (N >= 50 threshold)
     calibration_data = {"calibrated": False, "status_badge": "Collecting OOS Truth", "sample_count": 0, "threshold_required": 50}
     try:
@@ -217,10 +229,11 @@ def calculate_qlib_alpha_factors(df: pd.DataFrame) -> Dict[str, Any]:
         signal_label = "NEUTRAL (Balanced Factor Equilibrium)"
         color = "#6B7280"  # Gray
 
-    # Multi-horizon expected return forecast based on factor regression weights
-    expected_ret_1d = float(np.round((latest_roc5 * 0.15) - (latest_zscore * 0.25), 2))
-    expected_ret_5d = float(np.round((latest_roc20 * 0.35) - (latest_zscore * 0.80) + (latest_pvt * 0.20), 2))
-    expected_ret_20d = float(np.round((latest_roc20 * 0.65) - (latest_zscore * 1.50) + ((composite_ai_score - 50.0) * 0.15), 2))
+    # Multi-horizon expected return forecast based on factor regression weights + Bayesian Whale Drift
+    drift_pct = float(institutional_flow_info.get("whale_drift_bps", 0.0)) / 100.0
+    expected_ret_1d = float(np.round((latest_roc5 * 0.15) - (latest_zscore * 0.25) + (drift_pct * 0.2), 2))
+    expected_ret_5d = float(np.round((latest_roc20 * 0.35) - (latest_zscore * 0.80) + (latest_pvt * 0.20) + drift_pct, 2))
+    expected_ret_20d = float(np.round((latest_roc20 * 0.65) - (latest_zscore * 1.50) + ((composite_ai_score - 50.0) * 0.15) + (drift_pct * 2.0), 2))
 
     # Historical 60-day factor timeline for frontend charts
     chart_dates = df.index[-60:].strftime("%Y-%m-%d").tolist()
@@ -245,6 +258,10 @@ def calculate_qlib_alpha_factors(df: pd.DataFrame) -> Dict[str, Any]:
         "composite_ai_score": composite_ai_score,
         "signal": signal_label,
         "signal_color": color,
+        "completed_bar_guard": guard_info,
+        "shap_memory_risk": shap_memory_risk,
+        "isotonic_calibration": calibration_data,
+        "institutional_flow": institutional_flow_info,
         "factors": {
             "momentum_20d_pct": np.round(latest_roc20, 2),
             "momentum_5d_pct": np.round(latest_roc5, 2),
