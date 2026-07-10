@@ -218,7 +218,11 @@ def build_alpha158_panel_dataset(stock_dfs: dict, forward_horizon: int = 10) -> 
         
     panel_rows = []
 
+    from qlib_service import clean_ohlcv_completed_bars
     for sym, df in stock_dfs.items():
+        if len(df) < 150:
+            continue
+        df, _guard = clean_ohlcv_completed_bars(df)
         if len(df) < 150:
             continue
             

@@ -27,6 +27,34 @@ def _normalize_symbol(symbol: str) -> str:
     return clean
 
 
+def clean_ohlcv_completed_bars(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """Enforces strict T-1 completed bar cutoff or post-15:30 IST closing verification."""
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+        return df, {"excluded_current_session": False, "enforcement_rule": "No data"}
+
+    now = datetime.now()
+    try:
+        last_dt = pd.to_datetime(df.index[-1]).date() if isinstance(df.index, pd.DatetimeIndex) else pd.to_datetime(df["Date"].iloc[-1] if "Date" in df.columns else df.index[-1]).date()
+        target_close_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
+        if last_dt == now.date() and now < target_close_time:
+            if len(df) > 1:
+                cleaned_df = df.iloc[:-1].copy()
+                logger.info(f"T-1 Completed-Bar Guard active: Excluded partial intraday session {last_dt} before market close 15:30 IST.")
+                return cleaned_df, {
+                    "excluded_current_session": True,
+                    "cutoff_timestamp": str(cleaned_df.index[-1]),
+                    "reason": "Intraday bar excluded before market close (15:30 IST)"
+                }
+        return df, {
+            "excluded_current_session": False,
+            "cutoff_timestamp": str(df.index[-1]),
+            "reason": "Completed closing bar verified"
+        }
+    except Exception as e:
+        logger.warning(f"Error checking completed bars cutoff: {e}")
+        return df, {"excluded_current_session": False, "reason": f"Error: {e}"}
+
+
 def _fetch_ohlcv_data(symbol: str, lookback_days: int = 500) -> Optional[pd.DataFrame]:
     """Fetches full Open, High, Low, Close, Volume dataset for Qlib alpha factor calculations."""
     clean_sym = _normalize_symbol(symbol)
@@ -59,8 +87,10 @@ def _fetch_ohlcv_data(symbol: str, lookback_days: int = 500) -> Optional[pd.Data
                                     new_df.columns = new_df.columns.get_level_values(0)
                                 combined_df = pd.concat([local_df, new_df[["Open", "High", "Low", "Close", "Volume"]]]).drop_duplicates().sort_index()
                                 combined_df.to_csv(local_store_path)
-                                return combined_df
-                        return local_df
+                                cleaned, _ = clean_ohlcv_completed_bars(combined_df)
+                                return cleaned
+                        cleaned, _ = clean_ohlcv_completed_bars(local_df)
+                        return cleaned
             except Exception as ex:
                 logger.warning(f"Error reading local OHLCV cache for {clean_sym}: {ex}")
 
@@ -74,7 +104,8 @@ def _fetch_ohlcv_data(symbol: str, lookback_days: int = 500) -> Optional[pd.Data
             if all(col in raw_df.columns for col in required_cols):
                 df = raw_df[required_cols].dropna()
                 df.to_csv(local_store_path)
-                return df
+                cleaned, _ = clean_ohlcv_completed_bars(df)
+                return cleaned
     except Exception as e:
         logger.error(f"OHLCV fetch failed for {clean_sym}: {e}")
 
@@ -83,6 +114,9 @@ def _fetch_ohlcv_data(symbol: str, lookback_days: int = 500) -> Optional[pd.Data
 
 def calculate_qlib_alpha_factors(df: pd.DataFrame) -> Dict[str, Any]:
     """Computes formulaic quant factors inspired by Microsoft Qlib's Alpha158 library."""
+    if df is None or df.empty:
+        return {}
+    df, _guard = clean_ohlcv_completed_bars(df)
     close = df["Close"].astype(float)
     open_p = df["Open"].astype(float)
     high = df["High"].astype(float)

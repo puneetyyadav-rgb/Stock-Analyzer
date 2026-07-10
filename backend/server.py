@@ -1146,7 +1146,14 @@ def _auto_log_daily_rankings_to_ledger():
                 score = pred * 10.0 + 50.0
                 feats = {"roc_20": pick.get("momentum_20d_pct", 0.0), "zscore_20": pick.get("zscore", 0.0), "v_surge": pick.get("volume_surge", 1.0)}
                 if sym:
-                    pls.log_prediction(symbol=sym, target_horizon_days=10, predicted_return_pct=pred, raw_alpha_score=score, features=feats)
+                    pls.log_prediction(
+                        symbol=sym,
+                        target_horizon_days=10,
+                        predicted_return_pct=pred,
+                        raw_alpha_score=score,
+                        features=feats,
+                        model_version=data.get("model_used", "LightGBM_Alpha158_v2.1")
+                    )
             logger.info(f"Auto-logged {len(top_buys)} daily top picks from latest rankings into prediction ledger as PENDING.")
         except Exception as e:
             logger.warning(f"Error auto-logging daily rankings: {e}")
@@ -1169,6 +1176,78 @@ async def run_quant_reality_check_cycle_endpoint():
         return {"status": "success", "message": "Quant Reality Check Cycle executed across Phase A1, A2, and A3 with fresh daily data."}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+@api_router.get("/quant/self-learning/audit")
+async def get_quant_governance_audit_logbook():
+    """Returns the immutable compliance and governance audit logbook for the closed-loop engine without mutating weights."""
+    import hashlib
+    import prediction_ledger_service as pls
+    import isotonic_calibrator_service as ics
+    
+    model_path = os.path.join(ROOT_DIR, "data", "models", "nse_lightgbm_alpha.pkl")
+    model_hash = "no_model_file"
+    model_trained_at = "unknown"
+    if os.path.exists(model_path):
+        try:
+            with open(model_path, "rb") as f:
+                raw_bytes = f.read()
+                model_hash = hashlib.sha256(raw_bytes).hexdigest()
+            import pickle
+            with open(model_path, "rb") as f:
+                saved = pickle.load(f)
+                if isinstance(saved, dict) and "trained_at" in saved:
+                    model_trained_at = str(saved["trained_at"])
+        except Exception as ex:
+            model_hash = f"error_reading_hash: {ex}"
+
+    error_log_path = os.path.join(ROOT_DIR, "data", "prediction_error_log.json")
+    error_log = {}
+    if os.path.exists(error_log_path):
+        try:
+            with open(error_log_path, "r", encoding="utf-8") as f:
+                error_log = json.load(f)
+        except Exception:
+            pass
+
+    weights_path = os.path.join(ROOT_DIR, "data", "meta_factor_weights.json")
+    meta_weights = {}
+    if os.path.exists(weights_path):
+        try:
+            with open(weights_path, "r", encoding="utf-8") as f:
+                meta_weights = json.load(f)
+        except Exception:
+            pass
+
+    ledger_stats = pls.get_ledger_stats()
+    calib_status = ics.get_calibration_status()
+
+    # Determine T-1 Completed-Bar Guard enforcement status
+    now = datetime.now()
+    target_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
+    guard_status = {
+        "enforcement_rule": "Strict T-1 completed bar cutoff or post-15:30 IST closing verification",
+        "excluded_current_session": now < target_close,
+        "current_server_time": now.isoformat(),
+        "market_close_cutoff": "15:30:00 IST"
+    }
+
+    return {
+        "status": "success",
+        "governance_metadata": {
+            "model_version": meta_weights.get("active_model_version", "LightGBM_Alpha158_v2.1"),
+            "model_hash_sha256": model_hash,
+            "model_trained_at": model_trained_at,
+            "factor_schema_version": "Qlib_Alpha158_Bhavcopy_v2.1",
+            "data_cutoff_timestamp": guard_status["current_server_time"] if not guard_status["excluded_current_session"] else (now - timedelta(days=1)).strftime("%Y-%m-%d 15:30:00"),
+            "completed_bar_guard_status": guard_status,
+            "audited_at": datetime.now().isoformat()
+        },
+        "prediction_ledger_stats": ledger_stats,
+        "isotonic_calibration_status": calib_status,
+        "factor_health_summary": meta_weights,
+        "historical_diagnostics_audit": error_log
+    }
 
 
 app.include_router(api_router)

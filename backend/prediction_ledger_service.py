@@ -81,7 +81,8 @@ def log_prediction(
     raw_alpha_score: float = 50.0,
     features: Optional[Dict[str, Any]] = None,
     market_regime: str = "Normal_Vol",
-    custom_logged_at: Optional[str] = None
+    custom_logged_at: Optional[str] = None,
+    model_version: str = "LightGBM_Alpha158_v2.1"
 ) -> Dict[str, Any]:
     """Logs a new pre-trade prediction into the append-only ledger (`PENDING` state).
 
@@ -93,9 +94,10 @@ def log_prediction(
         features: Dictionary of factor indicator values at issuance t
         market_regime: Identified volatility/macro regime at issuance
         custom_logged_at: Optional ISO timestamp override (for walk-forward backtesting/tests)
+        model_version: Formally versioned model identifier
 
     Returns:
-        The newly created ledger record containing unique prediction_id.
+        The newly created or existing idempotent ledger record.
     """
     clean_sym = _normalize_symbol(symbol)
     if features is None:
@@ -103,6 +105,28 @@ def log_prediction(
 
     logged_dt = pd.to_datetime(custom_logged_at) if custom_logged_at else datetime.now()
     eval_dt = logged_dt + timedelta(days=target_horizon_days)
+    logged_date_str = logged_dt.strftime("%Y-%m-%d")
+
+    records = _load_ledger()
+
+    # Idempotency Guard: symbol + prediction_date + horizon + model_version
+    for idx, rec in enumerate(records):
+        rec_date_str = pd.to_datetime(rec.get("logged_at", "")).strftime("%Y-%m-%d")
+        if (
+            rec.get("symbol") == clean_sym
+            and rec_date_str == logged_date_str
+            and int(rec.get("target_horizon_days", 0)) == int(target_horizon_days)
+            and rec.get("model_version", "LightGBM_Alpha158_v2.1") == model_version
+            and rec.get("status") == "PENDING"
+        ):
+            logger.info(f"Idempotency guard: PENDING prediction for {clean_sym} on {logged_date_str} (horizon={target_horizon_days}, model={model_version}) already exists. Updating in-place.")
+            records[idx]["predicted_return_pct"] = float(np.round(predicted_return_pct, 2))
+            records[idx]["raw_alpha_score"] = float(np.round(raw_alpha_score, 2))
+            records[idx]["features"] = features
+            records[idx]["market_regime"] = str(market_regime)
+            records[idx]["model_version"] = str(model_version)
+            _save_ledger(records)
+            return records[idx]
 
     pred_id = f"pred_{int(logged_dt.timestamp())}_{uuid.uuid4().hex[:6]}_{clean_sym}"
 
@@ -116,6 +140,7 @@ def log_prediction(
         "raw_alpha_score": float(np.round(raw_alpha_score, 2)),
         "features": features,
         "market_regime": str(market_regime),
+        "model_version": str(model_version),
         "status": "PENDING",
         "actual_return_pct": None,
         "nifty_return_pct": None,
@@ -126,7 +151,6 @@ def log_prediction(
         "evaluated_at": None
     }
 
-    records = _load_ledger()
     records.append(record)
     _save_ledger(records)
 

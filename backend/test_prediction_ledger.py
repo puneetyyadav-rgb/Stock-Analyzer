@@ -104,6 +104,26 @@ class TestPredictionLedgerService(unittest.TestCase):
         self.assertEqual(summary["excluded_anomaly_count"], 1)
         self.assertEqual(summary["empirical_win_rate_pct"], 50.0) # 1 accurate out of 2 clean settled
 
+    def test_05_idempotency_guard_with_model_version(self):
+        """Verifies that logging duplicates for the same (symbol, date, horizon, model_version) updates in-place without creating duplicate rows, while a versioned model change creates a legitimate re-run record."""
+        # 1. Log initial PENDING prediction
+        rec1 = pls.log_prediction("RELIANCE.NS", target_horizon_days=10, predicted_return_pct=4.0, custom_logged_at="2026-07-10T11:00:00", model_version="LightGBM_v1.0")
+        summary1 = pls.get_ledger_summary()
+        initial_count = summary1["total_records"]
+
+        # 2. Log same stock, same day, same horizon, same model -> Must NOT increase record count
+        rec2 = pls.log_prediction("RELIANCE.NS", target_horizon_days=10, predicted_return_pct=4.5, custom_logged_at="2026-07-10T14:00:00", model_version="LightGBM_v1.0")
+        summary2 = pls.get_ledger_summary()
+        self.assertEqual(summary2["total_records"], initial_count, "Idempotency guard failed: Record count increased for duplicate log!")
+        self.assertEqual(rec2["prediction_id"], rec1["prediction_id"], "Idempotency guard failed: Different prediction ID returned!")
+        self.assertEqual(rec2["predicted_return_pct"], 4.5, "In-place update of predicted_return_pct failed!")
+
+        # 3. Log same stock, same day, same horizon, but NEW MODEL VERSION -> Legitimate versioned re-run! Must create new record
+        rec3 = pls.log_prediction("RELIANCE.NS", target_horizon_days=10, predicted_return_pct=5.0, custom_logged_at="2026-07-10T15:00:00", model_version="LightGBM_v2.0_Upgraded")
+        summary3 = pls.get_ledger_summary()
+        self.assertEqual(summary3["total_records"], initial_count + 1, "Formally versioned model change should allow legitimate re-run!")
+        self.assertNotEqual(rec3["prediction_id"], rec1["prediction_id"], "New model version should generate a distinct prediction ID!")
+
 
 if __name__ == "__main__":
     unittest.main()
