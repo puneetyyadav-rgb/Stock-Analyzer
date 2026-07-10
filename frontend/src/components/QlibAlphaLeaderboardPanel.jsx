@@ -620,7 +620,7 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
       avgDelivery: avgDelivery.toFixed(1),
       highInstCount,
       modelName,
-      lastUpdated: new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      lastUpdated: new Date(lastUpdated).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })
     };
   }, [rankingsData, diagnosticsData]);
 
@@ -962,7 +962,7 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
                   {/* Middle Column: Price & Factor Badges (Momentum, Volume Surge, Z-Score) */}
                   <div className="flex flex-wrap items-center gap-2.5 lg:gap-3">
                     <div className="px-3 py-1.5 rounded-xl bg-zinc-950/80 border border-zinc-800 text-right">
-                      <div className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Latest Price</div>
+                      <div className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Latest Price ({stats.lastUpdated.split(',')[0]})</div>
                       <div className="text-sm font-mono font-bold text-zinc-100">
                         ₹{fmtNum(stock.latest_close)}
                       </div>
