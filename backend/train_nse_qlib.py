@@ -424,7 +424,23 @@ def rank_current_market_universe(model, features, panel_df: pd.DataFrame) -> dic
         json.dump(payload, f, indent=2)
     logger.info(f"Saved live universe rankings ({len(ranked)} stocks) to {cache_file}")
 
-    return payload
+def run_daily_universe_refresh():
+    """Fast daily incremental OHLCV update & ranking refresh without full 10-year retraining."""
+    logger.info("Executing fast daily universe price download and ranking update...")
+    symbols = load_symbols_from_bhavcopy_if_available()[:200]
+    stock_dfs = download_universe_ohlcv_anti_ban(symbols, start_date="2026-01-01")
+    panel_df = build_alpha158_panel_dataset(stock_dfs, forward_horizon=10)
+    model_path = os.path.join(MODEL_DIR, "nse_lightgbm_alpha.pkl")
+    if os.path.exists(model_path):
+        with open(model_path, "rb") as f:
+            saved = pickle.load(f)
+        model = saved["model"]
+        features = saved["features"]
+    else:
+        model, features = train_lightgbm_alpha_model(panel_df)
+    if model is not None and not panel_df.empty:
+        return rank_current_market_universe(model, features, panel_df)
+    return {}
 
 
 def main():

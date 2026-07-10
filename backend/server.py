@@ -1154,16 +1154,19 @@ def _auto_log_daily_rankings_to_ledger():
 
 @api_router.post("/quant/self-learning/run-cycle")
 async def run_quant_reality_check_cycle_endpoint():
-    """Triggers immediate manual execution of Phase A1 -> A2 -> A3 reality check loop."""
+    """Triggers immediate manual execution of Phase A1 -> A2 -> A3 reality check loop with fresh closing prices."""
     try:
         import prediction_ledger_service as pls
         import self_learning_service as sls
         import shap_memory_service as sms
+        import train_nse_qlib as tnq
+        logger.info("Downloading fresh closing prices for all stocks and updating rankings...")
+        await asyncio.to_thread(tnq.run_daily_universe_refresh)
         await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
         await asyncio.to_thread(pls.evaluate_pending_predictions)
         await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
         await asyncio.to_thread(sms.build_shap_failure_memory_cache)
-        return {"status": "success", "message": "Quant Reality Check Cycle executed across Phase A1, A2, and A3."}
+        return {"status": "success", "message": "Quant Reality Check Cycle executed across Phase A1, A2, and A3 with fresh daily data."}
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -1184,6 +1187,7 @@ async def _daily_quant_reality_check_loop():
     import prediction_ledger_service as pls
     import self_learning_service as sls
     import shap_memory_service as sms
+    import train_nse_qlib as tnq
     from datetime import datetime, timedelta
 
     logger.info("Starting Daily Quant Reality Check background scheduler loop...")
@@ -1210,7 +1214,9 @@ async def _daily_quant_reality_check_loop():
             logger.info(f"Locked schedule: Next Quant Reality Check at 3:45 PM IST ({target_next.strftime('%Y-%m-%d %H:%M:%S')}, sleeping {int(wait_seconds)}s)...")
             await asyncio.sleep(wait_seconds)
 
-            logger.info("Executing locked 3:45 PM IST automated Quant Reality Check (Phase A1 -> A2 -> A3)...")
+            logger.info("Step 1: Downloading locked 3:45 PM IST fresh today's closing prices for all NSE universe stocks...")
+            await asyncio.to_thread(tnq.run_daily_universe_refresh)
+            logger.info("Step 2: Executing automated Quant Reality Check (Phase A1 -> A2 -> A3)...")
             await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
             await asyncio.to_thread(pls.evaluate_pending_predictions)
             await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
