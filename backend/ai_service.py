@@ -41,7 +41,7 @@ def _call_groq_fallback(prompt: str) -> str:
             base_url="https://api.groq.com/openai/v1",
             api_key=groq_key
         )
-        models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen-2.5-72b", "deepseek-r1-distill-llama-70b"]
+        models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
         for model in models:
             try:
                 logger.info(f"Attempting Groq fallback using model: {model}")
@@ -114,7 +114,7 @@ def _execute_ai_call_with_fallback(prompt: str, use_pdf_key: bool = False) -> st
             return _call_groq_fallback(prompt)
         return ""
         
-    client = genai.Client(api_key=key, http_options={'timeout': 15000})
+    client = genai.Client(api_key=key, http_options={'timeout': 60000 if use_pdf_key else 15000})
     try:
         return _call_gemini_with_retry(client, prompt)
     except Exception as e:
@@ -654,8 +654,8 @@ async def extract_ratios_from_source(text: str) -> dict:
     """Intelligently parse source material text to extract ratios and competitor comparisons in ONE call to save quota."""
     import time
     
-    # Take up to 40,000 characters (roughly 10,000 tokens) to save tokens and ensure it fits well
-    truncated_text = text[:40000]
+    # Take up to 15,000 characters (roughly 3,500 tokens) to guarantee it fits both Gemini and Groq TPM limits
+    truncated_text = text[:15000]
 
     merged_result = {
         "company_ratios": [],
