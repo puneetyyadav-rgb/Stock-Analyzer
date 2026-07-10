@@ -688,7 +688,7 @@ export default function SelfLearningLab() {
                   Alpha 24: Institutional Whale Flow &amp; FII/DII Net Absorption
                 </h3>
                 <p className="text-xs font-mono text-zinc-400 mt-1">
-                  Bayesian Return Drift Calibration (\(\Delta \mu_{{\text{{whale}}}}\)) &amp; Cross-Sectional Alpha Conviction Multiplier
+                  Bayesian Return Drift Calibration (Δμ_whale) &amp; Cross-Sectional Alpha Conviction Multiplier
                 </p>
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-bold flex items-center gap-2 self-start">
@@ -716,7 +716,7 @@ export default function SelfLearningLab() {
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 flex flex-col justify-center">
-                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Bayesian Drift (\(\Delta \mu\))</span>
+                <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Bayesian Drift (Δμ)</span>
                 <div className={"text-xl font-mono font-extrabold mt-1 " + ((flowData?.whale_drift_bps || 0) >= 0 ? "text-emerald-400" : "text-red-400")}>
                   {fmtSigned(flowData?.whale_drift_bps || 0)} bps
                 </div>
