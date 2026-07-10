@@ -1219,8 +1219,8 @@ async def get_quant_governance_audit_logbook():
         except Exception:
             pass
 
-    ledger_stats = pls.get_ledger_stats()
-    calib_status = ics.get_calibration_status()
+    ledger_stats = pls.get_ledger_summary()
+    calib_status = ics.calibrate_alpha_score(75.0)
 
     # Determine T-1 Completed-Bar Guard enforcement status
     now = datetime.now()
