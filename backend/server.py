@@ -1180,22 +1180,44 @@ app.add_middleware(
 
 
 async def _daily_quant_reality_check_loop():
-    """Background task running daily at 3:45 PM IST (or overnight) to settle predictions, prune factors, and update SHAP memory."""
+    """Background task locked specifically to 3:45 PM IST daily after Indian market close."""
     import prediction_ledger_service as pls
     import self_learning_service as sls
     import shap_memory_service as sms
+    from datetime import datetime, timedelta
+
     logger.info("Starting Daily Quant Reality Check background scheduler loop...")
+    # Perform initial warm check on boot
+    try:
+        logger.info("Performing initial warm check of prediction ledger and factor decay on startup...")
+        await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
+        await asyncio.to_thread(pls.evaluate_pending_predictions)
+        await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
+        await asyncio.to_thread(sms.build_shap_failure_memory_cache)
+    except Exception as e:
+        logger.error(f"Error during initial startup check: {e}")
+
     while True:
         try:
-            logger.info("Executing automated daily Quant Reality Check (Phase A1 -> A2 -> A3)...")
+            now = datetime.now()
+            target_today = now.replace(hour=15, minute=45, second=0, microsecond=0)
+            if now >= target_today:
+                target_next = target_today + timedelta(days=1)
+            else:
+                target_next = target_today
+
+            wait_seconds = (target_next - now).total_seconds()
+            logger.info(f"Locked schedule: Next Quant Reality Check at 3:45 PM IST ({target_next.strftime('%Y-%m-%d %H:%M:%S')}, sleeping {int(wait_seconds)}s)...")
+            await asyncio.sleep(wait_seconds)
+
+            logger.info("Executing locked 3:45 PM IST automated Quant Reality Check (Phase A1 -> A2 -> A3)...")
             await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
             await asyncio.to_thread(pls.evaluate_pending_predictions)
             await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
             await asyncio.to_thread(sms.build_shap_failure_memory_cache)
-            logger.info("Completed automated daily Quant Reality Check. Next run scheduled in 12 hours.")
-            await asyncio.sleep(43200)  # Sleep 12 hours between automated checks
+            logger.info("Completed locked 3:45 PM IST automated Quant Reality Check successfully.")
         except Exception as e:
-            logger.error(f"Error in daily quant reality check loop: {e}")
+            logger.error(f"Error in daily 3:45 PM quant reality check loop: {e}")
             await asyncio.sleep(3600)  # Retry in 1 hour on error
 
 
