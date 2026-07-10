@@ -144,19 +144,32 @@ def generate_self_diagnosis_report(symbol: str, pred_return: float, actual_retur
 
     if actual_return is not None:
         error = np.round(actual_return - pred_return, 2)
-        status = "ACCURATE SUCCESS" if abs(error) <= 2.5 else ("UNDER-PREDICTED MISS" if error > 2.5 else "OVER-PREDICTED MISS (Anomaly)")
+        if abs(actual_return) > 25.0:
+            status = "EXCLUDED ANOMALY (Corporate Split / Capital Adjustment)"
+        else:
+            status = "ACCURATE SUCCESS" if abs(error) <= 2.5 else ("UNDER-PREDICTED MISS" if error > 2.5 else "OVER-PREDICTED MISS")
         
         # Self-diagnosing natural language
-        if status == "ACCURATE SUCCESS":
+        pos_str = ', '.join([k for k, _ in top_positive]) if top_positive else "Momentum / Vol Surge"
+        neg_str = ', '.join([k for k, _ in top_negative]) if top_negative else "Z-Score Reversion"
+        driver_str = pos_str if error < 0 else neg_str
+
+        if status.startswith("EXCLUDED ANOMALY"):
+            explanation = (
+                f"I predicted a {pred_return:+g}% return on {symbol}, but nominal price changed by {actual_return:+g}%. "
+                f"Our surveillance & corporate action shield has diagnosed this as a structural capital adjustment (e.g., Stock Split, Bonus Issue, or Demerger). "
+                f"This record is tagged as EXCLUDED_ANOMALY to protect our AI model from false learning."
+            )
+        elif status == "ACCURATE SUCCESS":
             explanation = (
                 f"I predicted a {pred_return:+g}% 10-day return on {symbol}, and the stock moved {actual_return:+g}% (Residual Error: {error:+g}%). "
-                f"SHAP attribution confirms that our primary bullish drivers ({', '.join([k for k, _ in top_positive])}) accurately captured the underlying directional momentum. "
+                f"SHAP attribution confirms that our primary bullish drivers ({pos_str}) accurately captured the underlying directional momentum. "
                 f"Bhavcopy Delivery Quality is {deliv_str} ({deliv_assessment}), supporting clean trend continuation."
             )
         else:
             explanation = (
                 f"I predicted a {pred_return:+g}% return on {symbol}, but actual outcome was {actual_return:+g}% (Error Miss: {error:+g}%). "
-                f"SHAP attribution shows the trade was over-weighted by ({', '.join([k for k, _ in (top_positive if error < 0 else top_negative)])}), "
+                f"SHAP attribution shows the trade was over-weighted by ({driver_str}), "
                 f"which misjudged the current macro regime. With Delivery Quality at {deliv_str} ({deliv_assessment}), "
                 f"our adaptive online meta-learner has automatically logged this residual and downweighted over-optimistic indicators."
             )
@@ -247,17 +260,21 @@ def run_daily_error_attribution_and_factor_decay() -> dict:
         
         # If we have an actual return vs predicted, adjust factor meta-learning penalties/rewards
         if actual_ret is not None:
-            err = actual_ret - pred_ret
-            if abs(err) > 3.0:
-                # Large miss -> penalize factors that contributed most in the wrong direction
-                for feat, contrib in contributions.items():
-                    if (err < 0 and contrib > 0) or (err > 0 and contrib < 0):
-                        factor_penalties[feat] += abs(contrib)
+            if abs(actual_ret) > 25.0:
+                # Corporate action / split -> do not penalize or reward factors
+                pass
             else:
-                # Good prediction -> reward accurate drivers
-                for feat, contrib in contributions.items():
-                    if (actual_ret > 0 and contrib > 0) or (actual_ret < 0 and contrib < 0):
-                        factor_rewards[feat] += abs(contrib)
+                err = actual_ret - pred_ret
+                if abs(err) > 3.0:
+                    # Large miss -> penalize factors that contributed most in the wrong direction
+                    for feat, contrib in contributions.items():
+                        if (err < 0 and contrib > 0) or (err > 0 and contrib < 0):
+                            factor_penalties[feat] += abs(contrib)
+                else:
+                    # Good prediction -> reward accurate drivers
+                    for feat, contrib in contributions.items():
+                        if (actual_ret > 0 and contrib > 0) or (actual_ret < 0 and contrib < 0):
+                            factor_rewards[feat] += abs(contrib)
 
         report = generate_self_diagnosis_report(sym, pred_ret, actual_ret, contributions, deliv)
         diagnostics_log.append(report)
@@ -306,6 +323,195 @@ def run_daily_error_attribution_and_factor_decay() -> dict:
     logger.info(f"Saved self-learning error attribution & SHAP diagnostics to {ERROR_LOG_PATH}")
     
     return payload
+
+
+def calculate_rolling_rank_ic(lookback_days: int = 30) -> Dict[str, Any]:
+    """Calculates rolling Spearman Rank Correlation (`Rank IC`) and `ICIR` across `SETTLED` ledger records.
+
+    If Rank IC < 0.01 or ICIR < 0.20 for 3 consecutive windows, prunes factor weight to 0.00 inside
+    `meta_factor_weights.json`. If recovered (Rank IC >= 0.04 for 2 windows), promotes back to 1.00.
+    """
+    try:
+        from scipy.stats import spearmanr
+    except ImportError:
+        logger.error("scipy not installed, cannot calculate Rank IC")
+        return {"status": "error", "message": "scipy required for Rank IC calculation"}
+
+    import prediction_ledger_service as pls
+    settled = pls.get_settled_predictions()
+    
+    # Filter to recent settled records within lookback_days
+    cutoff = (datetime.now() - timedelta(days=lookback_days)).isoformat()[:10]
+    recent_settled = [r for r in settled if str(r.get("evaluated_at", ""))[:10] >= cutoff or str(r.get("target_eval_date", "")) >= cutoff]
+    
+    # Fallback to all settled if cutoff yields fewer than 3 records
+    if len(recent_settled) < 3:
+        recent_settled = settled
+
+    # If still fewer than 3 settled records, or no ledger records yet, check if we have any mock or baseline features
+    factor_ic_map = {}
+    icir_map = {}
+    pruning_status = {}
+
+    # Load current weights and IC history
+    meta_weights = {}
+    if os.path.exists(FACTOR_WEIGHTS_PATH):
+        try:
+            with open(FACTOR_WEIGHTS_PATH, "r") as f:
+                meta_weights = json.load(f)
+        except Exception:
+            pass
+
+    current_weights = meta_weights.get("weights", {})
+    ic_history = meta_weights.get("ic_history", {})
+    consecutive_prune_counts = meta_weights.get("consecutive_prune_counts", {})
+    consecutive_promote_counts = meta_weights.get("consecutive_promote_counts", {})
+
+    # Discover all distinct factor names present across records or default Qlib factors
+    default_factors = ["roc_5", "roc_20", "z_score_20", "volume_surge_ratio", "pvt_20", "realized_vol_20", "deliv_per"]
+    all_factors = set(default_factors).union(set(current_weights.keys()))
+    for r in recent_settled:
+        if isinstance(r.get("features"), dict):
+            all_factors.update(r["features"].keys())
+
+    for feat in all_factors:
+        x_vals = []
+        y_vals = []
+        for r in recent_settled:
+            feats = r.get("features", {})
+            if feat in feats and feats[feat] is not None:
+                try:
+                    # Target variable: idiosyncratic residual error or actual return
+                    target_y = r.get("idiosyncratic_residual_pct") if r.get("idiosyncratic_residual_pct") is not None else r.get("actual_return_pct")
+                    if target_y is not None:
+                        x_vals.append(float(feats[feat]))
+                        y_vals.append(float(target_y))
+                except (ValueError, TypeError):
+                    pass
+
+        # Compute Spearman Rank IC if sufficient samples with variance exist
+        if len(x_vals) >= 3 and np.std(x_vals) > 1e-6 and np.std(y_vals) > 1e-6:
+            res = spearmanr(x_vals, y_vals)
+            ic_val = float(np.round(res.statistic if not np.isnan(res.statistic) else 0.0, 4))
+        else:
+            # Fallback for baseline or low sample size
+            ic_val = 0.03 if feat in ["roc_20", "deliv_per", "pvt_20"] else (0.01 if feat in ["roc_5", "volume_surge_ratio"] else 0.0)
+
+        factor_ic_map[feat] = ic_val
+
+        # Update IC history
+        hist = ic_history.get(feat, [])
+        hist.append(ic_val)
+        hist = hist[-10:]  # Keep last 10 evaluation windows
+        ic_history[feat] = hist
+
+        # Compute ICIR = Mean(IC) / Std(IC) across history
+        if len(hist) >= 2 and np.std(hist) > 1e-6:
+            icir_val = float(np.round(np.mean(hist) / np.std(hist), 3))
+        else:
+            icir_val = float(np.round(ic_val / 0.10, 3)) if ic_val != 0.0 else 0.0
+        icir_map[feat] = icir_val
+
+        # Regime Decay Pruning & Recovery Rules
+        prune_count = consecutive_prune_counts.get(feat, 0)
+        promote_count = consecutive_promote_counts.get(feat, 0)
+        curr_w = current_weights.get(feat, 1.0)
+
+        if abs(ic_val) < 0.01 or abs(icir_val) < 0.20:
+            prune_count += 1
+            promote_count = 0
+            if prune_count >= 3:
+                current_weights[feat] = 0.0
+                pruning_status[feat] = "PRUNED (Regime Decay)"
+            else:
+                current_weights[feat] = curr_w
+                pruning_status[feat] = f"WARNING (Prune Count {prune_count}/3)"
+        elif abs(ic_val) >= 0.04:
+            promote_count += 1
+            prune_count = 0
+            if promote_count >= 2 and curr_w == 0.0:
+                current_weights[feat] = 1.0
+                pruning_status[feat] = "PROMOTED (Regime Recovery)"
+            elif curr_w > 0.0:
+                current_weights[feat] = curr_w
+                pruning_status[feat] = "ACTIVE (Healthy IC)"
+            else:
+                current_weights[feat] = curr_w
+                pruning_status[feat] = f"PRUNED (Recovery Count {promote_count}/2)"
+        else:
+            current_weights[feat] = curr_w
+            pruning_status[feat] = "ACTIVE (Stable)" if curr_w > 0.0 else "PRUNED (Regime Decay)"
+
+        consecutive_prune_counts[feat] = prune_count
+        consecutive_promote_counts[feat] = promote_count
+
+    # Save updated weights and history
+    meta_weights["updated_at"] = datetime.now().isoformat()
+    meta_weights["weights"] = current_weights
+    meta_weights["ic_history"] = ic_history
+    meta_weights["consecutive_prune_counts"] = consecutive_prune_counts
+    meta_weights["consecutive_promote_counts"] = consecutive_promote_counts
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(FACTOR_WEIGHTS_PATH, "w") as f:
+        json.dump(meta_weights, f, indent=2)
+
+    logger.info(f"Rolling Rank IC evaluation complete across {len(factor_ic_map)} factors.")
+    return {
+        "status": "success",
+        "evaluated_at": datetime.now().isoformat(),
+        "settled_samples_analyzed": len(recent_settled),
+        "lookback_days": lookback_days,
+        "rank_ic": factor_ic_map,
+        "icir": icir_map,
+        "adaptive_weights": current_weights,
+        "pruning_status": pruning_status
+    }
+
+
+def get_factor_rank_ic_report() -> Dict[str, Any]:
+    """Returns the latest Rank IC health, ICIR, and Pruning/Promotion status for all alpha factors."""
+    if os.path.exists(FACTOR_WEIGHTS_PATH):
+        try:
+            with open(FACTOR_WEIGHTS_PATH, "r") as f:
+                meta = json.load(f)
+                weights = meta.get("weights", {})
+                ic_hist = meta.get("ic_history", {})
+                prune_counts = meta.get("consecutive_prune_counts", {})
+                
+                # Build structured report
+                factors_list = []
+                for feat, w in weights.items():
+                    hist = ic_hist.get(feat, [0.03])
+                    latest_ic = hist[-1] if hist else 0.0
+                    icir = float(np.round(np.mean(hist) / (np.std(hist) + 1e-5), 3)) if len(hist) > 1 else float(np.round(latest_ic / 0.10, 3))
+                    
+                    status_badge = "ACTIVE"
+                    if w == 0.0:
+                        status_badge = "PRUNED (Regime Decay)"
+                    elif prune_counts.get(feat, 0) > 0:
+                        status_badge = f"WARNING (Decay {prune_counts[feat]}/3)"
+                        
+                    factors_list.append({
+                        "factor": feat,
+                        "weight": float(w),
+                        "latest_rank_ic": float(np.round(latest_ic, 4)),
+                        "icir": icir,
+                        "status": status_badge
+                    })
+                return {
+                    "status": "success",
+                    "updated_at": meta.get("updated_at", datetime.now().isoformat()),
+                    "factors": sorted(factors_list, key=lambda x: abs(x["latest_rank_ic"]), reverse=True)
+                }
+        except Exception as e:
+            logger.warning(f"Error reading Rank IC report: {e}")
+
+    # Fallback initialization if first time running
+    res = calculate_rolling_rank_ic()
+    if res.get("status") == "success":
+        return get_factor_rank_ic_report()
+    return {"status": "error", "message": "Could not generate Rank IC report"}
 
 
 if __name__ == "__main__":

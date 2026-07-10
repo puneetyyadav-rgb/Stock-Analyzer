@@ -23,6 +23,7 @@ import {
   Sliders,
   Database
 } from "lucide-react";
+import SelfLearningLab from "./SelfLearningLab";
 
 // Fallback Showcase Top 10 AI Quant Alpha Buys (enriched with real API & Qlib Alpha158 structure)
 const SHOWCASE_TOP_10_BUYS = [
@@ -811,6 +812,17 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
             <AlertTriangle size={14} className={activeView === "avoids" ? "text-white" : "text-red-400"} />
             Bottom Avoids / Shorts ({rankingsData?.bottom_avoids?.length || 10})
           </button>
+          <button
+            onClick={() => setActiveView("lab")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all flex items-center gap-2 ${
+              activeView === "lab"
+                ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/50"
+                : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-700/60"
+            }`}
+          >
+            <Sliders size={14} className={activeView === "lab" ? "text-white animate-pulse" : "text-emerald-400"} />
+            Quant Control Lab (Isotonic / Rank IC)
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -859,6 +871,9 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
       </div>
 
       {/* Main Leaderboard Table / Cards */}
+      {activeView === "lab" ? (
+        <SelfLearningLab />
+      ) : (
       <div className="space-y-4">
         {mergedStockList.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-3">
@@ -1237,6 +1252,7 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
           })
         )}
       </div>
+      )}
 
       {/* Footer / Educational Disclaimer Banner */}
       <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-xs font-sans text-zinc-400 flex items-start gap-3">

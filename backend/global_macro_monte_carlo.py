@@ -617,16 +617,29 @@ class GlobalMacroMonteCarloEngine:
 
         res_std = float(np.std(residuals)) if len(residuals) > 0 else 0.015
 
-        # Extract up to 250 real daily log-return data points for Nifty vs Stock scatter plot
+        # Extract up to 250 real daily log-return data points for Nifty vs Stock scatter plot with Outlier Flagging
         scatter_sample = []
         try:
             sample_df = aligned.tail(250)
             stock_col = stock_returns.name if stock_returns.name in sample_df.columns else sample_df.columns[0]
             for idx, row in sample_df.iterrows():
+                nf_ret = float(row["NIFTY"])
+                st_ret = float(row[stock_col])
+                expected_st = alpha + (up_beta if nf_ret >= 0 else down_beta) * nf_ret
+                dev = st_ret - expected_st
+                dev_pct = round(dev * 100.0, 2)
+                st_pct = round(st_ret * 100.0, 3)
+                nf_pct = round(nf_ret * 100.0, 3)
+                
+                # Flag extreme tail outliers: >= 4.0% idiosyncratic deviation OR >= 5.0% absolute stock return
+                is_out = abs(dev_pct) >= 4.0 or abs(st_pct) >= 5.0
+                
                 scatter_sample.append({
                     "date": str(idx.date()) if hasattr(idx, "date") else str(idx)[:10],
-                    "nifty": round(float(row["NIFTY"]) * 100.0, 3),
-                    "stock": round(float(row[stock_col]) * 100.0, 3)
+                    "nifty": nf_pct,
+                    "stock": st_pct,
+                    "deviation": dev_pct,
+                    "is_outlier": is_out
                 })
         except Exception as e:
             logger.warning(f"Failed to format scatter sample ({e})")

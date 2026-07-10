@@ -23,6 +23,22 @@ export default function StockMacroCouplingWidget({ symbol, sector = "Conglomerat
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
   const [activeTab, setActiveTab] = useState("scatter"); // "scatter" | "distribution" | "factors"
+  const [selectedDot, setSelectedDot] = useState(null);
+  const [outlierData, setOutlierData] = useState(null);
+  const [outlierLoading, setOutlierLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedDot) {
+      setOutlierData(null);
+      return;
+    }
+    setOutlierLoading(true);
+    fetch(`http://localhost:8000/api/stock/${symbol}/outlier-investigation?date=${selectedDot.date}&nifty_ret=${selectedDot.nifty}&stock_ret=${selectedDot.stock}&deviation=${selectedDot.deviation || 0}`)
+      .then((res) => res.json())
+      .then((res) => setOutlierData(res))
+      .catch((err) => setOutlierData({ error: "Failed to load anomaly diagnosis." }))
+      .finally(() => setOutlierLoading(false));
+  }, [selectedDot, symbol]);
 
   useEffect(() => {
     if (!symbol) return;
@@ -273,10 +289,23 @@ export default function StockMacroCouplingWidget({ symbol, sector = "Conglomerat
                           if (active && payload && payload.length) {
                             const d = payload[0].payload;
                             return (
-                              <div className="bg-zinc-900 border border-zinc-700 p-2 rounded text-xs font-mono shadow-xl">
-                                <div className="text-zinc-400 text-[10px] mb-1">{d.date || "Empirical Day"}</div>
+                              <div className="bg-zinc-900 border border-zinc-700 p-2 rounded text-xs font-mono shadow-xl z-50">
+                                <div className="flex items-center justify-between gap-3 mb-1">
+                                  <span className="text-zinc-400 text-[10px]">{d.date || "Empirical Day"}</span>
+                                  {d.is_outlier && (
+                                    <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 rounded text-[9px] animate-pulse">
+                                      ⚠️ TAIL OUTLIER (CLICK)
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-indigo-300">Nifty: <span className="font-bold text-white">{d.nifty}%</span></div>
                                 <div className="text-emerald-300">{symbol}: <span className="font-bold text-white">{d.stock}%</span></div>
+                                {d.deviation !== undefined && (
+                                  <div className="text-amber-400 text-[10px] mt-1 pt-1 border-t border-zinc-800 flex items-center justify-between">
+                                    <span>Deviation Epsilon:</span>
+                                    <span className="font-bold">{d.deviation > 0 ? `+${d.deviation}` : d.deviation}%</span>
+                                  </div>
+                                )}
                               </div>
                             );
                           }
@@ -328,14 +357,144 @@ export default function StockMacroCouplingWidget({ symbol, sector = "Conglomerat
                         );
                       })()}
 
-                      <Scatter name="Daily Returns" data={data.scatter_data || []}>
+                      <Scatter
+                        name="Daily Returns"
+                        data={data.scatter_data || []}
+                        onClick={(dot) => {
+                          if (dot && dot.payload) setSelectedDot(dot.payload);
+                        }}
+                      >
                         {(data.scatter_data || []).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.nifty >= 0 ? "#34d399" : "#f87171"} fillOpacity={0.7} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.is_outlier ? "#fbbf24" : (entry.nifty >= 0 ? "#34d399" : "#f87171")}
+                            fillOpacity={entry.is_outlier ? 1.0 : 0.7}
+                            stroke={entry.is_outlier ? "#f59e0b" : "none"}
+                            strokeWidth={entry.is_outlier ? 2 : 0}
+                            r={entry.is_outlier ? 6 : 4}
+                            className="cursor-pointer"
+                          />
                         ))}
                       </Scatter>
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
+
+                {/* Interactive AI Anomaly & Tail-Risk Investigation Drawer */}
+                {selectedDot && (
+                  <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-zinc-900 via-amber-950/30 to-zinc-900 border border-amber-500/40 shadow-2xl space-y-3 font-mono animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-500/20">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                          <AlertTriangle className="w-4 h-4 animate-pulse" />
+                        </span>
+                        <div>
+                          <h4 className="text-xs font-bold text-amber-200 uppercase tracking-wider">
+                            🤖 AI Tail-Risk Investigator — {symbol} on {selectedDot.date}
+                          </h4>
+                          <p className="text-[10px] text-zinc-400">
+                            Historical idiosyncratic deviation and macro/news anomaly diagnosis
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedDot(null)}
+                        className="px-2.5 py-1 text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded border border-zinc-700 transition"
+                      >
+                        Close ✕
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 text-center bg-zinc-950/60 p-2 rounded-lg border border-zinc-800/60">
+                      <div>
+                        <span className="text-[10px] text-zinc-500 uppercase">Stock Daily Return</span>
+                        <div className={`text-sm font-bold ${selectedDot.stock >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {selectedDot.stock > 0 ? `+${selectedDot.stock}` : selectedDot.stock}%
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-zinc-500 uppercase">Nifty Market Return</span>
+                        <div className="text-sm font-bold text-indigo-300">
+                          {selectedDot.nifty > 0 ? `+${selectedDot.nifty}` : selectedDot.nifty}%
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-zinc-500 uppercase">Idiosyncratic Deviation</span>
+                        <div className="text-sm font-bold text-amber-400">
+                          {selectedDot.deviation > 0 ? `+${selectedDot.deviation}` : selectedDot.deviation}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {outlierLoading ? (
+                      <div className="flex items-center justify-center gap-2 py-4 text-amber-300 text-xs">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>AI synthesizing historical macro shocks &amp; institutional news headlines for {selectedDot.date}...</span>
+                      </div>
+                    ) : outlierData && !outlierData.error ? (
+                      <div className="space-y-3">
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-100 text-xs leading-relaxed">
+                          <span className="font-bold text-amber-400">⚡ AI Root-Cause Verdict: </span>
+                          {outlierData.ai_summary}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Macro Shocks on Date */}
+                          <div className="p-3 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-2">
+                            <div className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5 uppercase">
+                              <Activity className="w-3.5 h-3.5" />
+                              <span>Macro Shocks on {selectedDot.date}</span>
+                            </div>
+                            {outlierData.macro_shocks && outlierData.macro_shocks.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {outlierData.macro_shocks.map((sh, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-[11px] bg-zinc-900/60 p-1.5 rounded border border-zinc-800/60">
+                                    <span className="font-bold text-zinc-300">{sh.factor}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className={sh.daily_move_pct >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                                        {sh.daily_move_pct > 0 ? `+${sh.daily_move_pct}` : sh.daily_move_pct}%
+                                      </span>
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-zinc-800 text-zinc-400">{sh.impact}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-zinc-500 text-[11px] py-2 italic">No severe global macro asset volatility detected on this exact day.</div>
+                            )}
+                          </div>
+
+                          {/* Institutional News Headlines around Date */}
+                          <div className="p-3 rounded-lg bg-zinc-950/80 border border-zinc-800 space-y-2">
+                            <div className="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5 uppercase">
+                              <TrendingUp className="w-3.5 h-3.5" />
+                              <span>Relevant News &amp; Events</span>
+                            </div>
+                            {outlierData.company_news_events && outlierData.company_news_events.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {outlierData.company_news_events.map((nw, idx) => (
+                                  <div key={idx} className="text-[11px] bg-zinc-900/60 p-1.5 rounded border border-zinc-800/60 space-y-0.5">
+                                    <div className="text-zinc-200 line-clamp-2">{nw.title}</div>
+                                    <div className="text-[9px] text-zinc-500 flex items-center justify-between">
+                                      <span>Source: {nw.source}</span>
+                                      <span>Window: {selectedDot.date}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-zinc-500 text-[11px] py-2 italic">No immediate headline catalysts surfaced for this window.</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                        {outlierData?.error || "Unable to diagnose anomaly."}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

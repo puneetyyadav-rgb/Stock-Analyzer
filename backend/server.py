@@ -1019,6 +1019,18 @@ async def get_beta_coupled_simulation_endpoint(
     return data
 
 
+@api_router.get("/stock/{symbol}/outlier-investigation")
+async def get_outlier_investigation_endpoint(
+    symbol: str,
+    date: str,
+    nifty_ret: float = 0.0,
+    stock_ret: float = 0.0,
+    deviation: float = 0.0
+):
+    data = await asyncio.to_thread(ms.get_outlier_investigation, symbol, date, nifty_ret, stock_ret, deviation)
+    return data
+
+
 @api_router.get("/qlib/predict/{symbol}")
 async def get_qlib_prediction_endpoint(
     symbol: str,
@@ -1060,6 +1072,102 @@ async def get_qlib_diagnostics_endpoint():
         return {"error": str(e), "status": "failed_diagnostics"}
 
 
+@api_router.get("/quant/ledger")
+async def get_quant_ledger_endpoint():
+    """Returns aggregated summary metrics and recent error misses of the Phase A1 Prediction Ledger."""
+    try:
+        import prediction_ledger_service as pls
+        summary = await asyncio.to_thread(pls.get_ledger_summary)
+        recent_misses = await asyncio.to_thread(pls.get_recent_error_misses, 15)
+        return {"status": "success", "summary": summary, "recent_misses": recent_misses}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@api_router.get("/quant/rank-ic")
+async def get_quant_rank_ic_endpoint():
+    """Returns rolling Spearman Rank IC health, ICIR, and Pruning/Promotion status across all factors (`Phase A2`)."""
+    try:
+        import self_learning_service as sls
+        data = await asyncio.to_thread(sls.get_factor_rank_ic_report)
+        return data
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@api_router.get("/quant/shap-memory")
+async def get_quant_shap_memory_endpoint():
+    """Returns the cached ternary failure vectors from Phase A3 SHAP memory."""
+    try:
+        import shap_memory_service as sms
+        if os.path.exists(sms.CACHE_PATH):
+            with open(sms.CACHE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        else:
+            return await asyncio.to_thread(sms.build_shap_failure_memory_cache)
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@api_router.post("/quant/shap-memory/rebuild")
+async def rebuild_quant_shap_memory_endpoint():
+    """Rebuilds the SHAP failure memory cache from latest SETTLED MODEL_MISS ledger entries."""
+    try:
+        import shap_memory_service as sms
+        res = await asyncio.to_thread(sms.build_shap_failure_memory_cache)
+        return res
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@api_router.get("/quant/calibration")
+async def get_quant_calibration_endpoint(score: float = 75.0):
+    """Returns Phase B Isotonic calibration status for a given candidate alpha score."""
+    try:
+        import isotonic_calibrator_service as ics
+        res = await asyncio.to_thread(ics.calibrate_alpha_score, score)
+        return res
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def _auto_log_daily_rankings_to_ledger():
+    import prediction_ledger_service as pls
+    import json
+    rank_path = os.path.join(ROOT_DIR, "data", "latest_nse_rankings.json")
+    if os.path.exists(rank_path):
+        try:
+            with open(rank_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            top_buys = data.get("top_buys", [])[:15]
+            for pick in top_buys:
+                sym = pick.get("symbol")
+                pred = float(pick.get("pred_return_10d_pct", 0.0))
+                score = pred * 10.0 + 50.0
+                feats = {"roc_20": pick.get("momentum_20d_pct", 0.0), "zscore_20": pick.get("zscore", 0.0), "v_surge": pick.get("volume_surge", 1.0)}
+                if sym:
+                    pls.log_prediction(symbol=sym, target_horizon_days=10, predicted_return_pct=pred, raw_alpha_score=score, features=feats)
+            logger.info(f"Auto-logged {len(top_buys)} daily top picks from latest rankings into prediction ledger as PENDING.")
+        except Exception as e:
+            logger.warning(f"Error auto-logging daily rankings: {e}")
+
+
+@api_router.post("/quant/self-learning/run-cycle")
+async def run_quant_reality_check_cycle_endpoint():
+    """Triggers immediate manual execution of Phase A1 -> A2 -> A3 reality check loop."""
+    try:
+        import prediction_ledger_service as pls
+        import self_learning_service as sls
+        import shap_memory_service as sms
+        await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
+        await asyncio.to_thread(pls.evaluate_pending_predictions)
+        await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
+        await asyncio.to_thread(sms.build_shap_failure_memory_cache)
+        return {"status": "success", "message": "Quant Reality Check Cycle executed across Phase A1, A2, and A3."}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1069,6 +1177,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+async def _daily_quant_reality_check_loop():
+    """Background task running daily at 3:45 PM IST (or overnight) to settle predictions, prune factors, and update SHAP memory."""
+    import prediction_ledger_service as pls
+    import self_learning_service as sls
+    import shap_memory_service as sms
+    logger.info("Starting Daily Quant Reality Check background scheduler loop...")
+    while True:
+        try:
+            logger.info("Executing automated daily Quant Reality Check (Phase A1 -> A2 -> A3)...")
+            await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
+            await asyncio.to_thread(pls.evaluate_pending_predictions)
+            await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
+            await asyncio.to_thread(sms.build_shap_failure_memory_cache)
+            logger.info("Completed automated daily Quant Reality Check. Next run scheduled in 12 hours.")
+            await asyncio.sleep(43200)  # Sleep 12 hours between automated checks
+        except Exception as e:
+            logger.error(f"Error in daily quant reality check loop: {e}")
+            await asyncio.sleep(3600)  # Retry in 1 hour on error
+
+
+@app.on_event("startup")
+async def startup_quant_scheduler():
+    asyncio.create_task(_daily_quant_reality_check_loop())
 
 
 @app.on_event("shutdown")

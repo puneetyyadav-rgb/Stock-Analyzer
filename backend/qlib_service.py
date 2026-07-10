@@ -136,6 +136,36 @@ def calculate_qlib_alpha_factors(df: pd.DataFrame) -> Dict[str, Any]:
         2
     ))
 
+    # Phase A3: Check Pre-Trade SHAP Failure Memory Fingerprints (<0.2ms check)
+    shap_memory_risk = {"risk_warning_active": False, "confidence_discount_pct": 0.0, "max_similarity_pct": 0.0, "warning_message": None}
+    try:
+        import shap_memory_service as sms
+        factor_inputs = {
+            "roc_20": latest_roc20,
+            "roc_5": latest_roc5,
+            "realized_vol_20": latest_vol20,
+            "z_score_20": latest_zscore,
+            "volume_surge_ratio": latest_vsurge,
+            "pvt_20": latest_pvt
+        }
+        # Identify quick volatility regime from realized vol
+        current_regime = "High_Vol" if latest_vol20 > 25.0 else ("Low_Vol" if latest_vol20 < 12.0 else "Normal_Vol")
+        shap_memory_risk = sms.check_pretrade_memory_risk(factor_inputs, current_regime)
+        if shap_memory_risk.get("risk_warning_active"):
+            discount = float(shap_memory_risk.get("confidence_discount_pct", 15.0))
+            composite_ai_score = float(np.round(composite_ai_score * (1.0 - (discount / 100.0)), 2))
+            logger.warning(f"[{symbol}] Applied -{discount}% Pre-Trade SHAP Failure Memory discount -> new score: {composite_ai_score}")
+    except Exception as ex:
+        logger.warning(f"Error executing SHAP memory risk check: {ex}")
+
+    # Phase B: Isotonic Probability Calibration against SETTLED OOS Ledger (N >= 50 threshold)
+    calibration_data = {"calibrated": False, "status_badge": "Collecting OOS Truth", "sample_count": 0, "threshold_required": 50}
+    try:
+        import isotonic_calibrator_service as ics
+        calibration_data = ics.calibrate_alpha_score(composite_ai_score)
+    except Exception as ex:
+        logger.warning(f"Error executing Isotonic score calibration: {ex}")
+
     # Determine AI Signal Recommendation
     if composite_ai_score >= 68.0:
         signal_label = "STRONG BUY (Bullish Quant Alpha)"
@@ -200,7 +230,9 @@ def calculate_qlib_alpha_factors(df: pd.DataFrame) -> Dict[str, Any]:
             {"factor": "Volume Flow Dynamics (Alpha PVT)", "weight_pct": 20, "contribution_score": np.round(vol_flow_score * 0.20, 1)},
             {"factor": "Volatility Quality & Spread", "weight_pct": 20, "contribution_score": np.round(vol_quality_score * 0.20, 1)}
         ],
-        "history_60d": history_series
+        "history_60d": history_series,
+        "shap_memory_risk": shap_memory_risk,
+        "calibration": calibration_data
     }
 
 
@@ -239,4 +271,18 @@ def get_qlib_alpha_prediction(symbol: str, lookback_days: int = 500) -> Dict[str
     }
 
     _QLIB_CACHE[cache_key] = (time.time(), payload)
+
+    # Automatically deposit live prediction into the Phase A1 Closed-Loop Ledger
+    try:
+        import prediction_ledger_service as pls
+        pls.log_prediction(
+            symbol=clean_sym,
+            target_horizon_days=10,
+            predicted_return_pct=float(alpha_results.get("forecast_horizon_returns", {}).get("5D_pct", 0.0)),
+            raw_alpha_score=float(alpha_results.get("composite_ai_score", 50.0)),
+            features=alpha_results.get("factors", {})
+        )
+    except Exception as ex:
+        logger.debug(f"Could not auto-log prediction to ledger for {clean_sym}: {ex}")
+
     return payload
