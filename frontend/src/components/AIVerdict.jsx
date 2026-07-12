@@ -29,10 +29,18 @@ export default function AIVerdict({ symbol }) {
   const [history, setHistory] = useState(null);
 
   useEffect(() => {
-    setVerdict(null);
     setErr(null);
     setHistory(null);
     getVerdictHistory(symbol).then(setHistory).catch(() => {});
+    if (!symbol) return;
+    const cached = localStorage.getItem(`aiVerdict_${symbol}`);
+    if (cached) {
+      try {
+        setVerdict(JSON.parse(cached));
+        return;
+      } catch (e) {}
+    }
+    setVerdict(null);
   }, [symbol]);
 
   const run = async () => {
@@ -40,8 +48,14 @@ export default function AIVerdict({ symbol }) {
     setErr(null);
     try {
       const r = await getAIVerdict(symbol);
-      if (r.error) setErr(r.error);
-      else setVerdict(r);
+      if (r.error) {
+        setErr(r.error);
+      } else {
+        setVerdict(r);
+        try {
+          localStorage.setItem(`aiVerdict_${symbol}`, JSON.stringify(r));
+        } catch (e) {}
+      }
     } catch (e) {
       setErr(e.message || "Failed");
     } finally {

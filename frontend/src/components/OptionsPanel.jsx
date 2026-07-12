@@ -13,7 +13,16 @@ export default function OptionsPanel({ symbol }) {
   useEffect(() => {
     if (!symbol) return;
     setData(null);
-    setAnalysis(null);
+    const cachedOpt = localStorage.getItem(`optionsAnalysis_${symbol}`);
+    if (cachedOpt) {
+      try {
+        setAnalysis(JSON.parse(cachedOpt));
+      } catch (e) {
+        setAnalysis(null);
+      }
+    } else {
+      setAnalysis(null);
+    }
     axios.get(`${API}/stock/${symbol}/options`).then((r) => setData(r.data)).catch(() => setData({ available: false }));
   }, [symbol]);
 
@@ -24,6 +33,9 @@ export default function OptionsPanel({ symbol }) {
     try {
       const res = await axios.post(`${API}/stock/${symbol}/analyze-options`, data);
       setAnalysis(res.data);
+      try {
+        localStorage.setItem(`optionsAnalysis_${symbol}`, JSON.stringify(res.data));
+      } catch (e) {}
     } catch (e) {
       setAnalysis({ error: "Analysis failed" });
     }

@@ -4,8 +4,10 @@ if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Body
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv()  # also check root .env as fallback
 
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -48,24 +50,71 @@ api_router = APIRouter(prefix="/api")
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-# Simple in-memory cache to avoid hammering data sources
+# Simple in-memory + persistent disk cache to ensure analyses never disappear across refreshes
 _CACHE: dict = {}
 _CACHE_TTL = 60  # seconds
+_DISK_CACHE_FILE = None
 
+def _disk_cache_path():
+    global _DISK_CACHE_FILE
+    if _DISK_CACHE_FILE is None:
+        import os
+        base = os.path.join(os.path.dirname(__file__), "..", "data")
+        os.makedirs(base, exist_ok=True)
+        _DISK_CACHE_FILE = os.path.join(base, "server_analysis_cache.json")
+    return _DISK_CACHE_FILE
 
 def _cache_get(key: str, custom_ttl: float = None):
     item = _CACHE.get(key)
-    if not item:
-        return None
-    ts, val = item
-    ttl = custom_ttl if custom_ttl is not None else _CACHE_TTL
-    if (datetime.now(timezone.utc) - ts).total_seconds() > ttl:
-        return None
-    return val
+    now = datetime.now(timezone.utc)
+    # If in memory check first
+    if item:
+        ts, val = item
+        ttl = custom_ttl if custom_ttl is not None else _CACHE_TTL
+        if (now - ts).total_seconds() <= ttl:
+            return val
+
+    # If key is an AI analysis or expensive query, check persistent disk cache (default 24h TTL)
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict")):
+        import json, os, time
+        try:
+            path = _disk_cache_path()
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    store = json.load(f)
+                entry = store.get(key)
+                if entry:
+                    ts_disk = entry.get("ts", 0)
+                    disk_ttl = custom_ttl if custom_ttl is not None else 86400  # 24 hours default for AI
+                    if time.time() - ts_disk <= disk_ttl:
+                        val = entry.get("val")
+                        _CACHE[key] = (now, val)
+                        return val
+        except Exception:
+            pass
+    return None
 
 
 def _cache_set(key: str, val):
     _CACHE[key] = (datetime.now(timezone.utc), val)
+    # If key is an AI analysis or expensive query, persist to disk cache
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict")):
+        import json, os, time
+        try:
+            path = _disk_cache_path()
+            store = {}
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        store = json.load(f)
+                except Exception:
+                    store = {}
+            store[key] = {"val": val, "ts": time.time()}
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(store, f)
+        except Exception:
+            pass
+
 
 
 def _items_list(value):
@@ -302,10 +351,30 @@ async def ai_ratios(symbol: str, force: bool = False, pdf_data: dict = Body(None
         "screener": screener_data,
         "peers": peers_data
     }
-    
+
     if pdf_data:
         payload["pdf_extracted_data"] = pdf_data
-    
+
+        # ── T4 PDF SOURCE-LOCK OVERRIDE ───────────────────────────────────────
+        # If the uploaded PDF already contains an extracted competitor comparison
+        # grid (set by extract_ratios_from_source), replace the generic Yahoo peers
+        # completely so the AI is benchmarked ONLY against the document's own peers
+        # (e.g. Apex Frozen Foods / Waterbase from an Avanti Feeds analyst report),
+        # not against HUL / Nestle from the broad sector bucket.
+        pdf_competitors = (pdf_data.get("competitor_comparison") or {}).get("companies") or []
+        if pdf_competitors:
+            payload["peers"] = {
+                "source": "T4_PDF_EXTRACTED",
+                "notice": (
+                    "STRICT SOURCE-LOCK: This peer comparison was extracted directly from the "
+                    "uploaded analyst/annual report PDF. You MUST evaluate valuation, margins, "
+                    "and growth EXCLUSIVELY against these document-sourced peers. "
+                    "Ignore any generic sector benchmarks you may infer from company names."
+                ),
+                "companies": pdf_competitors,
+            }
+
+
     import ai_service as ais
     data = await ais.generate_ratio_analysis(payload)
     if data and "error" not in data:

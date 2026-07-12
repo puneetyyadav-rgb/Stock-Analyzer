@@ -177,6 +177,13 @@ def get_chart(symbol: str, period: str = "1y") -> dict:
     interval = intervals.get(period, "1d")
     try:
         df = yf.Ticker(sym).history(period=period, interval=interval, auto_adjust=True)
+        if (df.empty or len(df) < 20) and sym.endswith(".BO"):
+            nse_proxy = sym[:-3] + ".NS"
+            logger.info(f"get_chart: {sym} has insufficient data ({len(df)} rows). Falling back to {nse_proxy}...")
+            df_nse = yf.Ticker(nse_proxy).history(period=period, interval=interval, auto_adjust=True)
+            if not df_nse.empty and len(df_nse) >= 15:
+                df = df_nse
+                
         if df.empty:
             return {"symbol": sym, "period": period, "data": []}
         df = df.reset_index()
@@ -273,6 +280,13 @@ def compute_technicals(symbol: str) -> dict:
         # auto_adjust=False → raw Close (price levels a trader compares to the broker chart) PLUS
         # Adj Close (total-return series) so split/dividend jumps don't distort return-based stats.
         df = yf.Ticker(sym).history(period="1y", interval="1d", auto_adjust=False)
+        if (df.empty or len(df) < 30) and sym.endswith(".BO"):
+            nse_proxy = sym[:-3] + ".NS"
+            logger.info(f"compute_technicals: {sym} has insufficient data ({len(df)} rows). Falling back to {nse_proxy}...")
+            df_nse = yf.Ticker(nse_proxy).history(period="1y", interval="1d", auto_adjust=False)
+            if not df_nse.empty and len(df_nse) >= 30:
+                df = df_nse
+                
         if df.empty or len(df) < 30:
             return {}
         df = df.dropna(subset=["Close"])

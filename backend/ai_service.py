@@ -13,6 +13,14 @@ from google.genai import types
 logger = logging.getLogger(__name__)
 INDIA_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
+from pathlib import Path
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+    load_dotenv(override=True)
+except Exception:
+    pass
+
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 def get_gemini_client():
@@ -22,6 +30,7 @@ def get_gemini_client():
 def _has_any_ai_key() -> bool:
     try:
         from dotenv import load_dotenv
+        load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
         load_dotenv(override=True)
     except Exception:
         pass
@@ -41,7 +50,7 @@ def _call_groq_fallback(prompt: str) -> str:
             base_url="https://api.groq.com/openai/v1",
             api_key=groq_key
         )
-        models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+        models = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "qwen-2.5-32b", "llama-3.1-8b-instant", "gemma2-9b-it"]
         for model in models:
             try:
                 logger.info(f"Attempting Groq fallback using model: {model}")
@@ -203,11 +212,12 @@ THE FOUR DESKS (data for each provided below):
 1. FUNDAMENTALS — financials, valuation, governance, promoter pledging, macro/sector context
 2. NEWS & SENTIMENT — official headlines, legal filings vs retail Twitter/FinTwit sentiment
 3. TECHNICAL — trend regime, relative strength vs Nifty 50, candlestick patterns, RSI/MACD
-4. QUANTITATIVE — Monte Carlo median forecast, confidence band, sector ranking
+4. QUANTITATIVE — Monte Carlo median forecast, Asymmetric Beta coupling (upside β+ vs downside β-), Cholesky 95% CVaR tail-risk across 7 global macro drivers, walk-forward MAPE accuracy, and 30-day macro-adjusted target
 
 STEP 1: THE 9-FACTOR ASSESSMENT
 Before writing your synthesis, you MUST systematically assess the stock across these 9 specific categories to establish your base facts.
-CRITICAL GUARDRAIL: Base every single 9-factor assessment STRICTLY on the JSON payload provided. If the payload contains no official data for a specific factor (e.g. Global Shocks or Trade Data), you MUST state "No data available" instead of guessing or inventing an assessment.
+CRITICAL QUANTITATIVE RULE: For "globalShocks" and "macroeconomic", explicitly evaluate the Quantitative desk's macroCoupledMetrics: Asymmetric Beta (if downsideBeta > upsideBeta, highlight downside tail vulnerability during macro sell-offs; if upsideBeta > downsideBeta, highlight upside capture), and state the exact Cholesky 95% Expected Shortfall (CVaR) across Crude Oil, USD/INR, Gold, and India VIX.
+CRITICAL GUARDRAIL: Base every single 9-factor assessment STRICTLY on the JSON payload provided. If the payload contains no official data for a specific factor (e.g. Trade Data), you MUST state "No data available" instead of guessing or inventing an assessment.
 
 STEP 2: THE CENTRAL QUESTION (Master Synthesis)
 Does the market's current price ALREADY reflect what Fundamentals/News suggest — or is there a lag? Specifically:
@@ -547,26 +557,31 @@ async def generate_verdict(stock_data: dict, macro_data: dict) -> dict:
     tech_prompt = (
         f"You are an elite Chartered Market Technician (CMT) Desk Analyst specializing in Indian F&O and Bhavcopy delivery analysis.\n"
         f"Review this technical payload for {overview.get('symbol')}:\n```json\n{json.dumps(tech_data, default=str)}\n```\n"
+        f"CRITICAL INSTRUCTION: Check moving average alignment (SMA 20/50/200), RSI momentum, and relative trend regime vs Nifty. Note: Even if raw technical indicators are partially missing for BSE (.BO) tickers, use available price action or regime data to form a definitive directional bias rather than saying insufficient data whenever possible.\n"
         f"Output STRICT JSON with:\n{{\n"
         f"  \"bias\": \"Bullish\" | \"Bearish\" | \"Neutral\",\n"
         f"  \"dataSufficient\": true | false,\n"
-        f"  \"keyFact\": \"single most critical trend regime, delivery accumulation %, or breakout level\",\n"
-        f"  \"executiveSummary\": \"2-3 plain-text sentences evaluating multi-timeframe moving averages and Bhavcopy institutional delivery %\",\n"
+        f"  \"keyFact\": \"single most critical trend regime, moving average alignment, or RSI breakout level\",\n"
+        f"  \"executiveSummary\": \"2-3 plain-text sentences evaluating multi-timeframe moving averages, trend momentum, and flow conviction\",\n"
         f"  \"nineFactorReads\": {{\n"
-        f"    \"technicalAndMarket\": \"1-2 sentences on price action and flow conviction.\"\n"
+        f"    \"technicalAndMarket\": \"1-2 sentences on price action and flow conviction. State 'No data available' if missing.\"\n"
         f"  }}\n}}"
     )
 
     quant_prompt = (
         f"You are an institutional Quantitative & ML Desk Analyst.\n"
         f"Review this quantitative ML forecast payload for {overview.get('symbol')}:\n```json\n{json.dumps(quant_data, default=str)}\n```\n"
+        f"CRITICAL INSTRUCTIONS:\n"
+        f"1. Check `ml_forecast.macroCoupledMetrics`: Evaluate `upsideBeta` vs `downsideBeta`. If downsideBeta > upsideBeta, explicitly diagnose asymmetric downside tail amplification when macro drivers fall. If upsideBeta > downsideBeta, diagnose defensive upside capture.\n"
+        f"2. Cite the exact `choleskyCVaR95` (Expected Shortfall) and `macroExpectedMovePct` derived from the 10,000-path Cholesky Global Macro Simulation Engine across Crude Oil, USD/INR, Gold, VIX, and US 10Y Yield.\n"
+        f"3. Evaluate walk-forward backtest reliability (`backtestAccuracy` and `mape`) along with `trendSignal` (`projected30D`).\n"
         f"Output STRICT JSON with:\n{{\n"
         f"  \"bias\": \"Bullish\" | \"Bearish\" | \"Neutral\",\n"
         f"  \"dataSufficient\": true | false,\n"
-        f"  \"keyFact\": \"Monte Carlo median target and confidence distribution read\",\n"
-        f"  \"executiveSummary\": \"1-2 plain-text sentences interpreting ML forecast probabilities\",\n"
+        f"  \"keyFact\": \"Asymmetric Beta (β+ vs β-), exact Cholesky 95% CVaR, and 30-day macro-coupled target price\",\n"
+        f"  \"executiveSummary\": \"2-3 plain-text sentences synthesizing walk-forward accuracy (`backtestAccuracy`), macro-coupled expected drift (`macroExpectedMovePct`), and asymmetric tail-risk coupling (`choleskyCVaR95`)\",\n"
         f"  \"nineFactorReads\": {{\n"
-        f"    \"globalShocks\": \"1-2 sentences on implied volatility risk. 'No data available' if missing.\"\n"
+        f"    \"globalShocks\": \"2 sentences explaining how Asymmetric Beta (β+={quant_data.get('ml_forecast', {}).get('macroCoupledMetrics', {}).get('upsideBeta', 'N/A')} vs β-={quant_data.get('ml_forecast', {}).get('macroCoupledMetrics', {}).get('downsideBeta', 'N/A')}) and Cholesky 95% CVaR ({quant_data.get('ml_forecast', {}).get('macroCoupledMetrics', {}).get('choleskyCVaR95', 'N/A')}%) impact downside vulnerability during global shocks. State 'No data available' if missing.\"\n"
         f"  }}\n}}"
     )
 
@@ -650,12 +665,75 @@ Tickertape: {json.dumps(tickertape, default=str)}
         return {"error": str(e)}
 
 
+def _distill_financial_text_for_extraction(text: str, max_chars: int = 15000) -> str:
+    """Zero-compromise financial distillation: preserves executive summary AND high-density ratio/peer tables across large PDFs within max_chars."""
+    if not text or len(text) <= max_chars:
+        return text
+    
+    # Always preserve the first 3000 chars (Executive Summary / Header / Overview)
+    header_chunk = text[:3000]
+    remaining_text = text[3000:]
+    remaining_budget = max_chars - len(header_chunk)
+    
+    if remaining_budget <= 0:
+        return header_chunk[:max_chars]
+        
+    # Chunk the remaining text into 1000-char segments
+    chunk_size = 1000
+    chunks = [remaining_text[i:i + chunk_size] for i in range(0, len(remaining_text), chunk_size)]
+    
+    keywords = [
+        "ratio", "peer", "competitor", "comparison", "p/e", "pe", "ebitda", "roe", "roce",
+        "margin", "table", "target price", "pat", "eps", "valuation", "income", "balance",
+        "debt", "cagr", "multiple", "ev/ebitda", "crore", "mn", "bn"
+    ]
+    
+    scored_chunks = []
+    for idx, chunk in enumerate(chunks):
+        lower_chunk = chunk.lower()
+        score = sum(lower_chunk.count(kw) for kw in keywords)
+        # Bonus for tabular / pipe density or numeric layout
+        score += chunk.count("|") * 3
+        score += sum(1 for c in chunk if c.isdigit()) * 0.1
+        scored_chunks.append((score, idx, chunk))
+        
+    # Sort by descending score to prioritize rich financial/peer comparison sections
+    scored_chunks.sort(key=lambda x: x[0], reverse=True)
+    
+    selected = []
+    current_len = 0
+    for score, idx, chunk in scored_chunks:
+        if current_len + len(chunk) <= remaining_budget:
+            selected.append((idx, chunk))
+            current_len += len(chunk)
+            
+    # Sort selected back by original index so reading flow is natural
+    selected.sort(key=lambda x: x[0])
+    distilled_body = "".join([c[1] for c in selected])
+    
+    # If we still have budget left, fill with unselected chunks sequentially
+    if current_len < remaining_budget:
+        selected_indices = set(c[0] for c in selected)
+        for idx, chunk in enumerate(chunks):
+            if idx not in selected_indices:
+                if current_len + len(chunk) <= remaining_budget:
+                    distilled_body += chunk
+                    current_len += len(chunk)
+                else:
+                    needed = int(remaining_budget - current_len)
+                    if needed > 0:
+                        distilled_body += chunk[:needed]
+                    break
+                    
+    return header_chunk + distilled_body
+
+
 async def extract_ratios_from_source(text: str) -> dict:
     """Intelligently parse source material text to extract ratios and competitor comparisons in ONE call to save quota."""
     import time
     
-    # Take up to 15,000 characters (roughly 3,500 tokens) to guarantee it fits both Gemini and Groq TPM limits
-    truncated_text = text[:15000]
+    # Take up to 15,000 characters via zero-compromise distillation (ensures all peer/ratio tables across large PDFs are captured)
+    truncated_text = _distill_financial_text_for_extraction(text, max_chars=15000)
 
     merged_result = {
         "company_ratios": [],
@@ -737,12 +815,14 @@ DATA YOU WILL RECEIVE:
 - Historical values for this stock's own ratios (e.g. last few years), if provided
 
 GROUNDING RULES — do not violate these:
+- PEER SOURCE-LOCK (T4): If the data payload contains "peers" with "source": "T4_PDF_EXTRACTED", you MUST evaluate this stock EXCLUSIVELY against the companies listed in peers["companies"]. These peers were extracted directly from the user's uploaded analyst or annual report PDF. Do NOT reference or compare against any company not listed in that peer set. Do NOT infer alternative peers from the company name, sector, or your training knowledge.
 - Use ONLY the ratios and peer data actually provided. Do not estimate or recall a ratio you weren't given — mark it "N/A" in dataCompleteness instead.
 - Never compare a ratio against a fixed universal "good/bad" number. Always compare against the provided sector/peer data. If no peer data is provided for a given ratio, say so explicitly rather than falling back to a generic rule of thumb.
 - Read ratios in combination, not isolation — this is the entire point of your job. A single ratio stated alone is not analysis.
 - Plain text only — no markdown, no asterisks.
 - No "Buy/Sell" instruction. Output a view and reasoning, not a directive.
 - Qualitative confidence only (High/Medium/Low) — never invent a specific target price or exact percentage upside/downside.
+
 
 HOW TO READ RATIOS IN COMBINATION (apply these checks wherever the underlying data is available; skip silently if the needed ratios for a given check are missing):
 1. RETURNS vs. LEVERAGE: A high ROE/ROCE alongside high debt-to-equity often means returns are leverage-amplified, not purely operational quality. Flag this combination explicitly — don't credit "strong ROE" without checking what's funding it.

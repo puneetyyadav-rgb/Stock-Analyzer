@@ -125,3 +125,6 @@ backend/bhavcopy/
 bhavcopy/
 
 
+
+data/
+*.cache

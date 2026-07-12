@@ -10,6 +10,23 @@ export default function AIRatioAnalysisPanel({ symbol, pdfData }) {
   const [err, setErr] = useState(null);
   const [started, setStarted] = useState(false);
 
+  useEffect(() => {
+    if (!symbol) return;
+    const cached = localStorage.getItem(`aiRatios_${symbol}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setData(parsed);
+        setStarted(true);
+        setErr(null);
+        return;
+      } catch (e) {}
+    }
+    setData(null);
+    setStarted(false);
+    setErr(null);
+  }, [symbol]);
+
   const fetchData = async (force = false) => {
     if (!symbol) return;
     setStarted(true);
@@ -21,6 +38,9 @@ export default function AIRatioAnalysisPanel({ symbol, pdfData }) {
         setErr(result.error);
       } else {
         setData(result);
+        try {
+          localStorage.setItem(`aiRatios_${symbol}`, JSON.stringify(result));
+        } catch (e) {}
       }
     } catch (e) {
       setErr(e.response?.data?.detail || e.message || "Failed to generate AI Ratio Analysis");
@@ -28,9 +48,6 @@ export default function AIRatioAnalysisPanel({ symbol, pdfData }) {
       setLoading(false);
     }
   };
-
-  // Removed useEffect auto-fetch to prevent rate limits
-  // Analysis only starts when user clicks the button
 
   const handleRefresh = () => {
     fetchData(true);

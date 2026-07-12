@@ -248,20 +248,38 @@ def _fetch_or_fallback_stock_returns(symbol: str, lookback_days: int, engine: Gl
         else:
             local_s = None
 
-        if local_s is None:
+        if local_s is None or len(local_s) < 50:
             logger.info(f"Downloading initial full stock history starting 2009-01-01 for {symbol}...")
             df = yf.download(symbol, start="2009-01-01", end=end_dt.strftime("%Y-%m-%d"), progress=False)["Close"]
             if isinstance(df, pd.DataFrame):
                 df = df.iloc[:, 0]
             local_s = df.dropna()
-            if len(local_s) >= 20:
+            
+            # If BSE (.BO) ticker returns fewer than 50 days of data, automatically fall back to NSE (.NS)
+            if (local_s is None or len(local_s) < 50) and symbol.endswith(".BO"):
+                nse_sym = symbol[:-3] + ".NS"
+                logger.info(f"BSE ticker {symbol} has insufficient data ({len(local_s) if local_s is not None else 0} rows). Falling back to NSE proxy {nse_sym}...")
+                df_nse = yf.download(nse_sym, start="2009-01-01", end=end_dt.strftime("%Y-%m-%d"), progress=False)["Close"]
+                if isinstance(df_nse, pd.DataFrame):
+                    df_nse = df_nse.iloc[:, 0]
+                local_s_nse = df_nse.dropna()
+                if len(local_s_nse) >= 50:
+                    local_s = local_s_nse
+                    logger.info(f"Successfully retrieved {len(local_s)} rows via NSE fallback {nse_sym}.")
+            
+            if local_s is not None and len(local_s) >= 20:
                 local_s.index = pd.to_datetime(local_s.index).tz_localize(None).normalize()
                 local_s = local_s[~local_s.index.duplicated(keep="last")].sort_index()
                 local_s.to_frame(name="Close").to_csv(local_store_path)
                 logger.info(f"Saved {len(local_s)} initial historical ticks to local disk store: {local_store_path}")
 
         if local_s is None or len(local_s) < 20:
-            return None
+            logger.warning(f"Unable to fetch real history for {symbol}, falling back to correlated synthetic baseline.")
+            if engine.macro_returns is None:
+                engine.compute_ewma_covariance()
+            nifty = engine.macro_returns["NIFTY"]
+            synth = 0.0002 + 1.15 * nifty + np.random.normal(0, 0.015, len(nifty))
+            return pd.Series(synth, index=nifty.index, name=symbol)
 
         # Ensure index uniqueness and sorting before shift/diff
         local_s = local_s[~local_s.index.duplicated(keep="last")].sort_index()

@@ -14,7 +14,16 @@ export default function ConcallsPanel({ symbol }) {
   useEffect(() => {
     if (!symbol) return;
     setItems(null);
-    setSummaries({});
+    const cachedSums = localStorage.getItem(`concallSummaries_${symbol}`);
+    if (cachedSums) {
+      try {
+        setSummaries(JSON.parse(cachedSums));
+      } catch (e) {
+        setSummaries({});
+      }
+    } else {
+      setSummaries({});
+    }
     axios.get(`${API}/stock/${symbol}/concalls`)
       .then((r) => setItems(r.data.items || []))
       .catch(() => setItems([]));
@@ -28,7 +37,13 @@ export default function ConcallsPanel({ symbol }) {
         transcriptUrl: item.transcript,
         date: item.date,
       }, { timeout: 90000 });
-      setSummaries((s) => ({ ...s, [item.transcript]: r.data }));
+      setSummaries((s) => {
+        const next = { ...s, [item.transcript]: r.data };
+        try {
+          localStorage.setItem(`concallSummaries_${symbol}`, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
     } catch (e) {
       setSummaries((s) => ({ ...s, [item.transcript]: { error: e.response?.data?.detail || e.message || "Failed" } }));
     } finally {
