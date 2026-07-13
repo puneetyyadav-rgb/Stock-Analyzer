@@ -349,6 +349,19 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
     setLoading(true);
     setError(null);
     try {
+      // If forceRefresh, trigger the full self-learning cycle first (downloads fresh prices, retrains, re-ranks)
+      if (forceRefresh) {
+        try {
+          await client.post("/quant/self-learning/run-cycle", null, { timeout: 900000 });
+        } catch (cycleErr) {
+          try {
+            await fetch("http://localhost:8000/api/quant/self-learning/run-cycle", { method: "POST", signal: AbortSignal.timeout(900000) });
+          } catch (cycleErr2) {
+            console.warn("Self-learning run-cycle fallback also failed:", cycleErr2);
+          }
+        }
+      }
+
       // Fetch rankings
       let rData = null;
       try {
@@ -393,7 +406,18 @@ export default function QlibAlphaLeaderboardPanel({ onSelectStock }) {
   };
 
   useEffect(() => {
-    fetchAllData();
+    fetchAllData().then(() => {
+      // Auto-detect staleness: if data is older than 18 hours, trigger a fresh self-learning cycle
+      const lastUpdated = rankingsData?.updated_at || diagnosticsData?.timestamp;
+      if (lastUpdated) {
+        const ageMs = Date.now() - new Date(lastUpdated).getTime();
+        const EIGHTEEN_HOURS = 18 * 60 * 60 * 1000;
+        if (ageMs > EIGHTEEN_HOURS) {
+          console.info(`Meta-learning data is ${Math.round(ageMs / 3600000)}h stale. Auto-triggering fresh self-learning cycle...`);
+          fetchAllData(true);
+        }
+      }
+    });
   }, []);
 
   const toggleExpand = (sym) => {

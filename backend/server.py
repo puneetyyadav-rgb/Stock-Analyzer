@@ -1356,13 +1356,31 @@ async def _daily_quant_reality_check_loop():
     from datetime import datetime, timedelta
 
     logger.info("Starting Daily Quant Reality Check background scheduler loop...")
-    # Perform initial warm check on boot
+    # Perform initial warm check on boot — if data is stale (>18h), do a FULL universe refresh + retrain
     try:
-        logger.info("Performing initial warm check of prediction ledger and factor decay on startup...")
+        weights_path = os.path.join(ROOT_DIR, "data", "meta_factor_weights.json")
+        is_stale = True
+        if os.path.exists(weights_path):
+            try:
+                with open(weights_path, "r", encoding="utf-8") as f:
+                    mw = json.load(f)
+                last_upd = mw.get("updated_at")
+                if last_upd:
+                    age_hours = (datetime.now() - datetime.fromisoformat(last_upd)).total_seconds() / 3600
+                    is_stale = age_hours > 18
+                    logger.info(f"Meta-learning data age: {age_hours:.1f}h — {'STALE, triggering full refresh' if is_stale else 'FRESH, warm check only'}.")
+            except Exception:
+                pass
+
+        if is_stale:
+            logger.info("Data is stale (>18h). Running full universe refresh + self-learning cycle on startup...")
+            await asyncio.to_thread(tnq.run_daily_universe_refresh)
+
         await asyncio.to_thread(_auto_log_daily_rankings_to_ledger)
         await asyncio.to_thread(pls.evaluate_pending_predictions)
         await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
         await asyncio.to_thread(sms.build_shap_failure_memory_cache)
+        logger.info("Startup warm check completed successfully.")
     except Exception as e:
         logger.error(f"Error during initial startup check: {e}")
 
