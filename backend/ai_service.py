@@ -123,7 +123,7 @@ def _execute_ai_call_with_fallback(prompt: str, use_pdf_key: bool = False) -> st
             return _call_groq_fallback(prompt)
         return ""
         
-    client = genai.Client(api_key=key, http_options={'timeout': 60000 if use_pdf_key else 15000})
+    client = genai.Client(api_key=key, http_options={'timeout': 180000})
     try:
         return _call_gemini_with_retry(client, prompt)
     except Exception as e:

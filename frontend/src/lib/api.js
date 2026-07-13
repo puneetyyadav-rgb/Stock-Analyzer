@@ -3,7 +3,7 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
-export const client = axios.create({ baseURL: API, timeout: 180000 });
+export const client = axios.create({ baseURL: API, timeout: 900000 });
 
 export const searchStocks = (q) => client.get(`/search`, { params: { q } }).then((r) => r.data);
 export const getOverview = (sym) => client.get(`/stock/${sym}/overview`).then((r) => r.data);
@@ -53,7 +53,7 @@ export const getGlobalMacroMonteCarlo = async (params = {}, options = {}) => {
         regime_override: params.regime_override || "normal"
       },
       signal: options.signal,
-      timeout: options.timeout ?? 180000
+      timeout: options.timeout ?? 900000
     });
     const data = response.data || {};
     if (!data.status) {
@@ -84,7 +84,7 @@ export const getBetaCoupledSimulation = async (sym, params = {}, options = {}) =
         regime_override: params.regime_override || "normal"
       },
       signal: options.signal,
-      timeout: options.timeout ?? 180000
+      timeout: options.timeout ?? 900000
     });
     const data = response.data || {};
     if (!data.status) {
