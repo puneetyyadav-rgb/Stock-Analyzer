@@ -142,7 +142,7 @@ def generate_self_diagnosis_report(symbol: str, pred_return: float, actual_retur
         else:
             deliv_assessment = "Moderate Institutional Participation (25% - 60% Delivery)"
 
-    if actual_return is not None:
+    if actual_return is not None and not (isinstance(actual_return, float) and (np.isnan(actual_return) or np.isinf(actual_return))):
         error = np.round(actual_return - pred_return, 2)
         if abs(actual_return) > 25.0:
             status = "EXCLUDED ANOMALY (Corporate Split / Capital Adjustment)"
@@ -240,6 +240,8 @@ def run_daily_error_attribution_and_factor_decay() -> dict:
                     c = df["Close"].astype(float)
                     if len(c) >= 25:
                         actual_ret = float(np.round((c.iloc[-1] / c.iloc[-11] - 1.0) * 100.0, 2))
+                        if isinstance(actual_ret, float) and (np.isnan(actual_ret) or np.isinf(actual_ret)):
+                            actual_ret = None
                         
                     # Extract features vector for SHAP
                     # Build quick feature vector approximating current bar
@@ -309,6 +311,19 @@ def run_daily_error_attribution_and_factor_decay() -> dict:
 
     with open(FACTOR_WEIGHTS_PATH, "w") as f:
         json.dump(meta_weights, f, indent=2)
+
+    # Sanitize NaN/Inf values that crash JSON serialization
+    def _sanitize(obj):
+        if isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj)):
+            return None
+        if isinstance(obj, dict):
+            return {k: _sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_sanitize(v) for v in obj]
+        return obj
+
+    diagnostics_log = _sanitize(diagnostics_log)
+    updated_weights = _sanitize(updated_weights)
 
     payload = {
         "timestamp": datetime.now().isoformat(),

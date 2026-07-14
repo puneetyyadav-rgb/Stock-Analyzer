@@ -1143,9 +1143,13 @@ async def get_qlib_diagnostics_endpoint():
     error_log_path = os.path.join(ROOT_DIR, "data", "prediction_error_log.json")
     if os.path.exists(error_log_path):
         try:
-            import json
-            with open(error_log_path, "r") as f:
-                return json.load(f)
+            import json, math
+            with open(error_log_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            # Replace NaN/Infinity literals that Python json.dump may have written
+            content = content.replace(": NaN", ": null").replace(":NaN", ":null")
+            content = content.replace(": Infinity", ": null").replace(": -Infinity", ": null")
+            return json.loads(content)
         except Exception as e:
             pass
     # If not run yet, trigger a fresh check
