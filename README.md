@@ -17,38 +17,38 @@ Moving beyond traditional retail charting and simple technical indicators, this 
 
 ```mermaid
 graph TD
-    subgraph Ingestion [1. Multi-Source Ingestion & Verification Layer]
-        A[yfinance / Kotak Neo API<br/>Daily OHLCV & Market Depth] --> D[Price & Volume Normalization]
-        B[NSE Official Bhavcopy CSV<br/>sec_bhavdata_full_...csv] --> E[True Delivery Quality Ingestion<br/>deliv_per > 60% vs < 25%]
-        C[Concall / Legal / Scraper<br/>2-Year Filings & News] --> F[NLP & Event Extraction]
+    subgraph Ingestion ["1. Multi-Source Ingestion & Verification Layer"]
+        A["yfinance / Kotak Neo API (Daily OHLCV & Market Depth)"] --> D["Price & Volume Normalization"]
+        B["NSE Official Bhavcopy CSV (sec_bhavdata_full.csv)"] --> E["True Delivery Quality Ingestion (deliv_per > 60% vs < 25%)"]
+        C["Concall / Legal / Scraper (2-Year Filings & News)"] --> F["NLP & Event Extraction"]
     end
 
-    subgraph FeatureEng [2. Qlib Alpha158 Feature Engineering & Model Layer]
-        D --> G[Cross-Sectional Alpha158 Features<br/>roc_20, zscore_20, vol_20, v_surge, pvt_20]
+    subgraph FeatureEng ["2. Qlib Alpha158 Feature Engineering & Model Layer"]
+        D --> G["Cross-Sectional Alpha158 Features (roc_20, zscore_20, vol_20, v_surge)"]
         E --> G
-        G --> H[LightGBM Cross-Sectional Ranker<br/>500-Bar Historical Lookback Evaluation]
-        H --> I[193-Stock NSE Universe Leaderboard<br/>Top 15 Buys & Bottom 10 Avoids]
+        G --> H["LightGBM Cross-Sectional Ranker (500-Bar Historical Lookback)"]
+        H --> I["193-Stock NSE Universe Leaderboard (Top 15 Buys & Bottom 10 Avoids)"]
     end
 
-    subgraph Governance [3. Quant Control Lab & Governance Shield]
-        I --> J[Phase A1: Prediction Ledger<br/>Track OOS Win Rate & Alpha Outperformance]
-        I --> K[Phase A2: Rolling Rank IC Monitor<br/>Spearman Correlation & ICIR Factor Decay]
-        I --> L[Phase A3: Ternary SHAP Memory Vector<br/>[-1, 0, +1] Hamming Distance Discounting]
-        I --> M[Phase B: Isotonic Probability Calibrator<br/>Enforces N >= 50 OOS Sample Threshold]
-        I --> N[Phase C: Alpha 24 Institutional Flow<br/>Real-Time FII/DII Absorption Tracking]
+    subgraph Governance ["3. Quant Control Lab & Governance Shield"]
+        I --> J["Phase A1: Prediction Ledger (Track OOS Win Rate & Alpha Outperformance)"]
+        I --> K["Phase A2: Rolling Rank IC Monitor (Spearman Correlation & ICIR Decay)"]
+        I --> L["Phase A3: Ternary SHAP Memory Vector (-1, 0, +1 Hamming Discounting)"]
+        I --> M["Phase B: Isotonic Probability Calibrator (Enforces N >= 50 OOS Sample Threshold)"]
+        I --> N["Phase C: Alpha 24 Institutional Flow (Real-Time FII/DII Absorption Tracking)"]
     end
 
-    subgraph SelfLearning [4. Closed-Loop Meta-Learning & Reality Check]
-        J & K & L & M & N --> O[Daily OOS Reality Check<br/>10-Day Actual vs Predicted Returns]
-        O --> P[Tree-SHAP Splitting Attribution<br/>Extract Bullish Catalysts & Reversion Drags]
-        P --> Q[Error Attribution Log & Factor Rotation<br/>prediction_error_log.json & meta_factor_weights.json]
-        Q -->|Dynamic Weight Adjustments| G
+    subgraph SelfLearning ["4. Closed-Loop Meta-Learning & Reality Check"]
+        J & K & L & M & N --> O["Daily OOS Reality Check (10-Day Actual vs Predicted Returns)"]
+        O --> P["Tree-SHAP Splitting Attribution (Extract Bullish Catalysts & Reversion Drags)"]
+        P --> Q["Error Attribution Log & Factor Rotation (prediction_error_log.json)"]
+        Q -->|"Dynamic Weight Adjustments"| G
     end
 
-    subgraph Frontend [5. Institutional React Dashboard]
-        I & Q --> R[Qlib Alpha Leaderboard & Diagnostics Deck]
-        N & O --> S[Quant Control Lab & Calibration Visualizer]
-        F & G --> T[AI Verdict 4-Desk Synthesis<br/>Gemini 3 Flash Multi-Agent Output]
+    subgraph Frontend ["5. Institutional React Dashboard"]
+        I & Q --> R["Qlib Alpha Leaderboard & Diagnostics Deck"]
+        N & O --> S["Quant Control Lab & Calibration Visualizer"]
+        F & G --> T["AI Verdict 4-Desk Synthesis (Gemini 3 Flash Multi-Agent Output)"]
     end
 ```
 
