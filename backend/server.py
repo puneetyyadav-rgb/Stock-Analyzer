@@ -835,7 +835,7 @@ async def get_results_due_route(days: int = 30, force_refresh: bool = False):
     else:
         logger.info(f"Forced exchange sync triggered for /catalysts/results-due (days={days})")
     import events_service as es
-    result = await asyncio.to_thread(es.get_results_due, days)
+    result = await asyncio.to_thread(es.get_results_due, days, force_refresh)
     try:
         _cache_set(key, result)
     except TypeError:

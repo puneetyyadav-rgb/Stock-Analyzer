@@ -440,7 +440,7 @@ def _get_yf_consensus(clean_sym: str) -> dict:
     return data
 
 
-def get_results_due(days: int = 30) -> dict:
+def get_results_due(days: int = 30, force_refresh: bool = False) -> dict:
     """Builds the institutional 'Results Due' & forthcoming corporate actions tracker:
     1. structured board meetings from NSE /api/event-calendar
     2. filtered & tagged by purpose (Financial Results vs Dividend/Rights/Bonus)
@@ -452,8 +452,10 @@ def get_results_due(days: int = 30) -> dict:
     import factor_service as fs
 
     now_ts = time.time()
-    if _RESULTS_DUE_CACHE["data"] and _RESULTS_DUE_CACHE["days"] == days and (now_ts - _RESULTS_DUE_CACHE["timestamp"] < 600):
+    if not force_refresh and _RESULTS_DUE_CACHE["data"] and _RESULTS_DUE_CACHE["days"] == days and (now_ts - _RESULTS_DUE_CACHE["timestamp"] < 600):
         return _RESULTS_DUE_CACHE["data"]
+    if force_refresh:
+        logger.info(f"Bypassing internal _RESULTS_DUE_CACHE and fetching live from NSE API (days={days})")
 
     today = datetime.now().astimezone().date()
     max_date = today + timedelta(days=days)
