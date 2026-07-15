@@ -1507,7 +1507,22 @@ async def _daily_quant_reality_check_loop():
             await asyncio.to_thread(pls.evaluate_pending_predictions)
             await asyncio.to_thread(sls.run_daily_error_attribution_and_factor_decay)
             await asyncio.to_thread(sms.build_shap_failure_memory_cache)
-            logger.info("Completed locked 3:45 PM IST automated Quant Reality Check successfully.")
+            logger.info("Step 3: Automatically syncing forthcoming exchange board meetings & indexing latest corporate filings...")
+            import events_service as es
+            import catalyst_archive_service as cas
+            try:
+                res_due = await asyncio.to_thread(es.get_results_due, 30)
+                _cache_set("results_due:30", res_due)
+                logger.info(f"Daily automated sync complete: cached {res_due.get('total', 0)} upcoming structured board meetings.")
+            except Exception as ev_err:
+                logger.warning(f"Daily board meeting sync warning: {ev_err}")
+            try:
+                # Automatically scan and backfill top 100 most liquid/active stocks for new disclosures daily
+                await asyncio.to_thread(cas.run_batch_archive, max_stocks=100, download_pdfs=False, universe_filter="all")
+                logger.info("Daily automated corporate announcement archiving loop triggered successfully.")
+            except Exception as cas_err:
+                logger.warning(f"Daily filings archive warning: {cas_err}")
+            logger.info("Completed locked 3:45 PM IST automated Quant Reality Check & Catalyst Scan successfully.")
         except Exception as e:
             logger.error(f"Error in daily 3:45 PM quant reality check loop: {e}")
             await asyncio.sleep(3600)  # Retry in 1 hour on error
