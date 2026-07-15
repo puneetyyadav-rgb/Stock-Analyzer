@@ -138,28 +138,38 @@ function TimeSection({ title, icon, color, events }) {
 }
 
 export default function CatalystRadarPanel() {
-  const [data, setData] = useState(null);
+  const [days, setDays] = useState(30);
+  const [data, setData] = useState(() => {
+    try {
+      const cached = localStorage.getItem(`catalyst_radar_cache_30`);
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [days, setDays] = useState(30);
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
   const [scanProgress, setScanProgress] = useState(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    // Stale-while-revalidate: only show loading spinner if we have no cached data at all
+    if (!data) setLoading(true);
     setError(null);
     try {
       const result = await getCatalystsUpcoming(days);
       setData(result);
+      try {
+        localStorage.setItem(`catalyst_radar_cache_${days}`, JSON.stringify(result));
+      } catch (e) {}
     } catch (err) {
       setError(err.message || "Failed to load catalyst radar");
     } finally {
       setLoading(false);
     }
-  }, [days]);
+  }, [days, data]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
 
   useEffect(() => {
     const pollProgress = async () => {

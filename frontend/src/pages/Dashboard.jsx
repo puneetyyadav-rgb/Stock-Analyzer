@@ -208,7 +208,9 @@ export default function Dashboard() {
           {activeTab === "backtest" && <BacktestPanel />}
           {activeTab === "macro-sim" && <GlobalMacroSimulationPanel symbol={symbol || "RELIANCE"} sector={overview?.sector || "Conglomerate"} />}
           {activeTab === "qlib" && <QlibAlphaLeaderboardPanel onSelectStock={(sym) => { setSymbol(sym); setActiveTab("stock"); }} />}
-          {activeTab === "catalyst-radar" && <CatalystRadarPanel />}
+          <div style={{ display: activeTab === "catalyst-radar" ? "block" : "none" }}>
+            <CatalystRadarPanel />
+          </div>
 
           {activeTab === "stock" && (
             <>
