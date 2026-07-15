@@ -117,3 +117,6 @@ export const getCatalystsUpcoming = (days = 30) =>
 export const runBatchArchive = (maxStocks = 2000, downloadPdfs = false, universeFilter = "all") =>
   client.post(`/catalysts/run-batch-archive`, null, { params: { max_stocks: maxStocks, download_pdfs: downloadPdfs, universe_filter: universeFilter } }).then((r) => r.data);
 
+export const getScanProgress = () =>
+  client.get(`/catalysts/scan-progress`).then((r) => r.data);
+

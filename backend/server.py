@@ -812,6 +812,13 @@ async def run_batch_archive(max_stocks: int = 500, download_pdfs: bool = False, 
     }
 
 
+@api_router.get("/catalysts/scan-progress")
+async def get_scan_progress():
+    """Returns real-time progress of market-wide background announcement archiving."""
+    import catalyst_archive_service as cas
+    return cas.CURRENT_SCAN_PROGRESS
+
+
 
 @api_router.get("/stock/{symbol}/red-flags")
 async def red_flags(symbol: str):

@@ -238,6 +238,18 @@ def get_archived_announcements(
         conn.close()
 
 
+CURRENT_SCAN_PROGRESS = {
+    "is_scanning": False,
+    "current_stock": "",
+    "scanned_count": 0,
+    "total_stocks": 0,
+    "filter_type": "all",
+    "disclosures_found": 0,
+    "catalysts_extracted": 0,
+    "status_msg": "Idle"
+}
+
+
 def archive_nse_universe_batch(
     symbols: Optional[List[str]] = None,
     months_back: int = 3,
@@ -273,7 +285,17 @@ def archive_nse_universe_batch(
     logger.info(f"Starting market-wide corporate announcement archive across {len(symbols)} Indian symbols (filter: {universe_filter})...")
     total_stats = {"stocks_scanned": 0, "fetched": 0, "inserted": 0, "updated": 0, "errors": 0}
 
+    CURRENT_SCAN_PROGRESS["is_scanning"] = True
+    CURRENT_SCAN_PROGRESS["total_stocks"] = len(symbols)
+    CURRENT_SCAN_PROGRESS["scanned_count"] = 0
+    CURRENT_SCAN_PROGRESS["filter_type"] = universe_filter
+    CURRENT_SCAN_PROGRESS["disclosures_found"] = 0
+    CURRENT_SCAN_PROGRESS["status_msg"] = f"Initializing scan across {len(symbols)} stocks ({universe_filter})..."
+
     for i, sym in enumerate(symbols):
+        CURRENT_SCAN_PROGRESS["current_stock"] = sym
+        CURRENT_SCAN_PROGRESS["scanned_count"] = i + 1
+        CURRENT_SCAN_PROGRESS["status_msg"] = f"Scanning {i+1}/{len(symbols)} stocks (`{sym}`). Found {total_stats['inserted']} new disclosures."
         try:
             res = archive_nse_announcements(
                 symbol=sym,
@@ -285,6 +307,8 @@ def archive_nse_universe_batch(
             total_stats["fetched"] += res.get("fetched", 0)
             total_stats["inserted"] += res.get("inserted", 0)
             total_stats["updated"] += res.get("updated", 0)
+            CURRENT_SCAN_PROGRESS["disclosures_found"] = total_stats["inserted"]
+            CURRENT_SCAN_PROGRESS["status_msg"] = f"Scanned {i+1}/{len(symbols)} stocks (`{sym}`). Found {total_stats['inserted']} new disclosures."
         except Exception as e:
             logger.warning(f"Error batch archiving {sym}: {e}")
             total_stats["errors"] += 1
@@ -293,14 +317,18 @@ def archive_nse_universe_batch(
             time.sleep(delay_sec)
 
     # Automatically run Phase 2 deterministic extraction over the updated archive
+    CURRENT_SCAN_PROGRESS["status_msg"] = f"Extracting future catalyst dates & snippets from {total_stats['inserted']} disclosures..."
     try:
         from events_service import run_catalyst_extraction
         ext_stats = run_catalyst_extraction(symbol=None, days_forward=365)
         total_stats["catalysts_extracted"] = ext_stats.get("extracted", 0)
         total_stats["catalysts_inserted"] = ext_stats.get("inserted", 0)
+        CURRENT_SCAN_PROGRESS["catalysts_extracted"] = ext_stats.get("extracted", 0)
     except Exception as e:
         logger.error(f"Error running post-batch Phase 2 catalyst extraction: {e}")
 
+    CURRENT_SCAN_PROGRESS["is_scanning"] = False
+    CURRENT_SCAN_PROGRESS["status_msg"] = f"Scan complete! Scanned {len(symbols)} stocks ({universe_filter}). Found {total_stats['inserted']} disclosures & {total_stats.get('catalysts_extracted', 0)} future catalysts."
     logger.info(f"Market-Wide Archive Complete across {total_stats['stocks_scanned']} stocks: {total_stats}")
     return total_stats
 

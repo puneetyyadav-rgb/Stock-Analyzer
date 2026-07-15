@@ -5,7 +5,7 @@
  * Strictly NO probability scores, NO outcome predictions, NO buy/sell badges.
  */
 import React, { useState, useEffect, useCallback } from "react";
-import { getCatalystsUpcoming, runBatchArchive } from "../lib/api";
+import { getCatalystsUpcoming, runBatchArchive, getScanProgress } from "../lib/api";
 
 const CATEGORY_STYLES = {
   "Legal/Regulatory":   { bg: "rgba(239,68,68,0.15)",  border: "#ef4444", icon: "⚖️",  color: "#fca5a5" },
@@ -144,6 +144,7 @@ export default function CatalystRadarPanel() {
   const [days, setDays] = useState(30);
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
+  const [scanProgress, setScanProgress] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -160,6 +161,27 @@ export default function CatalystRadarPanel() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    const pollProgress = async () => {
+      try {
+        const prog = await getScanProgress();
+        if (prog) {
+          setScanProgress(prog);
+          if (prog.is_scanning) setScanning(true);
+          else if (scanning && !prog.is_scanning) {
+            setScanning(false);
+            fetchData(); // Auto refresh when scan finishes
+          }
+        }
+      } catch (err) {
+        // silently ignore progress poll errors
+      }
+    };
+    pollProgress();
+    const timer = setInterval(pollProgress, 1500);
+    return () => clearInterval(timer);
+  }, [scanning, fetchData]);
+
   const handleScanAll = async () => {
     setScanning(true);
     setScanMsg("Starting background scan of all 2,000+ NSE stocks...");
@@ -168,8 +190,6 @@ export default function CatalystRadarPanel() {
       setScanMsg(res.message || "Background scan running across all 2,000+ NSE symbols!");
     } catch (err) {
       setScanMsg("Failed to start scan: " + (err.message || "Network error"));
-    } finally {
-      setScanning(false);
     }
   };
 
@@ -181,8 +201,6 @@ export default function CatalystRadarPanel() {
       setScanMsg(res.message || "Background scan running across 1,879 micro-cap stocks!");
     } catch (err) {
       setScanMsg("Failed to start micro-cap scan: " + (err.message || "Network error"));
-    } finally {
-      setScanning(false);
     }
   };
 
@@ -262,8 +280,77 @@ export default function CatalystRadarPanel() {
         </div>
       </div>
 
+      {/* Live Glassmorphism Progress Bar */}
+      {scanProgress && (scanProgress.is_scanning || scanProgress.scanned_count > 0) && (
+        <div style={{
+          background: "rgba(15, 23, 42, 0.85)",
+          border: scanProgress.is_scanning ? "1px solid rgba(99, 102, 241, 0.6)" : "1px solid rgba(51, 65, 85, 0.6)",
+          borderRadius: 14,
+          padding: "16px 20px",
+          marginBottom: 20,
+          boxShadow: scanProgress.is_scanning ? "0 0 25px rgba(99, 102, 241, 0.15)" : "0 4px 15px rgba(0,0,0,0.2)",
+          backdropFilter: "blur(12px)",
+          transition: "all 0.3s ease"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: scanProgress.is_scanning ? "#10b981" : "#6366f1",
+                boxShadow: scanProgress.is_scanning ? "0 0 10px #10b981" : "none"
+              }} />
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "#f8fafc", letterSpacing: "0.3px" }}>
+                {scanProgress.is_scanning ? `Scanning Market Universe (${scanProgress.filter_type.toUpperCase()})` : "Last Market Scan Summary"}
+              </span>
+              {scanProgress.current_stock && scanProgress.is_scanning && (
+                <span style={{
+                  fontSize: 11.5,
+                  background: "rgba(99, 102, 241, 0.2)",
+                  color: "#c4b5fd",
+                  padding: "3px 10px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(99, 102, 241, 0.4)",
+                  fontWeight: 700
+                }}>
+                  Scanning: {scanProgress.current_stock}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#38bdf8" }}>
+              {scanProgress.total_stocks > 0 ? `${Math.round((scanProgress.scanned_count / scanProgress.total_stocks) * 100)}% (${scanProgress.scanned_count} / ${scanProgress.total_stocks} Stocks)` : ""}
+            </div>
+          </div>
+
+          {/* Progress Bar Track */}
+          <div style={{ width: "100%", height: 10, background: "rgba(30, 41, 59, 0.9)", borderRadius: 6, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 12 }}>
+            <div style={{
+              width: `${scanProgress.total_stocks > 0 ? Math.min(100, (scanProgress.scanned_count / scanProgress.total_stocks) * 100) : 0}%`,
+              height: "100%",
+              background: scanProgress.is_scanning
+                ? "linear-gradient(90deg, #6366f1, #38bdf8, #10b981)"
+                : "linear-gradient(90deg, #6366f1, #10b981)",
+              transition: "width 0.3s ease",
+              borderRadius: 6
+            }} />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, color: "#94a3b8", flexWrap: "wrap", gap: 8 }}>
+            <span>⚡ {scanProgress.status_msg}</span>
+            <div style={{ display: "flex", gap: 16, fontWeight: 700 }}>
+              <span style={{ color: "#6ee7b7" }}>📥 Disclosures Found: {scanProgress.disclosures_found || 0}</span>
+              {scanProgress.catalysts_extracted > 0 && (
+                <span style={{ color: "#fcd34d" }}>🎯 Catalysts Extracted: {scanProgress.catalysts_extracted}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scan Banner */}
-      {scanMsg && (
+      {scanMsg && !scanProgress?.is_scanning && (
         <div style={{
           background: "rgba(16,185,129,0.15)",
           border: "1px solid #10b98155",
