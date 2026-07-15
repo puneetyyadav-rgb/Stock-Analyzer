@@ -120,3 +120,6 @@ export const runBatchArchive = (maxStocks = 2000, downloadPdfs = false, universe
 export const getScanProgress = () =>
   client.get(`/catalysts/scan-progress`).then((r) => r.data);
 
+export const getResultsDue = (days = 30) =>
+  client.get(`/catalysts/results-due`, { params: { days } }).then((r) => r.data);
+

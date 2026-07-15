@@ -5,7 +5,7 @@
  * Strictly NO probability scores, NO outcome predictions, NO buy/sell badges.
  */
 import React, { useState, useEffect, useCallback } from "react";
-import { getCatalystsUpcoming, runBatchArchive, getScanProgress } from "../lib/api";
+import { getCatalystsUpcoming, runBatchArchive, getScanProgress, getResultsDue } from "../lib/api";
 
 const CATEGORY_STYLES = {
   "Legal/Regulatory":   { bg: "rgba(239,68,68,0.15)",  border: "#ef4444", icon: "⚖️",  color: "#fca5a5" },
@@ -137,7 +137,246 @@ function TimeSection({ title, icon, color, events }) {
   );
 }
 
+function ResultsDueView({ days }) {
+  const [data, setData] = useState(() => {
+    try {
+      const cached = localStorage.getItem(`results_due_cache_${days}`);
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState("ALL");
+
+  const fetchResults = useCallback(async () => {
+    if (!data) setLoading(true);
+    setError(null);
+    try {
+      const res = await getResultsDue(days);
+      setData(res);
+      try { localStorage.setItem(`results_due_cache_${days}`, JSON.stringify(res)); } catch {}
+    } catch (err) {
+      setError(err.message || "Failed to load forthcoming board meetings & corporate actions");
+    } finally {
+      setLoading(false);
+    }
+  }, [days, data]);
+
+  useEffect(() => { fetchResults(); }, [fetchResults]);
+
+  if (loading && !data) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
+        <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+        Syncing forthcoming structured board meetings from NSE...
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return <div style={{ padding: 20, color: "#fca5a5", background: "rgba(239,68,68,0.1)", borderRadius: 10 }}>⚠️ {error}</div>;
+  }
+
+  const list = data?.results_due || [];
+  const filtered = filter === "ALL" ? list : list.filter(c => {
+    if (filter === "RESULTS") return c.event_type.includes("Financial Results");
+    if (filter === "DIVIDEND") return c.event_type.includes("Dividend");
+    if (filter === "ACTIONS") return c.event_type.includes("Corporate Action");
+    return true;
+  });
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {[
+            { id: "ALL", label: `🏢 All Events (${list.length})` },
+            { id: "RESULTS", label: `📊 Financial Results (${list.filter(c => c.event_type.includes("Financial Results")).length})` },
+            { id: "DIVIDEND", label: `💰 Dividends (${list.filter(c => c.event_type.includes("Dividend")).length})` },
+            { id: "ACTIONS", label: `🎁 Bonus/Rights/Splits (${list.filter(c => c.event_type.includes("Corporate Action")).length})` },
+          ].map(btn => (
+            <button
+              key={btn.id}
+              onClick={() => setFilter(btn.id)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: filter === btn.id ? "1px solid #38bdf8" : "1px solid #334155",
+                background: filter === btn.id ? "rgba(56,189,248,0.15)" : "rgba(15,23,42,0.6)",
+                color: filter === btn.id ? "#7dd3fc" : "#94a3b8",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "#64748b" }}>
+          ⚡ Zero-noise structured calendar directly from NSE (`{data?.as_of || "live"}`)
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ padding: 40, textAlign: "center", color: "#64748b", background: "rgba(15,23,42,0.4)", borderRadius: 12, border: "1px solid #1e293b" }}>
+          No upcoming board meetings found for {filter === "ALL" ? "any category" : filter} inside the next {days} days horizon.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
+          {filtered.map((card, idx) => {
+            const badgeBg = card.badge_color === "red" ? "rgba(239,68,68,0.15)" :
+                            card.badge_color === "green" ? "rgba(34,197,94,0.15)" :
+                            card.badge_color === "purple" ? "rgba(168,85,247,0.15)" : "rgba(59,130,246,0.15)";
+            const badgeBorder = card.badge_color === "red" ? "#ef4444" :
+                                card.badge_color === "green" ? "#22c55e" :
+                                card.badge_color === "purple" ? "#a855f7" : "#3b82f6";
+            const badgeColor = card.badge_color === "red" ? "#fca5a5" :
+                               card.badge_color === "green" ? "#86efac" :
+                               card.badge_color === "purple" ? "#d8b4fe" : "#93c5fd";
+
+            return (
+              <div
+                key={`${card.symbol}-${card.meeting_date}-${idx}`}
+                style={{
+                  background: "rgba(15, 23, 42, 0.75)",
+                  border: "1px solid rgba(51, 65, 85, 0.6)",
+                  borderRadius: 12,
+                  padding: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+                  transition: "border-color 0.2s ease",
+                }}
+              >
+                <div>
+                  {/* Top bar */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: "#f8fafc", letterSpacing: 0.5 }}>{card.symbol}</span>
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {card.company}
+                      </div>
+                    </div>
+                    <span style={{
+                      padding: "3px 8px",
+                      borderRadius: 6,
+                      background: badgeBg,
+                      border: `1px solid ${badgeBorder}55`,
+                      color: badgeColor,
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      textTransform: "uppercase"
+                    }}>
+                      {card.event_type}
+                    </span>
+                  </div>
+
+                  {/* Date & Countdown */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(30,41,59,0.5)", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
+                      🗓️ {card.meeting_date}
+                    </div>
+                    <span style={{ fontSize: 11, color: card.countdown_days <= 3 ? "#f87171" : "#38bdf8", fontWeight: 600 }}>
+                      ⏱️ {card.countdown_days === 0 ? "Today!" : `${card.countdown_days} day${card.countdown_days === 1 ? "" : "s"} away`}
+                    </span>
+                  </div>
+
+                  {/* Purpose */}
+                  <p style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.4, margin: "0 0 12px" }}>
+                    {card.purpose}
+                  </p>
+
+                  {/* Consensus Estimates */}
+                  {card.consensus && (card.consensus.eps_avg || card.consensus.rev_avg_cr) ? (
+                    <div style={{
+                      background: "rgba(16, 185, 129, 0.08)",
+                      border: "1px solid rgba(16, 185, 129, 0.25)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      marginBottom: 10,
+                      fontSize: 11.5,
+                      color: "#6ee7b7",
+                    }}>
+                      <div style={{ fontWeight: 700, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                        📈 yfinance Consensus Estimates
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, color: "#a7f3d0" }}>
+                        {card.consensus.eps_avg && (
+                          <span>EPS Avg: <strong>₹{card.consensus.eps_avg}</strong></span>
+                        )}
+                        {card.consensus.eps_high && (
+                          <span style={{ fontSize: 10.5, color: "#6ee7b7" }}>(High ₹{card.consensus.eps_high} / Low ₹{card.consensus.eps_low})</span>
+                        )}
+                        {card.consensus.rev_avg_cr && (
+                          <span>Est. Revenue: <strong>₹{card.consensus.rev_avg_cr.toLocaleString()} Cr</strong></span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 10.5, color: "#475569", marginBottom: 10 }}>
+                      📊 Consensus EPS estimate: N/A
+                    </div>
+                  )}
+
+                  {/* Factor Snapshot */}
+                  {card.factor_snapshot ? (
+                    <div style={{
+                      background: "rgba(99, 102, 241, 0.08)",
+                      border: "1px solid rgba(99, 102, 241, 0.25)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      fontSize: 11,
+                      color: "#a5b4fc",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontWeight: 700, color: "#c4b5fd" }}>🏛️ Factor Profile (Latest)</span>
+                        {card.factor_snapshot.decile && (
+                          <span style={{ background: "rgba(168,85,247,0.2)", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, color: "#e9d5ff" }}>
+                            Decile D{card.factor_snapshot.decile} · Top {card.factor_snapshot.percentile}%
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, fontSize: 10.5 }}>
+                        <div>
+                          <div style={{ color: "#64748b" }}>Delivery %</div>
+                          <div style={{ fontWeight: 700, color: "#e2e8f0" }}>
+                            {card.factor_snapshot.deliv_pct !== null ? `${card.factor_snapshot.deliv_pct}%` : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ color: "#64748b" }}>Vol Trend</div>
+                          <div style={{ fontWeight: 700, color: "#e2e8f0" }}>
+                            {card.factor_snapshot.vol_trend !== null ? `${card.factor_snapshot.vol_trend}×` : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ color: "#64748b" }}>20d Mom</div>
+                          <div style={{ fontWeight: 700, color: card.factor_snapshot.mom_20d >= 0 ? "#4ade80" : "#f87171" }}>
+                            {card.factor_snapshot.mom_20d !== null ? `${card.factor_snapshot.mom_20d > 0 ? "+" : ""}${card.factor_snapshot.mom_20d}%` : "—"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 10.5, color: "#475569" }}>
+                      🏛️ Factor profile unavailable
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CatalystRadarPanel() {
+  const [radarTab, setRadarTab] = useState("results-due");
   const [days, setDays] = useState(30);
   const [data, setData] = useState(() => {
     try {
@@ -216,15 +455,46 @@ export default function CatalystRadarPanel() {
 
   return (
     <div style={panelStyle}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+      {/* Header & Mode Tabs */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#f8fafc", display: "flex", alignItems: "center", gap: 8 }}>
             🛰️ Catalyst Radar
           </h2>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-            Upcoming events from official NSE/BSE filings · No predictions · No probabilities
-          </p>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              onClick={() => setRadarTab("results-due")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 8,
+                border: radarTab === "results-due" ? "1px solid #10b981" : "1px solid #334155",
+                background: radarTab === "results-due" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.6)",
+                color: radarTab === "results-due" ? "#6ee7b7" : "#94a3b8",
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              📅 Results Due & Actions (Structured Calendar)
+            </button>
+            <button
+              onClick={() => setRadarTab("nlp-filings")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 8,
+                border: radarTab === "nlp-filings" ? "1px solid #6366f1" : "1px solid #334155",
+                background: radarTab === "nlp-filings" ? "rgba(99,102,241,0.2)" : "rgba(15,23,42,0.6)",
+                color: radarTab === "nlp-filings" ? "#a5b4fc" : "#94a3b8",
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              📑 Free-Text Filings Radar (Phase 3 NLP)
+            </button>
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button
@@ -393,56 +663,61 @@ export default function CatalystRadarPanel() {
       )}
 
       {/* Content */}
-      {!loading && !error && data && (
-        <>
-          <TimeSection
-            title="This Week"
-            icon="🔴"
-            color="#ef4444"
-            events={data.this_week}
-          />
-          <TimeSection
-            title="Next 2 Weeks"
-            icon="🟡"
-            color="#f59e0b"
-            events={data.next_two_weeks}
-          />
-          <TimeSection
-            title="15–30 Days"
-            icon="🔵"
-            color="#3b82f6"
-            events={data.later}
-          />
+      {radarTab === "results-due" ? (
+        <ResultsDueView days={days} />
+      ) : (
+        !loading && !error && data && (
+          <>
+            <TimeSection
+              title="This Week"
+              icon="🔴"
+              color="#ef4444"
+              events={data.this_week}
+            />
+            <TimeSection
+              title="Next 2 Weeks"
+              icon="🟡"
+              color="#f59e0b"
+              events={data.next_two_weeks}
+            />
+            <TimeSection
+              title="15–30 Days"
+              icon="🔵"
+              color="#3b82f6"
+              events={data.later}
+            />
 
-          {data.total === 0 && (
+            {data.total === 0 && (
+              <div style={{
+                textAlign: "center",
+                padding: 40,
+                color: "#475569",
+                fontSize: 14,
+              }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
+                <p>No upcoming catalyst events found in the next {days} days.</p>
+                <p style={{ fontSize: 12, marginTop: 4 }}>Run archive backfill to populate historical filings.</p>
+              </div>
+            )}
+
+            {/* Footer disclaimer */}
             <div style={{
-              textAlign: "center",
-              padding: 40,
+              marginTop: 16,
+              padding: "10px 14px",
+              background: "rgba(30,41,59,0.6)",
+              borderRadius: 8,
+              border: "1px solid #1e293b",
+              fontSize: 11,
               color: "#475569",
-              fontSize: 14,
+              lineHeight: 1.5,
             }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
-              <p>No upcoming catalyst events found in the next {days} days.</p>
-              <p style={{ fontSize: 12, marginTop: 4 }}>Run archive backfill to populate historical filings.</p>
+              🔒 <strong>Data Integrity:</strong> {data.note || "All events sourced exclusively from official NSE/BSE exchange filings."}
+              {" "}This panel does not predict outcomes, assign probabilities, or issue buy/sell recommendations.
             </div>
-          )}
-
-          {/* Footer disclaimer */}
-          <div style={{
-            marginTop: 16,
-            padding: "10px 14px",
-            background: "rgba(30,41,59,0.6)",
-            borderRadius: 8,
-            border: "1px solid #1e293b",
-            fontSize: 11,
-            color: "#475569",
-            lineHeight: 1.5,
-          }}>
-            🔒 <strong>Data Integrity:</strong> {data.note || "All events sourced exclusively from official NSE/BSE exchange filings."}
-            {" "}This panel does not predict outcomes, assign probabilities, or issue buy/sell recommendations.
-          </div>
-        </>
+          </>
+        )
       )}
+
     </div>
   );
 }

@@ -819,6 +819,24 @@ async def get_scan_progress():
     return cas.CURRENT_SCAN_PROGRESS
 
 
+@api_router.get("/catalysts/results-due")
+async def get_results_due_route(days: int = 30):
+    """Returns forthcoming board meetings & corporate actions from structured NSE event-calendar
+    enriched with yfinance consensus EPS/revenue estimates and 9-factor profiles.
+    """
+    key = f"results_due:{days}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+    import events_service as es
+    result = await asyncio.to_thread(es.get_results_due, days)
+    try:
+        _cache_set(key, result)
+    except TypeError:
+        pass
+    return result
+
+
 
 @api_router.get("/stock/{symbol}/red-flags")
 async def red_flags(symbol: str):
