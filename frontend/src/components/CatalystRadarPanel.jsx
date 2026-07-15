@@ -182,7 +182,12 @@ function ResultsDueView({ days }) {
   }
 
   if (error && !data) {
-    return <div style={{ padding: 20, color: "#fca5a5", background: "rgba(239,68,68,0.1)", borderRadius: 10 }}>⚠️ {error}</div>;
+    return (
+      <div style={{ padding: 20, color: "#fca5a5", background: "rgba(239,68,68,0.1)", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>⚠️ {error}</span>
+        <button onClick={() => fetchResults(true)} style={{ padding: "6px 14px", borderRadius: 6, background: "#ef4444", border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>↻ Retry Connection</button>
+      </div>
+    );
   }
 
   const list = data?.results_due || [];
@@ -727,8 +732,8 @@ export default function CatalystRadarPanel() {
         </div>
       )}
 
-      {/* Error */}
-      {error && (
+      {/* Error when no data is cached */}
+      {error && !data && (
         <div style={{
           background: "rgba(239,68,68,0.1)",
           border: "1px solid #ef444444",
@@ -736,8 +741,34 @@ export default function CatalystRadarPanel() {
           padding: 16,
           color: "#fca5a5",
           fontSize: 13,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
         }}>
-          ⚠️ {error}
+          <span>⚠️ {error}</span>
+          <button onClick={() => fetchData(true)} style={{ padding: "6px 14px", borderRadius: 6, background: "#ef4444", border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>↻ Retry Connection</button>
+        </div>
+      )}
+
+      {/* Warning banner when showing cached data despite error */}
+      {error && data && (
+        <div style={{
+          background: "rgba(245,158,11,0.12)",
+          border: "1px solid #f59e0b55",
+          borderRadius: 8,
+          padding: "8px 14px",
+          color: "#fcd34d",
+          fontSize: 12,
+          marginBottom: 14,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <span>⚠️ Offline / Network Error: Showing cached filings while reconnecting...</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => fetchData(true)} style={{ padding: "3px 8px", borderRadius: 4, background: "rgba(245,158,11,0.25)", border: "1px solid #f59e0b", color: "#fcd34d", fontWeight: 700, cursor: "pointer", fontSize: 11 }}>↻ Retry</button>
+            <button onClick={() => setError(null)} style={{ background: "transparent", border: "none", color: "#fcd34d", cursor: "pointer", fontWeight: 700 }}>✕</button>
+          </div>
         </div>
       )}
 
@@ -745,7 +776,7 @@ export default function CatalystRadarPanel() {
       {radarTab === "results-due" ? (
         <ResultsDueView days={days} />
       ) : (
-        !loading && !error && data && (() => {
+        !loading && data && (() => {
           const filterList = (list = []) => {
             if (!nlpQuery.trim()) return list;
             const q = nlpQuery.trim().toLowerCase();
