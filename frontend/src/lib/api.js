@@ -113,3 +113,7 @@ export const getBetaCoupledSimulation = async (sym, params = {}, options = {}) =
 
 export const getCatalystsUpcoming = (days = 30) =>
   client.get(`/catalysts/upcoming`, { params: { days } }).then((r) => r.data);
+
+export const runBatchArchive = (maxStocks = 2000, downloadPdfs = false) =>
+  client.post(`/catalysts/run-batch-archive`, null, { params: { max_stocks: maxStocks, download_pdfs: downloadPdfs } }).then((r) => r.data);
+

@@ -5,7 +5,7 @@
  * Strictly NO probability scores, NO outcome predictions, NO buy/sell badges.
  */
 import React, { useState, useEffect, useCallback } from "react";
-import { getCatalystsUpcoming } from "../lib/api";
+import { getCatalystsUpcoming, runBatchArchive } from "../lib/api";
 
 const CATEGORY_STYLES = {
   "Legal/Regulatory":   { bg: "rgba(239,68,68,0.15)",  border: "#ef4444", icon: "⚖️",  color: "#fca5a5" },
@@ -142,6 +142,8 @@ export default function CatalystRadarPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [days, setDays] = useState(30);
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -158,10 +160,23 @@ export default function CatalystRadarPanel() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const handleScanAll = async () => {
+    setScanning(true);
+    setScanMsg("Starting background scan of all 2,000+ NSE stocks...");
+    try {
+      const res = await runBatchArchive(2029, false);
+      setScanMsg(res.message || "Background scan running across all 2,000+ NSE symbols!");
+    } catch (err) {
+      setScanMsg("Failed to start scan: " + (err.message || "Network error"));
+    } finally {
+      setScanning(false);
+    }
+  };
+
   return (
     <div style={panelStyle}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#f8fafc", display: "flex", alignItems: "center", gap: 8 }}>
             🛰️ Catalyst Radar
@@ -170,7 +185,24 @@ export default function CatalystRadarPanel() {
             Upcoming events from official NSE/BSE filings · No predictions · No probabilities
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={handleScanAll}
+            disabled={scanning}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              border: "1px solid #10b981",
+              background: scanning ? "rgba(16,185,129,0.1)" : "rgba(16,185,129,0.2)",
+              color: "#6ee7b7",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: scanning ? "wait" : "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {scanning ? "⏳ Initiating..." : "🚀 Scan All 2,000+ NSE Stocks"}
+          </button>
           {[30, 60, 90].map(d => (
             <button key={d} onClick={() => setDays(d)} style={{
               padding: "6px 14px",
@@ -200,11 +232,22 @@ export default function CatalystRadarPanel() {
         </div>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>
-          <div style={{ fontSize: 28, marginBottom: 12, animation: "pulse 1.5s infinite" }}>🛰️</div>
-          <p>Scanning official NSE/BSE filings for upcoming events...</p>
+      {/* Scan Banner */}
+      {scanMsg && (
+        <div style={{
+          background: "rgba(16,185,129,0.15)",
+          border: "1px solid #10b98155",
+          borderRadius: 10,
+          padding: "10px 14px",
+          marginBottom: 16,
+          color: "#6ee7b7",
+          fontSize: 12.5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}>
+          <span>📡 {scanMsg}</span>
+          <button onClick={() => setScanMsg("")} style={{ background: "transparent", border: "none", color: "#6ee7b7", cursor: "pointer", fontWeight: 700 }}>✕</button>
         </div>
       )}
 

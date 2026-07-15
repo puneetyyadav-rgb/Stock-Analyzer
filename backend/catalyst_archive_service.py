@@ -236,3 +236,59 @@ def get_archived_announcements(
         return [dict(r) for r in rows]
     finally:
         conn.close()
+
+
+def archive_nse_universe_batch(
+    symbols: Optional[List[str]] = None,
+    months_back: int = 3,
+    download_pdfs: bool = False,
+    max_items_per_stock: int = 15,
+    max_stocks: int = 2050,
+    delay_sec: float = 0.3
+) -> Dict[str, Any]:
+    """Batch archives NSE corporate announcements across all 2,000+ active Indian equity symbols
+    from local Bhavcopy/MASTER list.
+    Returns market-wide extraction summary stats.
+    """
+    import time
+    if symbols is None:
+        try:
+            from train_nse_qlib import load_symbols_from_bhavcopy_if_available
+            symbols = load_symbols_from_bhavcopy_if_available()[:max_stocks]
+        except Exception:
+            symbols = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "LT", "WIPRO"]
+
+    logger.info(f"Starting market-wide corporate announcement archive across {len(symbols)} Indian symbols...")
+    total_stats = {"stocks_scanned": 0, "fetched": 0, "inserted": 0, "updated": 0, "errors": 0}
+
+    for i, sym in enumerate(symbols):
+        try:
+            res = archive_nse_announcements(
+                symbol=sym,
+                months_back=months_back,
+                download_pdfs=download_pdfs,
+                max_items=max_items_per_stock
+            )
+            total_stats["stocks_scanned"] += 1
+            total_stats["fetched"] += res.get("fetched", 0)
+            total_stats["inserted"] += res.get("inserted", 0)
+            total_stats["updated"] += res.get("updated", 0)
+        except Exception as e:
+            logger.warning(f"Error batch archiving {sym}: {e}")
+            total_stats["errors"] += 1
+
+        if delay_sec > 0:
+            time.sleep(delay_sec)
+
+    # Automatically run Phase 2 deterministic extraction over the updated archive
+    try:
+        from events_service import run_catalyst_extraction
+        ext_stats = run_catalyst_extraction(symbol=None, days_forward=365)
+        total_stats["catalysts_extracted"] = ext_stats.get("extracted", 0)
+        total_stats["catalysts_inserted"] = ext_stats.get("inserted", 0)
+    except Exception as e:
+        logger.error(f"Error running post-batch Phase 2 catalyst extraction: {e}")
+
+    logger.info(f"Market-Wide Archive Complete across {total_stats['stocks_scanned']} stocks: {total_stats}")
+    return total_stats
+

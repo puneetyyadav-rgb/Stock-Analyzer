@@ -789,6 +789,29 @@ async def catalysts_upcoming(days: int = 30):
     return result
 
 
+@api_router.post("/catalysts/run-batch-archive")
+async def run_batch_archive(max_stocks: int = 500, download_pdfs: bool = False):
+    """Triggers batch archiving across the full Indian stock universe (up to 2,000+ stocks).
+    Runs asynchronously in background thread pool."""
+    import catalyst_archive_service as cas
+    asyncio.create_task(
+        asyncio.to_thread(
+            cas.archive_nse_universe_batch,
+            symbols=None,
+            months_back=3,
+            download_pdfs=download_pdfs,
+            max_items_per_stock=10,
+            max_stocks=max_stocks,
+            delay_sec=0.25
+        )
+    )
+    return {
+        "status": "started",
+        "message": f"Market-wide background archive started across up to {max_stocks} NSE symbols. New catalysts will appear automatically as extraction progresses."
+    }
+
+
+
 @api_router.get("/stock/{symbol}/red-flags")
 async def red_flags(symbol: str):
     key = f"redflags:{symbol}"
