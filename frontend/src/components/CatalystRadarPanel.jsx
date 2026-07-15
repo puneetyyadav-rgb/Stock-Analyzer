@@ -147,6 +147,7 @@ function ResultsDueView({ days }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchResults = useCallback(async () => {
     if (!data) setLoading(true);
@@ -178,17 +179,24 @@ function ResultsDueView({ days }) {
   }
 
   const list = data?.results_due || [];
-  const filtered = filter === "ALL" ? list : list.filter(c => {
-    if (filter === "RESULTS") return c.event_type.includes("Financial Results");
-    if (filter === "DIVIDEND") return c.event_type.includes("Dividend");
-    if (filter === "ACTIONS") return c.event_type.includes("Corporate Action");
+  const filtered = list.filter(c => {
+    if (filter === "RESULTS" && !c.event_type.includes("Financial Results")) return false;
+    if (filter === "DIVIDEND" && !c.event_type.includes("Dividend")) return false;
+    if (filter === "ACTIONS" && !c.event_type.includes("Corporate Action")) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const symMatch = (c.symbol || "").toLowerCase().includes(q);
+      const compMatch = (c.company || "").toLowerCase().includes(q);
+      const purpMatch = (c.purpose || "").toLowerCase().includes(q);
+      if (!symMatch && !compMatch && !purpMatch) return false;
+    }
     return true;
   });
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           {[
             { id: "ALL", label: `🏢 All Events (${list.length})` },
             { id: "RESULTS", label: `📊 Financial Results (${list.filter(c => c.event_type.includes("Financial Results")).length})` },
@@ -214,14 +222,64 @@ function ResultsDueView({ days }) {
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: "#64748b" }}>
-          ⚡ Zero-noise structured calendar directly from NSE (`{data?.as_of || "live"}`)
+
+        {/* Search Bar & Manual Sync Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: "1 1 320px", justifyContent: "flex-end" }}>
+          <div style={{ position: "relative", minWidth: 220, flex: "1 1 auto", maxWidth: 350 }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#64748b" }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Filter by Symbol or Company (e.g. TCS)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "6px 28px 6px 30px",
+                borderRadius: 8,
+                border: searchQuery ? "1px solid #38bdf8" : "1px solid #334155",
+                background: "rgba(15, 23, 42, 0.85)",
+                color: "#f8fafc",
+                fontSize: 12.5,
+                outline: "none",
+                transition: "all 0.15s ease",
+                boxSizing: "border-box"
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}
+              >✕</button>
+            )}
+          </div>
+
+          <button
+            onClick={fetchResults}
+            disabled={loading}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              border: "1px solid #6366f1",
+              background: loading ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.2)",
+              color: "#a5b4fc",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: loading ? "wait" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "all 0.15s ease",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {loading ? "⏳ Syncing..." : "⚡ Sync Exchange Feed"}
+          </button>
         </div>
       </div>
 
       {filtered.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "#64748b", background: "rgba(15,23,42,0.4)", borderRadius: 12, border: "1px solid #1e293b" }}>
-          No upcoming board meetings found for {filter === "ALL" ? "any category" : filter} inside the next {days} days horizon.
+          No upcoming board meetings found for {searchQuery ? `"${searchQuery}"` : filter === "ALL" ? "any category" : filter} inside the next {days} days horizon.
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
@@ -389,6 +447,7 @@ export default function CatalystRadarPanel() {
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState("");
   const [scanProgress, setScanProgress] = useState(null);
+  const [nlpQuery, setNlpQuery] = useState("");
 
   const fetchData = useCallback(async () => {
     // Stale-while-revalidate: only show loading spinner if we have no cached data at all
@@ -666,56 +725,131 @@ export default function CatalystRadarPanel() {
       {radarTab === "results-due" ? (
         <ResultsDueView days={days} />
       ) : (
-        !loading && !error && data && (
-          <>
-            <TimeSection
-              title="This Week"
-              icon="🔴"
-              color="#ef4444"
-              events={data.this_week}
-            />
-            <TimeSection
-              title="Next 2 Weeks"
-              icon="🟡"
-              color="#f59e0b"
-              events={data.next_two_weeks}
-            />
-            <TimeSection
-              title="15–30 Days"
-              icon="🔵"
-              color="#3b82f6"
-              events={data.later}
-            />
+        !loading && !error && data && (() => {
+          const filterList = (list = []) => {
+            if (!nlpQuery.trim()) return list;
+            const q = nlpQuery.trim().toLowerCase();
+            return list.filter(ev => 
+              (ev.symbol || "").toLowerCase().includes(q) ||
+              (ev.company || "").toLowerCase().includes(q) ||
+              (ev.raw_snippet || "").toLowerCase().includes(q) ||
+              (ev.event_type || "").toLowerCase().includes(q)
+            );
+          };
+          const tw = filterList(data.this_week);
+          const n2 = filterList(data.next_two_weeks);
+          const lt = filterList(data.later);
+          const totalFiltered = tw.length + n2.length + lt.length;
 
-            {data.total === 0 && (
-              <div style={{
-                textAlign: "center",
-                padding: 40,
-                color: "#475569",
-                fontSize: 14,
-              }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
-                <p>No upcoming catalyst events found in the next {days} days.</p>
-                <p style={{ fontSize: 12, marginTop: 4 }}>Run archive backfill to populate historical filings.</p>
+          return (
+            <>
+              {/* NLP Filings Search & Manual Sync Bar */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8" }}>
+                  📡 Extracted Free-Text Filings ({totalFiltered}{nlpQuery ? ` matching "${nlpQuery}"` : ""})
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: "1 1 300px", justifyContent: "flex-end" }}>
+                  <div style={{ position: "relative", minWidth: 220, flex: "1 1 auto", maxWidth: 350 }}>
+                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#64748b" }}>🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Filter by Symbol or Company (e.g. RELIANCE)..."
+                      value={nlpQuery}
+                      onChange={(e) => setNlpQuery(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 28px 6px 30px",
+                        borderRadius: 8,
+                        border: nlpQuery ? "1px solid #38bdf8" : "1px solid #334155",
+                        background: "rgba(15, 23, 42, 0.85)",
+                        color: "#f8fafc",
+                        fontSize: 12.5,
+                        outline: "none",
+                        transition: "all 0.15s ease",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                    {nlpQuery && (
+                      <button
+                        onClick={() => setNlpQuery("")}
+                        style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}
+                      >✕</button>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={fetchData}
+                    disabled={loading}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 8,
+                      border: "1px solid #6366f1",
+                      background: loading ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.2)",
+                      color: "#a5b4fc",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: loading ? "wait" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {loading ? "⏳ Syncing..." : "⚡ Sync NLP Filings"}
+                  </button>
+                </div>
               </div>
-            )}
 
-            {/* Footer disclaimer */}
-            <div style={{
-              marginTop: 16,
-              padding: "10px 14px",
-              background: "rgba(30,41,59,0.6)",
-              borderRadius: 8,
-              border: "1px solid #1e293b",
-              fontSize: 11,
-              color: "#475569",
-              lineHeight: 1.5,
-            }}>
-              🔒 <strong>Data Integrity:</strong> {data.note || "All events sourced exclusively from official NSE/BSE exchange filings."}
-              {" "}This panel does not predict outcomes, assign probabilities, or issue buy/sell recommendations.
-            </div>
-          </>
-        )
+              <TimeSection
+                title="This Week"
+                icon="🔴"
+                color="#ef4444"
+                events={tw}
+              />
+              <TimeSection
+                title="Next 2 Weeks"
+                icon="🟡"
+                color="#f59e0b"
+                events={n2}
+              />
+              <TimeSection
+                title="15–30 Days"
+                icon="🔵"
+                color="#3b82f6"
+                events={lt}
+              />
+
+              {totalFiltered === 0 && (
+                <div style={{
+                  textAlign: "center",
+                  padding: 40,
+                  color: "#475569",
+                  fontSize: 14,
+                }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
+                  <p>No upcoming catalyst events found {nlpQuery ? `matching "${nlpQuery}"` : `in the next ${days} days`}.</p>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>Run archive backfill or clear search query.</p>
+                </div>
+              )}
+
+              {/* Footer disclaimer */}
+              <div style={{
+                marginTop: 16,
+                padding: "10px 14px",
+                background: "rgba(30,41,59,0.6)",
+                borderRadius: 8,
+                border: "1px solid #1e293b",
+                fontSize: 11,
+                color: "#475569",
+                lineHeight: 1.5,
+              }}>
+                🔒 <strong>Data Integrity:</strong> {data.note || "All events sourced exclusively from official NSE/BSE exchange filings."}
+                {" "}This panel does not predict outcomes, assign probabilities, or issue buy/sell recommendations.
+              </div>
+            </>
+          );
+        })()
       )}
 
     </div>
