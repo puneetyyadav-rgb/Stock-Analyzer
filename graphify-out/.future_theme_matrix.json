@@ -1,0 +1,210 @@
+[
+  {
+    "file": "01_master_institutional_roadmap_and_architecture.md",
+    "words": 1677,
+    "top": [
+      [
+        "VaR",
+        21
+      ],
+      [
+        "regime",
+        18
+      ],
+      [
+        "execution",
+        15
+      ],
+      [
+        "Kalman",
+        14
+      ],
+      [
+        "portfolio",
+        10
+      ],
+      [
+        "beta",
+        9
+      ],
+      [
+        "microstructure",
+        8
+      ],
+      [
+        "covariance",
+        7
+      ]
+    ]
+  },
+  {
+    "file": "02_online_kalman_filtering_and_dynamic_stat_arb.md",
+    "words": 2995,
+    "top": [
+      [
+        "Kalman",
+        36
+      ],
+      [
+        "beta",
+        35
+      ],
+      [
+        "VaR",
+        14
+      ],
+      [
+        "covariance",
+        8
+      ],
+      [
+        "macro",
+        1
+      ]
+    ]
+  },
+  {
+    "file": "03_hidden_markov_models_and_crash_regime_detection.md",
+    "words": 2509,
+    "top": [
+      [
+        "regime",
+        37
+      ],
+      [
+        "HMM",
+        18
+      ],
+      [
+        "VaR",
+        11
+      ],
+      [
+        "NIFTY",
+        9
+      ],
+      [
+        "factor",
+        5
+      ],
+      [
+        "portfolio",
+        3
+      ],
+      [
+        "covariance",
+        2
+      ],
+      [
+        "microstructure",
+        1
+      ]
+    ]
+  },
+  {
+    "file": "04_almgren_chriss_optimal_execution_and_microstructure.md",
+    "words": 2838,
+    "top": [
+      [
+        "execution",
+        29
+      ],
+      [
+        "Almgren",
+        24
+      ],
+      [
+        "microstructure",
+        5
+      ],
+      [
+        "VaR",
+        3
+      ],
+      [
+        "macro",
+        1
+      ],
+      [
+        "NIFTY",
+        1
+      ]
+    ]
+  },
+  {
+    "file": "05_black_litterman_cvar_and_portfolio_constraints.md",
+    "words": 2123,
+    "top": [
+      [
+        "VaR",
+        49
+      ],
+      [
+        "beta",
+        36
+      ],
+      [
+        "CVaR",
+        27
+      ],
+      [
+        "NIFTY",
+        24
+      ],
+      [
+        "portfolio",
+        20
+      ],
+      [
+        "factor",
+        8
+      ],
+      [
+        "covariance",
+        5
+      ],
+      [
+        "Kalman",
+        4
+      ]
+    ]
+  },
+  {
+    "file": "06_global_macro_multivariate_monte_carlo_and_beta_decoupling.md",
+    "words": 4524,
+    "top": [
+      [
+        "macro",
+        76
+      ],
+      [
+        "beta",
+        68
+      ],
+      [
+        "NIFTY",
+        55
+      ],
+      [
+        "VaR",
+        48
+      ],
+      [
+        "factor",
+        39
+      ],
+      [
+        "simulation",
+        23
+      ],
+      [
+        "USD",
+        14
+      ],
+      [
+        "crude",
+        14
+      ]
+    ]
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "files": {
+    "code": [],
+    "document": [
+      "future plans\\01_master_institutional_roadmap_and_architecture.md",
+      "future plans\\02_online_kalman_filtering_and_dynamic_stat_arb.md",
+      "future plans\\03_hidden_markov_models_and_crash_regime_detection.md",
+      "future plans\\04_almgren_chriss_optimal_execution_and_microstructure.md",
+      "future plans\\05_black_litterman_cvar_and_portfolio_constraints.md",
+      "future plans\\06_global_macro_multivariate_monte_carlo_and_beta_decoupling.md"
+    ],
+    "paper": [],
+    "image": [],
+    "video": []
+  },
+  "total_files": 6,
+  "total_words": 14014,
+  "needs_graph": false,
+  "warning": "Corpus is ~14,014 words - fits in a single context window. You may not need a graph.",
+  "skipped_sensitive": [],
+  "graphifyignore_patterns": 0
+}
