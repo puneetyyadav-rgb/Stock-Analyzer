@@ -785,7 +785,7 @@ async def catalysts_upcoming(days: int = 30):
         "total": len(classified),
         "note": "All events sourced from official NSE/BSE filings. No outcome predictions or probabilities."
     }
-    _cache_set(key, result, ttl=1800)
+    _cache_set(key, result)
     return result
 
 
