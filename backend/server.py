@@ -739,6 +739,56 @@ async def events(symbol: str):
     return {"items": data}
 
 
+@api_router.get("/catalysts/upcoming")
+async def catalysts_upcoming(days: int = 30):
+    """Phase 4: Catalyst Radar endpoint — returns upcoming deterministically extracted
+    events from official NSE/BSE filings, classified by category. No predictions, no probabilities."""
+    key = f"catalysts:upcoming:{days}"
+    cached = _cache_get(key)
+    if cached:
+        return cached
+
+    raw_events = await asyncio.to_thread(ev_mod.get_extracted_catalyst_events, None, days)
+
+    if raw_events:
+        classified = await ev_mod.classify_catalyst_events(raw_events)
+    else:
+        classified = []
+
+    # Group by time horizon
+    from datetime import datetime as _dt, timedelta as _td
+    today = _dt.now().date()
+    this_week = []
+    next_two_weeks = []
+    later = []
+
+    for ev in classified:
+        try:
+            ev_date = _dt.fromisoformat(ev.get("extracted_date", "9999-12-31")).date()
+        except (ValueError, TypeError):
+            ev_date = today + _td(days=999)
+
+        days_away = (ev_date - today).days
+        ev["days_remaining"] = days_away
+
+        if days_away <= 7:
+            this_week.append(ev)
+        elif days_away <= 21:
+            next_two_weeks.append(ev)
+        else:
+            later.append(ev)
+
+    result = {
+        "this_week": this_week,
+        "next_two_weeks": next_two_weeks,
+        "later": later,
+        "total": len(classified),
+        "note": "All events sourced from official NSE/BSE filings. No outcome predictions or probabilities."
+    }
+    _cache_set(key, result, ttl=1800)
+    return result
+
+
 @api_router.get("/stock/{symbol}/red-flags")
 async def red_flags(symbol: str):
     key = f"redflags:{symbol}"

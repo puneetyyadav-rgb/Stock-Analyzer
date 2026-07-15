@@ -110,3 +110,6 @@ export const getBetaCoupledSimulation = async (sym, params = {}, options = {}) =
     };
   }
 };
+
+export const getCatalystsUpcoming = (days = 30) =>
+  client.get(`/catalysts/upcoming`, { params: { days } }).then((r) => r.data);

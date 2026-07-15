@@ -31,6 +31,7 @@ import PortfolioAllocPanel from "../components/PortfolioAllocPanel";
 import GlobalMacroSimulationPanel from "../components/GlobalMacroSimulationPanel";
 import StockMacroCouplingWidget from "../components/StockMacroCouplingWidget";
 import QlibAlphaLeaderboardPanel from "../components/QlibAlphaLeaderboardPanel";
+import CatalystRadarPanel from "../components/CatalystRadarPanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -189,6 +190,17 @@ export default function Dashboard() {
             >
               🔥 Quant AI Alpha (Qlib & SHAP)
             </button>
+            <button
+              onClick={() => setActiveTab("catalyst-radar")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "catalyst-radar"
+                  ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-900/40 border border-indigo-400/30"
+                  : "bg-zinc-900 text-indigo-400 hover:text-white border border-indigo-900/40"
+              }`}
+              data-testid="catalyst-radar-tab-btn"
+            >
+              🛰️ Catalyst Radar
+            </button>
           </div>
 
           {activeTab === "pairs" && <PairsTradingPanel />}
@@ -196,6 +208,7 @@ export default function Dashboard() {
           {activeTab === "backtest" && <BacktestPanel />}
           {activeTab === "macro-sim" && <GlobalMacroSimulationPanel symbol={symbol || "RELIANCE"} sector={overview?.sector || "Conglomerate"} />}
           {activeTab === "qlib" && <QlibAlphaLeaderboardPanel onSelectStock={(sym) => { setSymbol(sym); setActiveTab("stock"); }} />}
+          {activeTab === "catalyst-radar" && <CatalystRadarPanel />}
 
           {activeTab === "stock" && (
             <>
