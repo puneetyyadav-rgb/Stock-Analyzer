@@ -148,14 +148,21 @@ function ResultsDueView({ days }) {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [syncSuccessMsg, setSyncSuccessMsg] = useState(null);
 
-  const fetchResults = useCallback(async () => {
-    if (!data) setLoading(true);
+  const fetchResults = useCallback(async (isManual = false) => {
+    const force = typeof isManual === "boolean" && isManual;
+    if (!data || force) setLoading(true);
     setError(null);
+    if (force) setSyncSuccessMsg(null);
     try {
-      const res = await getResultsDue(days);
+      const res = await getResultsDue(days, force);
       setData(res);
       try { localStorage.setItem(`results_due_cache_${days}`, JSON.stringify(res)); } catch {}
+      if (force) {
+        setSyncSuccessMsg(`✅ Successfully synced live feed from NSE! Found ${res?.results_due?.length || 0} meetings.`);
+        setTimeout(() => setSyncSuccessMsg(null), 5000);
+      }
     } catch (err) {
       setError(err.message || "Failed to load forthcoming board meetings & corporate actions");
     } finally {
@@ -254,7 +261,7 @@ function ResultsDueView({ days }) {
           </div>
 
           <button
-            onClick={fetchResults}
+            onClick={() => fetchResults(true)}
             disabled={loading}
             style={{
               padding: "6px 14px",
@@ -276,6 +283,13 @@ function ResultsDueView({ days }) {
           </button>
         </div>
       </div>
+
+      {syncSuccessMsg && (
+        <div style={{ padding: "10px 16px", marginBottom: 14, background: "rgba(34, 197, 94, 0.15)", border: "1px solid #22c55e", borderRadius: 8, color: "#86efac", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>{syncSuccessMsg}</span>
+          <button onClick={() => setSyncSuccessMsg(null)} style={{ background: "transparent", border: "none", color: "#86efac", cursor: "pointer", fontWeight: 700 }}>✕</button>
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "#64748b", background: "rgba(15,23,42,0.4)", borderRadius: 12, border: "1px solid #1e293b" }}>
@@ -448,17 +462,23 @@ export default function CatalystRadarPanel() {
   const [scanMsg, setScanMsg] = useState("");
   const [scanProgress, setScanProgress] = useState(null);
   const [nlpQuery, setNlpQuery] = useState("");
+  const [nlpSyncSuccessMsg, setNlpSyncSuccessMsg] = useState(null);
 
-  const fetchData = useCallback(async () => {
-    // Stale-while-revalidate: only show loading spinner if we have no cached data at all
-    if (!data) setLoading(true);
+  const fetchData = useCallback(async (isManual = false) => {
+    const force = typeof isManual === "boolean" && isManual;
+    if (!data || force) setLoading(true);
     setError(null);
+    if (force) setNlpSyncSuccessMsg(null);
     try {
-      const result = await getCatalystsUpcoming(days);
+      const result = await getCatalystsUpcoming(days, force);
       setData(result);
       try {
         localStorage.setItem(`catalyst_radar_cache_${days}`, JSON.stringify(result));
       } catch (e) {}
+      if (force) {
+        setNlpSyncSuccessMsg(`✅ Successfully synced Free-Text Filings from NSE! Found ${result?.total || 0} events.`);
+        setTimeout(() => setNlpSyncSuccessMsg(null), 5000);
+      }
     } catch (err) {
       setError(err.message || "Failed to load catalyst radar");
     } finally {
@@ -778,7 +798,7 @@ export default function CatalystRadarPanel() {
                   </div>
 
                   <button
-                    onClick={fetchData}
+                    onClick={() => fetchData(true)}
                     disabled={loading}
                     style={{
                       padding: "6px 14px",
@@ -800,6 +820,13 @@ export default function CatalystRadarPanel() {
                   </button>
                 </div>
               </div>
+
+              {nlpSyncSuccessMsg && (
+                <div style={{ padding: "10px 16px", marginBottom: 14, background: "rgba(34, 197, 94, 0.15)", border: "1px solid #22c55e", borderRadius: 8, color: "#86efac", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>{nlpSyncSuccessMsg}</span>
+                  <button onClick={() => setNlpSyncSuccessMsg(null)} style={{ background: "transparent", border: "none", color: "#86efac", cursor: "pointer", fontWeight: 700 }}>✕</button>
+                </div>
+              )}
 
               <TimeSection
                 title="This Week"

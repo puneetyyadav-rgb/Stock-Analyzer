@@ -111,8 +111,8 @@ export const getBetaCoupledSimulation = async (sym, params = {}, options = {}) =
   }
 };
 
-export const getCatalystsUpcoming = (days = 30) =>
-  client.get(`/catalysts/upcoming`, { params: { days } }).then((r) => r.data);
+export const getCatalystsUpcoming = (days = 30, forceRefresh = false) =>
+  client.get(`/catalysts/upcoming`, { params: { days, force_refresh: forceRefresh } }).then((r) => r.data);
 
 export const runBatchArchive = (maxStocks = 2000, downloadPdfs = false, universeFilter = "all") =>
   client.post(`/catalysts/run-batch-archive`, null, { params: { max_stocks: maxStocks, download_pdfs: downloadPdfs, universe_filter: universeFilter } }).then((r) => r.data);
@@ -120,6 +120,6 @@ export const runBatchArchive = (maxStocks = 2000, downloadPdfs = false, universe
 export const getScanProgress = () =>
   client.get(`/catalysts/scan-progress`).then((r) => r.data);
 
-export const getResultsDue = (days = 30) =>
-  client.get(`/catalysts/results-due`, { params: { days } }).then((r) => r.data);
+export const getResultsDue = (days = 30, forceRefresh = false) =>
+  client.get(`/catalysts/results-due`, { params: { days, force_refresh: forceRefresh } }).then((r) => r.data);
 

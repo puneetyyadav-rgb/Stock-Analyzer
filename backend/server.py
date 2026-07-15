@@ -740,13 +740,16 @@ async def events(symbol: str):
 
 
 @api_router.get("/catalysts/upcoming")
-async def catalysts_upcoming(days: int = 30):
+async def catalysts_upcoming(days: int = 30, force_refresh: bool = False):
     """Phase 4: Catalyst Radar endpoint — returns upcoming deterministically extracted
     events from official NSE/BSE filings, classified by category. No predictions, no probabilities."""
     key = f"catalysts:upcoming:{days}"
-    cached = _cache_get(key)
-    if cached:
-        return cached
+    if not force_refresh:
+        cached = _cache_get(key)
+        if cached:
+            return cached
+    else:
+        logger.info(f"Forced exchange sync triggered for /catalysts/upcoming (days={days})")
 
     raw_events = await asyncio.to_thread(ev_mod.get_extracted_catalyst_events, None, days)
 
@@ -820,14 +823,17 @@ async def get_scan_progress():
 
 
 @api_router.get("/catalysts/results-due")
-async def get_results_due_route(days: int = 30):
+async def get_results_due_route(days: int = 30, force_refresh: bool = False):
     """Returns forthcoming board meetings & corporate actions from structured NSE event-calendar
     enriched with yfinance consensus EPS/revenue estimates and 9-factor profiles.
     """
     key = f"results_due:{days}"
-    cached = _cache_get(key)
-    if cached:
-        return cached
+    if not force_refresh:
+        cached = _cache_get(key)
+        if cached:
+            return cached
+    else:
+        logger.info(f"Forced exchange sync triggered for /catalysts/results-due (days={days})")
     import events_service as es
     result = await asyncio.to_thread(es.get_results_due, days)
     try:
