@@ -790,8 +790,8 @@ async def catalysts_upcoming(days: int = 30):
 
 
 @api_router.post("/catalysts/run-batch-archive")
-async def run_batch_archive(max_stocks: int = 500, download_pdfs: bool = False):
-    """Triggers batch archiving across the full Indian stock universe (up to 2,000+ stocks).
+async def run_batch_archive(max_stocks: int = 500, download_pdfs: bool = False, universe_filter: str = "all"):
+    """Triggers batch archiving across the full Indian stock universe (up to 2,000+ stocks or micro-caps specifically).
     Runs asynchronously in background thread pool."""
     import catalyst_archive_service as cas
     asyncio.create_task(
@@ -802,12 +802,13 @@ async def run_batch_archive(max_stocks: int = 500, download_pdfs: bool = False):
             download_pdfs=download_pdfs,
             max_items_per_stock=10,
             max_stocks=max_stocks,
-            delay_sec=0.25
+            delay_sec=0.2,
+            universe_filter=universe_filter
         )
     )
     return {
         "status": "started",
-        "message": f"Market-wide background archive started across up to {max_stocks} NSE symbols. New catalysts will appear automatically as extraction progresses."
+        "message": f"Background scan started across up to {max_stocks} NSE symbols ({universe_filter}). Micro-cap and upcoming catalysts will appear automatically as extraction progresses!"
     }
 
 

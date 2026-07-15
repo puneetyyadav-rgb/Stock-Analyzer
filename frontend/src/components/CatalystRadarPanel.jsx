@@ -164,10 +164,23 @@ export default function CatalystRadarPanel() {
     setScanning(true);
     setScanMsg("Starting background scan of all 2,000+ NSE stocks...");
     try {
-      const res = await runBatchArchive(2029, false);
+      const res = await runBatchArchive(2029, false, "all");
       setScanMsg(res.message || "Background scan running across all 2,000+ NSE symbols!");
     } catch (err) {
       setScanMsg("Failed to start scan: " + (err.message || "Network error"));
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleScanMicro = async () => {
+    setScanning(true);
+    setScanMsg("Targeting 1,879 small/micro-cap stocks outside Nifty 200...");
+    try {
+      const res = await runBatchArchive(1879, false, "micro_only");
+      setScanMsg(res.message || "Background scan running across 1,879 micro-cap stocks!");
+    } catch (err) {
+      setScanMsg("Failed to start micro-cap scan: " + (err.message || "Network error"));
     } finally {
       setScanning(false);
     }
@@ -201,7 +214,24 @@ export default function CatalystRadarPanel() {
               transition: "all 0.15s ease",
             }}
           >
-            {scanning ? "⏳ Initiating..." : "🚀 Scan All 2,000+ NSE Stocks"}
+            {scanning ? "⏳ Initiating..." : "🚀 Scan All 2,000+ Stocks"}
+          </button>
+          <button
+            onClick={handleScanMicro}
+            disabled={scanning}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              border: "1px solid #a855f7",
+              background: scanning ? "rgba(168,85,247,0.1)" : "rgba(168,85,247,0.2)",
+              color: "#c4b5fd",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: scanning ? "wait" : "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            🔬 Scan 1,800+ Micro Caps
           </button>
           {[30, 60, 90].map(d => (
             <button key={d} onClick={() => setDays(d)} style={{

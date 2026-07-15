@@ -244,21 +244,33 @@ def archive_nse_universe_batch(
     download_pdfs: bool = False,
     max_items_per_stock: int = 15,
     max_stocks: int = 2050,
-    delay_sec: float = 0.3
+    delay_sec: float = 0.3,
+    universe_filter: str = "all"
 ) -> Dict[str, Any]:
-    """Batch archives NSE corporate announcements across all 2,000+ active Indian equity symbols
+    """Batch archives NSE corporate announcements across active Indian equity symbols
     from local Bhavcopy/MASTER list.
+    `universe_filter` can be 'all' (2,029 stocks), 'micro_only' (1,879 small/micro-caps outside Nifty 200), or 'benchmark_only' (~150 large/midcaps).
     Returns market-wide extraction summary stats.
     """
     import time
     if symbols is None:
         try:
-            from train_nse_qlib import load_symbols_from_bhavcopy_if_available
-            symbols = load_symbols_from_bhavcopy_if_available()[:max_stocks]
+            from train_nse_qlib import load_symbols_from_bhavcopy_if_available, MASTER_NSE_UNIVERSE
+            all_syms = load_symbols_from_bhavcopy_if_available()
+            master_set = {s.replace(".NS", "").strip().upper() for s in MASTER_NSE_UNIVERSE}
+
+            if universe_filter == "micro_only":
+                symbols = [s for s in all_syms if s.replace(".NS", "").strip().upper() not in master_set]
+            elif universe_filter == "benchmark_only":
+                symbols = [s for s in all_syms if s.replace(".NS", "").strip().upper() in master_set]
+            else:
+                symbols = all_syms
+
+            symbols = symbols[:max_stocks]
         except Exception:
             symbols = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "LT", "WIPRO"]
 
-    logger.info(f"Starting market-wide corporate announcement archive across {len(symbols)} Indian symbols...")
+    logger.info(f"Starting market-wide corporate announcement archive across {len(symbols)} Indian symbols (filter: {universe_filter})...")
     total_stats = {"stocks_scanned": 0, "fetched": 0, "inserted": 0, "updated": 0, "errors": 0}
 
     for i, sym in enumerate(symbols):
