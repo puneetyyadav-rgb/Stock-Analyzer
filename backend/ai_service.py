@@ -50,7 +50,7 @@ def _call_groq_fallback(prompt: str) -> str:
             base_url="https://api.groq.com/openai/v1",
             api_key=groq_key
         )
-        models = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "qwen-2.5-32b", "llama-3.1-8b-instant", "gemma2-9b-it"]
+        models = ["qwen/qwen3-32b", "llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3.6-27b", "meta-llama/llama-4-scout-17b-16e-instruct", "llama-3.1-8b-instant"]
         for model in models:
             try:
                 logger.info(f"Attempting Groq fallback using model: {model}")
@@ -74,6 +74,8 @@ def _call_groq_fallback(prompt: str) -> str:
                     )
                 val = response.choices[0].message.content
                 if val:
+                    if "</think>" in val:
+                        val = val.split("</think>")[-1].strip()
                     logger.info(f"Groq fallback succeeded with model: {model}")
                     return val
             except Exception as ex:

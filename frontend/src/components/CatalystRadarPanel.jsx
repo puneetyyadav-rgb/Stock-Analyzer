@@ -5,7 +5,7 @@
  * Strictly NO probability scores, NO outcome predictions, NO buy/sell badges.
  */
 import React, { useState, useEffect, useCallback } from "react";
-import { getCatalystsUpcoming, runBatchArchive, getScanProgress, getResultsDue } from "../lib/api";
+import { getCatalystsUpcoming, runBatchArchive, getScanProgress, getResultsDue, getManagementGuidance } from "../lib/api";
 
 const CATEGORY_STYLES = {
   "Legal/Regulatory":   { bg: "rgba(239,68,68,0.15)",  border: "#ef4444", icon: "⚖️",  color: "#fca5a5" },
@@ -133,6 +133,272 @@ function TimeSection({ title, icon, color, events }) {
         }}>{events.length} event{events.length !== 1 ? "s" : ""}</span>
       </div>
       {events.map((ev, i) => <CatalystCard key={`${ev.symbol}-${ev.extracted_date}-${i}`} event={ev} />)}
+    </div>
+  );
+}
+
+function ResultsDueCard({ card }) {
+  const [guidance, setGuidance] = useState({ status: "idle", data: null });
+
+  const badgeBg = card.badge_color === "red" ? "rgba(239,68,68,0.15)" :
+                  card.badge_color === "green" ? "rgba(34,197,94,0.15)" :
+                  card.badge_color === "purple" ? "rgba(168,85,247,0.15)" : "rgba(59,130,246,0.15)";
+  const badgeBorder = card.badge_color === "red" ? "#ef4444" :
+                      card.badge_color === "green" ? "#22c55e" :
+                      card.badge_color === "purple" ? "#a855f7" : "#3b82f6";
+  const badgeColor = card.badge_color === "red" ? "#fca5a5" :
+                     card.badge_color === "green" ? "#86efac" :
+                     card.badge_color === "purple" ? "#d8b4fe" : "#93c5fd";
+
+  const runupTone = { red: { bg: "rgba(239,68,68,0.1)", border: "#ef4444", color: "#fca5a5" },
+                      blue: { bg: "rgba(56,189,248,0.1)", border: "#38bdf8", color: "#7dd3fc" },
+                      gray: { bg: "rgba(100,116,139,0.1)", border: "#64748b", color: "#cbd5e1" } }[card.runup?.tone] || {};
+
+  const recoKey = card.target_data?.recommendation_key || "";
+  const recoColor = recoKey.includes("buy") ? "#4ade80" : recoKey.includes("sell") ? "#f87171" : "#fbbf24";
+
+  const loadGuidance = async (forceRefresh = false) => {
+    if (!forceRefresh && (guidance.status === "loading" || guidance.status === "loaded")) return;
+    setGuidance({ status: "loading", data: null });
+    try {
+      const res = await getManagementGuidance(card.symbol, forceRefresh);
+      setGuidance({ status: "loaded", data: res });
+    } catch (err) {
+      setGuidance({ status: "error", data: { error: err.message || "Failed to extract guidance" } });
+    }
+  };
+
+  return (
+    <div
+      style={{
+        background: "rgba(15, 23, 42, 0.75)",
+        border: "1px solid rgba(51, 65, 85, 0.6)",
+        borderRadius: 12,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+        transition: "border-color 0.2s ease",
+      }}
+    >
+      <div>
+        {/* Top bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+          <div>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#f8fafc", letterSpacing: 0.5 }}>{card.symbol}</span>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {card.company}
+            </div>
+          </div>
+          <span style={{
+            padding: "3px 8px",
+            borderRadius: 6,
+            background: badgeBg,
+            border: `1px solid ${badgeBorder}55`,
+            color: badgeColor,
+            fontSize: 10.5,
+            fontWeight: 700,
+            textTransform: "uppercase"
+          }}>
+            {card.event_type}
+          </span>
+        </div>
+
+        {/* Date & Countdown */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(30,41,59,0.5)", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
+            🗓️ {card.meeting_date}
+          </div>
+          <span style={{ fontSize: 11, color: card.countdown_days <= 3 ? "#f87171" : "#38bdf8", fontWeight: 600 }}>
+            ⏱️ {card.countdown_days === 0 ? "Today!" : `${card.countdown_days} day${card.countdown_days === 1 ? "" : "s"} away`}
+          </span>
+        </div>
+
+        {/* Purpose */}
+        <p style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.4, margin: "0 0 12px" }}>
+          {card.purpose}
+        </p>
+
+        {/* Consensus Estimates */}
+        {card.consensus && (card.consensus.eps_avg || card.consensus.rev_avg_cr) ? (
+          <div style={{
+            background: "rgba(16, 185, 129, 0.08)",
+            border: "1px solid rgba(16, 185, 129, 0.25)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            marginBottom: 10,
+            fontSize: 11.5,
+            color: "#6ee7b7",
+          }}>
+            <div style={{ fontWeight: 700, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+              📈 yfinance Consensus Estimates
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, color: "#a7f3d0" }}>
+              {card.consensus.eps_avg && (
+                <span>EPS Avg: <strong>₹{card.consensus.eps_avg}</strong></span>
+              )}
+              {card.consensus.eps_high && (
+                <span style={{ fontSize: 10.5, color: "#6ee7b7" }}>(High ₹{card.consensus.eps_high} / Low ₹{card.consensus.eps_low})</span>
+              )}
+              {card.consensus.rev_avg_cr && (
+                <span>Est. Revenue: <strong>₹{card.consensus.rev_avg_cr.toLocaleString()} Cr</strong></span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 10.5, color: "#475569", marginBottom: 10 }}>
+            📊 Consensus EPS estimate: N/A
+          </div>
+        )}
+
+        {/* Factor Snapshot */}
+        {card.factor_snapshot ? (
+          <div style={{
+            background: "rgba(99, 102, 241, 0.08)",
+            border: "1px solid rgba(99, 102, 241, 0.25)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            fontSize: 11,
+            color: "#a5b4fc",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, color: "#c4b5fd" }}>🏛️ Factor Profile (Latest)</span>
+              {card.factor_snapshot.decile && (
+                <span style={{ background: "rgba(168,85,247,0.2)", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, color: "#e9d5ff" }}>
+                  Decile D{card.factor_snapshot.decile} · Top {card.factor_snapshot.percentile}%
+                </span>
+              )}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, fontSize: 10.5 }}>
+              <div>
+                <div style={{ color: "#64748b" }}>Delivery %</div>
+                <div style={{ fontWeight: 700, color: "#e2e8f0" }}>
+                  {card.factor_snapshot.deliv_pct !== null ? `${card.factor_snapshot.deliv_pct}%` : "—"}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: "#64748b" }}>Vol Trend</div>
+                <div style={{ fontWeight: 700, color: "#e2e8f0" }}>
+                  {card.factor_snapshot.vol_trend !== null ? `${card.factor_snapshot.vol_trend}×` : "—"}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: "#64748b" }}>20d Mom</div>
+                <div style={{ fontWeight: 700, color: card.factor_snapshot.mom_20d >= 0 ? "#4ade80" : "#f87171" }}>
+                  {card.factor_snapshot.mom_20d !== null ? `${card.factor_snapshot.mom_20d > 0 ? "+" : ""}${card.factor_snapshot.mom_20d}%` : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 10.5, color: "#475569" }}>
+            🏛️ Factor profile unavailable
+          </div>
+        )}
+
+        {/* NEW — Pre-Earnings Hype / Run-up (Brief Section 2B) */}
+        {card.runup && card.runup.runup_pct !== null && (
+          <div style={{
+            background: runupTone.bg, border: `1px solid ${runupTone.border}55`, borderRadius: 8,
+            padding: "6px 10px", marginTop: 10, fontSize: 11, color: runupTone.color,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <span style={{ fontWeight: 700 }}>{card.runup.emoji} {card.runup.label}</span>
+            <span>{card.runup.runup_pct > 0 ? "+" : ""}{card.runup.runup_pct}% / 10d</span>
+          </div>
+        )}
+
+        {/* NEW — Analyst Target Upside (Addendum #2) */}
+        {card.target_data && card.target_data.target_upside_pct !== null && (
+          <div style={{
+            background: "rgba(14, 165, 233, 0.08)", border: "1px solid rgba(14, 165, 233, 0.25)",
+            borderRadius: 8, padding: "6px 10px", marginTop: 8, fontSize: 11,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <span style={{ color: "#7dd3fc", fontWeight: 700 }}>
+              🎯 Target Upside:{" "}
+              <span style={{ color: card.target_data.target_upside_pct >= 0 ? "#4ade80" : "#f87171" }}>
+                {card.target_data.target_upside_pct > 0 ? "+" : ""}{card.target_data.target_upside_pct}%
+              </span>
+            </span>
+            {card.target_data.recommendation_key && (
+              <span style={{ color: recoColor, fontWeight: 700, textTransform: "uppercase", fontSize: 10 }}>
+                {card.target_data.recommendation_key.replace("_", " ")}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* NEW — Management Guidance, lazy-loaded accordion (Brief Section 2C + Addendum #1) */}
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => loadGuidance(false)}
+              style={{
+                flex: 1, textAlign: "left", background: "rgba(244,114,182,0.08)",
+                border: "1px solid rgba(244,114,182,0.25)", borderRadius: 8, padding: "6px 10px",
+                color: "#f9a8d4", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              {guidance.status === "loading" ? "⏳ Reading transcript + filings..." :
+               guidance.status === "loaded" ? "🎙️ Management Guidance ▾" :
+               "🎙️ Management Guidance (click to extract) ▸"}
+            </button>
+            {guidance.status === "loaded" && (
+              <button
+                onClick={(e) => { e.stopPropagation(); loadGuidance(true); }}
+                title="Force re-fetch transcript and re-run AI guidance extraction"
+                style={{
+                  background: "rgba(244,114,182,0.15)", border: "1px solid rgba(244,114,182,0.4)",
+                  borderRadius: 8, padding: "6px 10px", color: "#fbcfe8", fontSize: 11,
+                  fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap"
+                }}
+              >
+                🔄 Re-extract
+              </button>
+            )}
+          </div>
+
+          {guidance.status === "loaded" && guidance.data && (
+            <div style={{ marginTop: 6, padding: "8px 10px", background: "rgba(15,23,42,0.5)", borderRadius: 8, fontSize: 11, color: "#e2e8f0" }}>
+              {guidance.data.error ? (
+                <span style={{ color: "#f87171" }}>⚠️ {guidance.data.error}</span>
+              ) : !guidance.data.guidance_found ? (
+                <div>
+                  <span style={{ color: "#64748b" }}>
+                    {guidance.data.concall_checked
+                      ? `✅ Checked ${guidance.data.concall_quarter || "latest"} concall transcript: Management did not provide explicit forward numerical guidance.`
+                      : "No numerical guidance found in local archive or recent cache."}
+                  </span>
+                  {!guidance.data.concall_checked && (
+                    <div style={{ marginTop: 6 }}>
+                      <button
+                        onClick={() => loadGuidance(true)}
+                        style={{
+                          background: "#ec4899", border: "none", borderRadius: 6, padding: "5px 12px",
+                          color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer"
+                        }}
+                      >
+                        🚀 Auto-fetch Transcript from Screener & Re-extract Now
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                guidance.data.statements.map((s, i) => (
+                  <div key={i} style={{ marginBottom: i < guidance.data.statements.length - 1 ? 8 : 0 }}>
+                    <div style={{ color: "#94a3b8", fontSize: 9.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 2 }}>
+                      {s.source} · {s.metric}
+                    </div>
+                    <div style={{ fontStyle: "italic", lineHeight: 1.4 }}>&ldquo;{s.quote}&rdquo;</div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -302,150 +568,9 @@ function ResultsDueView({ days }) {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
-          {filtered.map((card, idx) => {
-            const badgeBg = card.badge_color === "red" ? "rgba(239,68,68,0.15)" :
-                            card.badge_color === "green" ? "rgba(34,197,94,0.15)" :
-                            card.badge_color === "purple" ? "rgba(168,85,247,0.15)" : "rgba(59,130,246,0.15)";
-            const badgeBorder = card.badge_color === "red" ? "#ef4444" :
-                                card.badge_color === "green" ? "#22c55e" :
-                                card.badge_color === "purple" ? "#a855f7" : "#3b82f6";
-            const badgeColor = card.badge_color === "red" ? "#fca5a5" :
-                               card.badge_color === "green" ? "#86efac" :
-                               card.badge_color === "purple" ? "#d8b4fe" : "#93c5fd";
-
-            return (
-              <div
-                key={`${card.symbol}-${card.meeting_date}-${idx}`}
-                style={{
-                  background: "rgba(15, 23, 42, 0.75)",
-                  border: "1px solid rgba(51, 65, 85, 0.6)",
-                  borderRadius: 12,
-                  padding: 16,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-                  transition: "border-color 0.2s ease",
-                }}
-              >
-                <div>
-                  {/* Top bar */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: "#f8fafc", letterSpacing: 0.5 }}>{card.symbol}</span>
-                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {card.company}
-                      </div>
-                    </div>
-                    <span style={{
-                      padding: "3px 8px",
-                      borderRadius: 6,
-                      background: badgeBg,
-                      border: `1px solid ${badgeBorder}55`,
-                      color: badgeColor,
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      textTransform: "uppercase"
-                    }}>
-                      {card.event_type}
-                    </span>
-                  </div>
-
-                  {/* Date & Countdown */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(30,41,59,0.5)", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
-                      🗓️ {card.meeting_date}
-                    </div>
-                    <span style={{ fontSize: 11, color: card.countdown_days <= 3 ? "#f87171" : "#38bdf8", fontWeight: 600 }}>
-                      ⏱️ {card.countdown_days === 0 ? "Today!" : `${card.countdown_days} day${card.countdown_days === 1 ? "" : "s"} away`}
-                    </span>
-                  </div>
-
-                  {/* Purpose */}
-                  <p style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.4, margin: "0 0 12px" }}>
-                    {card.purpose}
-                  </p>
-
-                  {/* Consensus Estimates */}
-                  {card.consensus && (card.consensus.eps_avg || card.consensus.rev_avg_cr) ? (
-                    <div style={{
-                      background: "rgba(16, 185, 129, 0.08)",
-                      border: "1px solid rgba(16, 185, 129, 0.25)",
-                      borderRadius: 8,
-                      padding: "8px 10px",
-                      marginBottom: 10,
-                      fontSize: 11.5,
-                      color: "#6ee7b7",
-                    }}>
-                      <div style={{ fontWeight: 700, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                        📈 yfinance Consensus Estimates
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, color: "#a7f3d0" }}>
-                        {card.consensus.eps_avg && (
-                          <span>EPS Avg: <strong>₹{card.consensus.eps_avg}</strong></span>
-                        )}
-                        {card.consensus.eps_high && (
-                          <span style={{ fontSize: 10.5, color: "#6ee7b7" }}>(High ₹{card.consensus.eps_high} / Low ₹{card.consensus.eps_low})</span>
-                        )}
-                        {card.consensus.rev_avg_cr && (
-                          <span>Est. Revenue: <strong>₹{card.consensus.rev_avg_cr.toLocaleString()} Cr</strong></span>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 10.5, color: "#475569", marginBottom: 10 }}>
-                      📊 Consensus EPS estimate: N/A
-                    </div>
-                  )}
-
-                  {/* Factor Snapshot */}
-                  {card.factor_snapshot ? (
-                    <div style={{
-                      background: "rgba(99, 102, 241, 0.08)",
-                      border: "1px solid rgba(99, 102, 241, 0.25)",
-                      borderRadius: 8,
-                      padding: "8px 10px",
-                      fontSize: 11,
-                      color: "#a5b4fc",
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontWeight: 700, color: "#c4b5fd" }}>🏛️ Factor Profile (Latest)</span>
-                        {card.factor_snapshot.decile && (
-                          <span style={{ background: "rgba(168,85,247,0.2)", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, color: "#e9d5ff" }}>
-                            Decile D{card.factor_snapshot.decile} · Top {card.factor_snapshot.percentile}%
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, fontSize: 10.5 }}>
-                        <div>
-                          <div style={{ color: "#64748b" }}>Delivery %</div>
-                          <div style={{ fontWeight: 700, color: "#e2e8f0" }}>
-                            {card.factor_snapshot.deliv_pct !== null ? `${card.factor_snapshot.deliv_pct}%` : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ color: "#64748b" }}>Vol Trend</div>
-                          <div style={{ fontWeight: 700, color: "#e2e8f0" }}>
-                            {card.factor_snapshot.vol_trend !== null ? `${card.factor_snapshot.vol_trend}×` : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ color: "#64748b" }}>20d Mom</div>
-                          <div style={{ fontWeight: 700, color: card.factor_snapshot.mom_20d >= 0 ? "#4ade80" : "#f87171" }}>
-                            {card.factor_snapshot.mom_20d !== null ? `${card.factor_snapshot.mom_20d > 0 ? "+" : ""}${card.factor_snapshot.mom_20d}%` : "—"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 10.5, color: "#475569" }}>
-                      🏛️ Factor profile unavailable
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {filtered.map((card, idx) => (
+            <ResultsDueCard key={`${card.symbol}-${card.meeting_date}-${idx}`} card={card} />
+          ))}
         </div>
       )}
     </div>

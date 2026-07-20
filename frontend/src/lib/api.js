@@ -123,3 +123,7 @@ export const getScanProgress = () =>
 export const getResultsDue = (days = 30, forceRefresh = false) =>
   client.get(`/catalysts/results-due`, { params: { days, force_refresh: forceRefresh } }).then((r) => r.data);
 
+export const getManagementGuidance = (sym, forceRefresh = false) =>
+  client.get(`/catalysts/results-due/${sym}/guidance`, { params: { force_refresh: forceRefresh } }).then((r) => r.data);
+
+

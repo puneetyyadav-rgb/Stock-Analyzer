@@ -75,7 +75,7 @@ def _cache_get(key: str, custom_ttl: float = None):
             return val
 
     # If key is an AI analysis or expensive query, check persistent disk cache (default 24h TTL)
-    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict")):
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict", "guidance_extract")):
         import json, os, time
         try:
             path = _disk_cache_path()
@@ -98,7 +98,7 @@ def _cache_get(key: str, custom_ttl: float = None):
 def _cache_set(key: str, val):
     _CACHE[key] = (datetime.now(timezone.utc), val)
     # If key is an AI analysis or expensive query, persist to disk cache
-    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict")):
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict", "guidance_extract")):
         import json, os, time
         try:
             path = _disk_cache_path()
@@ -605,6 +605,18 @@ async def concall_summary(symbol: str, payload: dict):
         return cached
     text = await asyncio.to_thread(ex.fetch_pdf_text, pdf_url, 30000)
     if text and len(text) > 500:
+        try:
+            import catalyst_archive_service as cas
+            from extra_service import _strip_symbol
+            from datetime import datetime
+            with cas.get_db_connection() as conn:
+                conn.execute(
+                    """INSERT OR REPLACE INTO concalls_archive (symbol, quarter_label, full_text, date_published, created_at)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (_strip_symbol(symbol), date_str or "Latest", text, datetime.now().strftime("%Y-%m-%d"), datetime.now().isoformat())
+                )
+        except Exception as arc_err:
+            logger.debug(f"Failed to archive concall text: {arc_err}")
         summary = await cs.summarize_concall(symbol, text, date_str)
     else:
         # Fallback: use available news + screener + about data
@@ -840,6 +852,25 @@ async def get_results_due_route(days: int = 30, force_refresh: bool = False):
         _cache_set(key, result)
     except TypeError:
         pass
+    return result
+
+
+@api_router.get("/catalysts/results-due/{symbol}/guidance")
+async def get_management_guidance(symbol: str, force_refresh: bool = False):
+    """Phase 5: strictly-gated dual-source (concall transcript + Investor
+    Presentation/Press Release) extraction of explicit management guidance.
+    Deliberately NOT bundled into /catalysts/results-due — that would mean one
+    Gemini call per visible card on every 10-minute cache refresh. This is
+    lazy-loaded per card instead."""
+    key = f"guidance_extract:{symbol.upper()}"
+    if not force_refresh:
+        cached = _cache_get(key, custom_ttl=86400)  # guidance is stable until the next concall
+        if cached and "error" not in cached:
+            return cached
+    import events_service as es
+    result = await es.extract_management_guidance(symbol, force_refresh)
+    if "error" not in result:
+        _cache_set(key, result)
     return result
 
 

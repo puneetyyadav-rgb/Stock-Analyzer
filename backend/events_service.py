@@ -3,7 +3,9 @@ import os
 import re
 import logging
 from datetime import date, datetime, timedelta
+from typing import Optional
 from dateutil import parser as date_parser
+import pandas as pd
 import yfinance as yf
 from legal_service import get_nse_announcements
 
@@ -440,6 +442,121 @@ def _get_yf_consensus(clean_sym: str) -> dict:
     return data
 
 
+# =====================================================================
+# PHASE 5: RESULT EXPECTATIONS & SENTIMENT TRACKER — fast math layer
+# =====================================================================
+
+_YF_TARGET_CACHE = {}
+_RUNUP_CACHE = {}
+
+
+def _get_yf_target_data(clean_sym: str) -> dict:
+    """Analyst target price + recommendation, 1h cache. Deliberately reuses
+    stock_service.get_overview() instead of issuing a second yfinance .info
+    call — that function already fetches targetMeanPrice/recommendationKey."""
+    import time
+    now = time.time()
+    if clean_sym in _YF_TARGET_CACHE:
+        entry = _YF_TARGET_CACHE[clean_sym]
+        if now - entry["time"] < 3600:
+            return entry["data"]
+
+    data = {
+        "current_price": None,
+        "target_mean_price": None,
+        "recommendation_key": None,
+        "num_analysts": None,
+        "target_upside_pct": None,
+    }
+    try:
+        import stock_service as ss
+        ov = ss.get_overview(clean_sym)
+        price = ov.get("price")
+        target = ov.get("targetMeanPrice")
+        data["current_price"] = price
+        data["target_mean_price"] = target
+        data["recommendation_key"] = ov.get("recommendation")
+        data["num_analysts"] = ov.get("numAnalysts")
+        if price and target and price > 0:
+            data["target_upside_pct"] = round(((target - price) / price) * 100.0, 2)
+    except Exception as e:
+        logger.error(f"yf target data error for {clean_sym}: {e}")
+
+    _YF_TARGET_CACHE[clean_sym] = {"time": now, "data": data}
+    return data
+
+
+def _classify_runup(pct) -> dict:
+    """Maps the 10-day pre-earnings run-up to the brief's three badge tiers."""
+    if pct is None:
+        return {"label": "Unknown", "emoji": "❔", "tone": "gray"}
+    if pct > 8.0:
+        return {"label": "High Hype / Run-up", "emoji": "🔥", "tone": "red"}
+    if pct < -5.0:
+        return {"label": "Low Bar / Depressed", "emoji": "❄️", "tone": "blue"}
+    return {"label": "Neutral", "emoji": "⚖️", "tone": "gray"}
+
+
+def _get_preearnings_runup_from_panel(clean_sym: str, window: int = 10):
+    """PRIMARY path. factor_service already loads the full NSE Bhavcopy close-price
+    panel in memory for the Factor Profile block on this same card — reusing it here
+    means zero extra network calls, and the run-up figure is methodologically
+    consistent with the mom_20d figure shown a few pixels away on the UI."""
+    try:
+        import factor_service as fs
+        panel = fs.load_panel()
+        wc = fs._wide(panel, "close")
+        if clean_sym not in wc.columns:
+            return None
+        series = wc[clean_sym].dropna()
+        if len(series) <= window:
+            return None
+        latest, prior = series.iloc[-1], series.iloc[-1 - window]
+        if not prior or pd.isna(prior) or pd.isna(latest):
+            return None
+        return round(((latest / prior) - 1.0) * 100.0, 2)
+    except Exception as e:
+        logger.debug(f"panel run-up lookup failed for {clean_sym}: {e}")
+        return None
+
+
+def _get_preearnings_runup_from_yfinance(clean_sym: str, window: int = 10):
+    """FALLBACK path — only hit when the symbol isn't in the local Bhavcopy universe
+    yet (e.g. a very recent listing). Mirrors the auto_adjust=True convention used
+    elsewhere in stock_service.py for return-style (not level-style) calculations."""
+    try:
+        hist = yf.Ticker(f"{clean_sym}.NS").history(period="1mo", interval="1d", auto_adjust=True)
+        closes = hist["Close"].dropna() if not hist.empty else hist
+        if len(closes) <= window:
+            return None
+        latest, prior = float(closes.iloc[-1]), float(closes.iloc[-1 - window])
+        if not prior:
+            return None
+        return round(((latest / prior) - 1.0) * 100.0, 2)
+    except Exception as e:
+        logger.debug(f"yfinance run-up fallback failed for {clean_sym}: {e}")
+        return None
+
+
+def _get_preearnings_runup(clean_sym: str) -> dict:
+    import time
+    now = time.time()
+    if clean_sym in _RUNUP_CACHE:
+        entry = _RUNUP_CACHE[clean_sym]
+        if now - entry["time"] < 3600:
+            return entry["data"]
+
+    pct = _get_preearnings_runup_from_panel(clean_sym)
+    source = "bhavcopy_panel"
+    if pct is None:
+        pct = _get_preearnings_runup_from_yfinance(clean_sym)
+        source = "yfinance_fallback"
+
+    data = {"runup_pct": pct, "source": source if pct is not None else None, **_classify_runup(pct)}
+    _RUNUP_CACHE[clean_sym] = {"time": now, "data": data}
+    return data
+
+
 def get_results_due(days: int = 30, force_refresh: bool = False) -> dict:
     """Builds the institutional 'Results Due' & forthcoming corporate actions tracker:
     1. structured board meetings from NSE /api/event-calendar
@@ -546,15 +663,22 @@ def get_results_due(days: int = 30, force_refresh: bool = False) -> dict:
 
         # Default consensus to null, enrich top 25 quickly with threadpool
         card["consensus"] = None
+        card["target_data"] = None
+        card["runup"] = None
 
-    # Enrich top 25 nearest cards with yfinance consensus estimates concurrently (~1s total)
-    def _fetch_consensus(card):
-        c = _get_yf_consensus(card["symbol"])
+    # Enrich top 25 nearest cards with yfinance consensus + target upside +
+    # pre-earnings run-up, concurrently (~1-2s total; run-up prefers the
+    # in-memory Bhavcopy panel so it adds almost no extra latency)
+    def _fetch_expectations(card):
+        sym = card["symbol"]
+        c = _get_yf_consensus(sym)
         card["consensus"] = c if c else None
+        card["target_data"] = _get_yf_target_data(sym)
+        card["runup"] = _get_preearnings_runup(sym)
         return card
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        cards[:25] = list(pool.map(_fetch_consensus, cards[:25]))
+        cards[:25] = list(pool.map(_fetch_expectations, cards[:25]))
 
     res = {
         "total": len(cards),
@@ -568,4 +692,191 @@ def get_results_due(days: int = 30, force_refresh: bool = False) -> dict:
     return res
 
 
+# =====================================================================
+# PHASE 5: DUAL-SOURCE GATED GUIDANCE EXTRACTION
+# =====================================================================
 
+def _select_latest_by_parsed_date(rows: list, date_key: str):
+    """SQL ORDER BY on date_published isn't reliable (raw NSE text, not ISO).
+    Pull a small batch, then use the module's own _parse_date() to find the
+    true most-recent row."""
+    best, best_date = None, None
+    for row in rows:
+        d = _parse_date(row.get(date_key))
+        if d and (best_date is None or d > best_date):
+            best_date, best = d, row
+    return best or (rows[0] if rows else None)
+
+
+def _fetch_guidance_source_text(symbol: str) -> dict:
+    """Dual-source fetch per Addendum #1: latest concall transcript tail +
+    latest Investor Presentation / Press Release. Both tables are already
+    populated by catalyst_archive_service.archive_nse_announcements() and
+    the concall archival job — this function is read-only, no network calls."""
+    import sqlite3
+    from extra_service import _strip_symbol
+    import catalyst_archive_service as cas
+
+    clean_sym = _strip_symbol(symbol)
+    conn = cas.get_db_connection()   # existing helper — sqlite3.Row factory already set
+    try:
+        transcript_rows = conn.execute(
+            """SELECT quarter_label, full_text, date_published
+               FROM concalls_archive WHERE symbol = ?
+               ORDER BY date_published DESC, id DESC LIMIT 5""",
+            (clean_sym,)
+        ).fetchall()
+        transcript_row = _select_latest_by_parsed_date([dict(r) for r in transcript_rows], "date_published")
+
+        ann_rows = conn.execute(
+            """SELECT subject, full_text, date_published FROM announcements_archive
+               WHERE symbol = ? AND (subject LIKE '%Investor Presentation%'
+                                      OR subject LIKE '%Press Release%')
+               ORDER BY date_published DESC, id DESC LIMIT 10""",
+            (clean_sym,)
+        ).fetchall()
+        ann_row = _select_latest_by_parsed_date([dict(r) for r in ann_rows], "date_published")
+    finally:
+        conn.close()
+
+    if not transcript_row or not transcript_row.get("full_text"):
+        try:
+            import extra_service as ex
+            concalls = ex.get_concalls(clean_sym)
+            if concalls and concalls[0].get("transcript"):
+                t_url = concalls[0]["transcript"]
+                t_date = concalls[0].get("date") or "Latest"
+                text = ex.fetch_pdf_text(t_url, 30000)
+                if text and len(text) > 500:
+                    transcript_row = {"full_text": text, "quarter_label": t_date}
+                    with cas.get_db_connection() as c:
+                        c.execute(
+                            """INSERT OR REPLACE INTO concalls_archive (symbol, quarter_label, full_text, date_published, created_at)
+                               VALUES (?, ?, ?, ?, ?)""",
+                            (clean_sym, t_date, text, datetime.now().strftime("%Y-%m-%d"), datetime.now().isoformat())
+                        )
+        except Exception as auto_err:
+            logger.debug(f"Auto-fetch concall failed for {clean_sym}: {auto_err}")
+
+    transcript_excerpt = ""
+    if transcript_row and transcript_row.get("full_text"):
+        text = transcript_row["full_text"]
+        if len(text) > 22000:
+            transcript_excerpt = "=== MANAGEMENT OPENING REMARKS & GUIDANCE ===\n" + text[:11000] + "\n\n=== Q&A SESSION EXCERPTS ===\n" + text[-11000:]
+        else:
+            transcript_excerpt = text
+
+    announcement_excerpt, announcement_label = "", None
+    if ann_row and ann_row.get("full_text"):
+        announcement_excerpt = ann_row["full_text"][:6000]
+        subj_lower = (ann_row.get("subject") or "").lower()
+        announcement_label = "Investor Presentation" if "presentation" in subj_lower else "Press Release"
+
+    return {
+        "transcript_excerpt": transcript_excerpt,
+        "transcript_quarter": transcript_row.get("quarter_label") if transcript_row else None,
+        "announcement_excerpt": announcement_excerpt,
+        "announcement_label": announcement_label,
+        "announcement_subject": ann_row.get("subject") if ann_row else None,
+    }
+
+
+GUIDANCE_EXTRACTION_PROMPT = """You are a STRICT DATA EXTRACTION engine for an Indian equity research terminal.
+You are NOT a financial analyst. You must not summarize, interpret, or predict.
+
+SOURCE MATERIAL below is (a) an excerpt from the company's most recent earnings call
+transcript (opening remarks + Q&A tail), and/or (b) the most recent Investor
+Presentation or Press Release filed with the exchange. Either source may be empty.
+
+TASK: Extract ONLY officially, explicitly stated numerical targets or guidance for the
+NEXT quarter, NEXT fiscal year, or multi-year strategic targets (e.g. FY28/FY29 targets,
+3-5 year goals, revenue growth %, margin target, capex, capacity expansion targets,
+volume guidance, EPS target, etc).
+
+HARD RULES:
+1. Do NOT infer, calculate, round, or extrapolate any number not stated verbatim.
+2. Do NOT summarize sentiment, tone, or outlook in prose.
+3. Do NOT invent a target because the text "sounds bullish" or "sounds bearish."
+4. If a target appears in both sources, list both occurrences separately with their source.
+5. If NO explicit numerical guidance exists in the text provided, set "guidance_found"
+   to false and "statements" to an empty array. Do not guess.
+6. Output STRICT JSON only. No markdown fences, no commentary outside the JSON object.
+
+Schema:
+{
+  "guidance_found": true | false,
+  "statements": [
+    {
+      "source": "Earnings Call Transcript" | "Investor Presentation" | "Press Release",
+      "metric": "short label, e.g. Revenue Growth Target",
+      "quote": "the exact sentence stating the target, verbatim from the source text"
+    }
+  ]
+}
+
+SOURCE TEXT:
+{combined_text}
+"""
+
+
+async def extract_management_guidance(symbol: str, force_refresh: bool = False) -> dict:
+    """Strictly-gated dual-source guidance extraction (Addendum #1). The only
+    network call is the single AI request — both sources are local archive
+    reads, so this is cheap to retry and safe to cache hard.
+    """
+    clean_sym = symbol.upper().split(".")[0]
+    src = _fetch_guidance_source_text(clean_sym)
+    if not src["transcript_excerpt"] and not src["announcement_excerpt"]:
+        return {
+            "guidance_found": False,
+            "statements": [],
+            "error": "No concall transcript or presentation/press release archived locally.",
+            "concall_checked": False,
+        }
+
+    parts = []
+    if src["transcript_excerpt"]:
+        header = f"=== Earnings Call Transcript ({src.get('transcript_quarter') or 'Latest Quarter'}) ==="
+        parts.append(f"{header}\n{src['transcript_excerpt']}")
+    if src["announcement_excerpt"]:
+        header = f"=== {src['announcement_label']} ({src.get('announcement_subject') or 'Latest'}) ==="
+        parts.append(f"{header}\n{src['announcement_excerpt']}")
+
+    prompt = GUIDANCE_EXTRACTION_PROMPT.replace("{combined_text}", "\n\n".join(parts))
+
+    try:
+        import asyncio
+        import json as _json
+        import ai_service as ai
+        # Run synchronous AI call in a background thread so we don't block Uvicorn event loop
+        text = await asyncio.to_thread(ai._call_groq_fallback, prompt)
+
+        # Bulletproof slice: extract exactly what is between the first { and last }
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end >= start:
+            text = text[start : end + 1]
+
+        result = _json.loads(text)
+        raw_stmts = result.get("statements") or []
+        unique_stmts = []
+        seen = set()
+        for s in raw_stmts:
+            if not isinstance(s, dict):
+                continue
+            quote = (s.get("quote") or "").strip()
+            metric = (s.get("metric") or "").strip()
+            if not quote or not metric:
+                continue
+            k = (metric.lower(), quote.lower())
+            if k not in seen:
+                seen.add(k)
+                unique_stmts.append({"source": s.get("source") or "Transcript", "metric": metric, "quote": quote})
+        result["statements"] = unique_stmts
+        result["guidance_found"] = bool(unique_stmts) if result.get("guidance_found") else False
+        result["concall_checked"] = bool(src["transcript_excerpt"])
+        result["concall_quarter"] = src.get("transcript_quarter") or "Latest"
+        return result
+    except Exception as e:
+        logger.error(f"guidance extraction error for {symbol}: {e}")
+        return {"error": str(e), "guidance_found": False, "statements": []}
