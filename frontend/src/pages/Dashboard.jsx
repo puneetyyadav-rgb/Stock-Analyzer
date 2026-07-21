@@ -32,6 +32,7 @@ import GlobalMacroSimulationPanel from "../components/GlobalMacroSimulationPanel
 import StockMacroCouplingWidget from "../components/StockMacroCouplingWidget";
 import QlibAlphaLeaderboardPanel from "../components/QlibAlphaLeaderboardPanel";
 import CatalystRadarPanel from "../components/CatalystRadarPanel";
+import OvernightSightPanel from "../components/OvernightSightPanel";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -215,8 +216,11 @@ export default function Dashboard() {
           {activeTab === "stock" && (
             <>
               {!symbol && !loading && (
-            <EmptyState onPick={setSymbol} />
-          )}
+                <>
+                  <OvernightSightPanel />
+                  <EmptyState onPick={setSymbol} />
+                </>
+              )}
 
           {symbol && loading && (
             <div className="flex items-center justify-center py-20 gap-3 text-zinc-400">

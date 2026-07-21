@@ -126,4 +126,22 @@ export const getResultsDue = (days = 30, forceRefresh = false) =>
 export const getManagementGuidance = (sym, forceRefresh = false) =>
   client.get(`/catalysts/results-due/${sym}/guidance`, { params: { force_refresh: forceRefresh } }).then((r) => r.data);
 
+// Overnight Sight
+export const getOvernightRawData = () =>
+  client.get(`/overnight/raw-data`).then((r) => r.data);
 
+export const getOvernightBriefing = async (forceRefresh = false, options = {}) => {
+  try {
+    const res = await client.get(`/overnight/briefing`, { 
+      params: { force_refresh: forceRefresh },
+      ...options 
+    });
+    return res.data;
+  } catch (error) {
+    if (error.name === 'CanceledError') {
+      throw error;
+    }
+    console.error("Failed to fetch overnight briefing:", error);
+    throw error;
+  }
+};

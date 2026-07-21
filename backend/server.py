@@ -1476,6 +1476,54 @@ async def get_quant_governance_audit_logbook():
     }
 
 
+import overnight_service as osrv
+
+@api_router.get("/overnight/raw-data")
+async def get_overnight_raw_data():
+    """Returns the overnight global market indices and commodities (raw data only)."""
+    key = "overnight:raw"
+    cached = _cache_get(key, custom_ttl=900)  # 15 minutes cache
+    if cached:
+        return cached
+    try:
+        result = await asyncio.to_thread(osrv.fetch_overnight_data)
+        _cache_set(key, result)
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching overnight raw data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/overnight/briefing")
+async def get_overnight_briefing(force_refresh: bool = False):
+    """Returns the overnight market raw data AND the AI-synthesized morning briefing bias.
+    Feeds REAL FII/DII net flow data into the AI prompt instead of letting the model guess."""
+    key = "overnight:briefing"
+    if not force_refresh:
+        cached = _cache_get(key, custom_ttl=7200)  # 2 hours cache
+        if cached:
+            return cached
+
+    # Fetch real FII data to pass into AI prompt (not for AI to guess from DXY)
+    fii_data = None
+    try:
+        fii_data = ifs.compute_institutional_flow_metrics()
+    except Exception as e:
+        logger.warning(f"Could not fetch FII data for overnight briefing: {e}")
+
+    try:
+        result = await osrv.generate_morning_briefing(force_refresh, fii_data=fii_data)
+
+        # Only cache if AI layer succeeded — don't freeze a null AI for 2 hours
+        if result.get("ai") is not None:
+            _cache_set(key, result)
+
+        return result
+    except Exception as e:
+        logger.error(f"Error generating overnight briefing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 app.include_router(api_router)
 
 app.add_middleware(
