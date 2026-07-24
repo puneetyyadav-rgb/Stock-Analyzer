@@ -1,0 +1,462 @@
+{
+  "INFY": {
+    "analysis_metadata": {
+      "company_name": "Infosys Limited",
+      "quarters_analyzed": [
+        "Q3 FY25 (Jan 2025)",
+        "Q4 FY25 (Apr 2025)",
+        "Q1 FY26 (Jul 2025)",
+        "Q2 FY26 (Oct 2025)",
+        "Q3 FY26 (Jan 2026)",
+        "Investor AI Day (Feb 2026)",
+        "Q4 FY26 (Apr 2026)"
+      ],
+      "quarters_provided_count": 7,
+      "data_completeness_note": "7 consecutive earnings calls and investor events provided spanning January 2025 through April 2026. Full cross-examination conducted across the provided transcripts."
+    },
+    "execution_tracker": {
+      "promises_evaluated": [
+        {
+          "promise_id": "revenue-growth-guidance-fy25",
+          "category": "Revenue Guidance",
+          "quarter_first_promised": "Q3 FY25 (Jan 2025)",
+          "original_commitment_summary": "Revised full-year FY25 constant currency revenue growth guidance upwards to 4.5%-5.0%.",
+          "status": "Missed - Acknowledged By Management",
+          "evidence_trail": "In Q3 FY25, management raised FY25 growth guidance to 4.5%-5.0%. However, in Q4 FY25 (Apr 2025), full-year FY25 constant currency growth was reported at 4.2%, falling short of the lower end of the upgraded guidance band.",
+          "management_accountability": "Deflected To External Factors"
+        },
+        {
+          "promise_id": "revenue-growth-guidance-fy26",
+          "category": "Revenue Guidance",
+          "quarter_first_promised": "Q4 FY25 (Apr 2025)",
+          "original_commitment_summary": "Provided initial FY26 constant currency revenue growth guidance of 0% to 3.0%.",
+          "status": "Delivered In Full",
+          "evidence_trail": "Management iteratively narrowed and raised FY26 guidance across quarters: 1%-3% in Q1 FY26, 2%-3% in Q2 FY26, and 3%-3.5% in Q3 FY26. In Q4 FY26 (Apr 2026), full-year FY26 constant currency growth was delivered at 3.1%, landing squarely within the final guided range.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "fresher-hiring-target-fy26",
+          "category": "Leadership or Org Change",
+          "quarter_first_promised": "Q3 FY25 (Jan 2025)",
+          "original_commitment_summary": "Committed to hiring 20,000+ freshers in FY26.",
+          "status": "Delivered In Full",
+          "evidence_trail": "Management repeatedly reconfirmed this target in Q4 FY25 and Q1 FY26. By Q2 FY26, 12,000+ freshers were onboarded, expanding to 18,000 by Q3 FY26. In Q4 FY26, CFO Jayesh Sanghrajka confirmed the company successfully crossed the 20,000 fresher hiring mark for the fiscal year.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "operating-margin-corridor-20-22",
+          "category": "Margin Guidance",
+          "quarter_first_promised": "Q3 FY25 (Jan 2025)",
+          "original_commitment_summary": "Maintain operating margin within the 20.0% to 22.0% band across FY25, FY26, and FY27.",
+          "status": "Delivered In Full",
+          "evidence_trail": "Operating margins remained firmly inside the 20%-22% corridor throughout all periods: FY25 closed at 21.1%, Q1 FY26 hit 20.9%, Q2 FY26 hit 21.0%, Q3 FY26 hit 21.2% (adjusted), and FY26 closed at 21.0%. FY27 margin guidance was again set at 20%-22%.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "ai-services-financial-disclosure",
+          "category": "Strategic Pivot",
+          "quarter_first_promised": "Q2 FY26 (Oct 2025)",
+          "original_commitment_summary": "Indicated that AI revenue contribution would be disclosed externally at the appropriate time once material.",
+          "status": "Partially Delivered",
+          "evidence_trail": "At the Feb 2026 Investor AI Day, management disclosed AI services accounted for 5.5% of Q3 FY26 revenue. However, when pressed by analysts in Q4 FY26 (Apr 2026) for updated Q4 or annual AI revenue figures, management backtracked and refused to disclose exact numbers, claiming it was no longer providing the metric.",
+          "management_accountability": "Acknowledged Only When Pressed By Analyst"
+        },
+        {
+          "promise_id": "versent-group-acquisition-closure",
+          "category": "Capex or Expansion",
+          "quarter_first_promised": "Q2 FY26 (Oct 2025)",
+          "original_commitment_summary": "Targeted closing the Versent Group acquisition in Australia during FY26 following routine regulatory approvals.",
+          "status": "Delivered Late",
+          "evidence_trail": "In Q2 FY26, closing was expected in coming months. By Q3 FY26 and Q4 FY26, management disclosed the deal faced regulatory queries and delays, leaving it unclosed by fiscal year-end and excluded from initial FY27 guidance.",
+          "management_accountability": "Acknowledged Only When Pressed By Analyst"
+        },
+        {
+          "promise_id": "headcount-expansion-trajectory",
+          "category": "Leadership or Org Change",
+          "quarter_first_promised": "Q3 FY26 (Jan 2026)",
+          "original_commitment_summary": "Framed two consecutive quarters of strong headcount additions (+13,200 employees) as evidence of demand confidence and capacity building for FY27.",
+          "status": "Missed - Silently Dropped",
+          "evidence_trail": "After touting 8,000 net additions in Q2 FY26 and 13,200 over H2 FY26 as a sign of demand strength, headcount abruptly dropped by 8,000 sequentially in Q4 FY26 (Apr 2026). Management pivoted to explaining the drop as routine demand-supply balancing without acknowledging the shift from the prior quarter's expansion narrative.",
+          "management_accountability": "Never Mentioned Again"
+        }
+      ],
+      "overall_execution_pattern": "Management demonstrates strong disciplined execution on core operational metrics, consistently maintaining its 20%-22% operating margin band and delivering on fresher hiring targets. On revenue guidance, management has adopted a pattern of setting conservative initial baselines (such as 0-3% for FY26) and steadily raising them as deal visibility improves. However, credibility flags emerge around narrative shifts and selective disclosures: management enthusiastically highlights capacity expansion or AI revenue percentages when trends are favorable, but abruptly closes off disclosure or reverses headcount narratives when faced with quarterly volume softness or regulatory delays."
+    },
+    "analyst_grill_vault": {
+      "sharpest_exchanges": [
+        {
+          "quarter": "Q4 FY25 (Apr 2025)",
+          "analyst_or_firm": "CNBC TV18 (Ritu Singh)",
+          "question_summary": "Challenged management on reports of mass layoffs involving over 300 to 700 fresh campus recruits and asked whether Infosys was struggling to find adequately skilled talent.",
+          "why_this_was_uncomfortable": "Directly probed corporate reputation, employee relations, and potential weaknesses in fresher onboarding and talent quality.",
+          "management_response_type": "Direct and Substantive Answer",
+          "response_summary": "CEO Salil Parekh defended the company's 20-year-old training and evaluation framework, confirming that recruits receive three testing attempts before exit, and insisted that standard performance evaluation protocols were strictly followed."
+        },
+        {
+          "quarter": "Q2 FY26 (Oct 2025)",
+          "analyst_or_firm": "CNBC TV18 (Ritu Singh)",
+          "question_summary": "Pressed management on H-1B visa dependency, potential business disruption from US immigration tightening, and ongoing US Department of Justice investigations.",
+          "why_this_was_uncomfortable": "Exposed regulatory, legal, and operational risks in the core US market alongside potential compliance scrutiny.",
+          "management_response_type": "Partial Answer With Deflection",
+          "response_summary": "Management emphasized that a majority of US employees do not require visa sponsorship due to heavy localization and nearshore hubs, while refusing to comment on ongoing internal or regulatory investigations."
+        },
+        {
+          "quarter": "Q3 FY26 (Jan 2026)",
+          "analyst_or_firm": "The Economic Times (Shristi Achar)",
+          "question_summary": "Inquired directly about reports of an Infosys employee being apprehended or deported by US authorities amidst H-1B immigration crackdowns.",
+          "why_this_was_uncomfortable": "Probed a specific, high-profile operational and legal failure regarding international workforce deployment.",
+          "management_response_type": "Direct and Substantive Answer",
+          "response_summary": "CEO Salil Parekh read out a formal denial, clarifying that no employee had been apprehended by US authorities, though confirming that one employee had been denied entry at immigration several months prior and returned to India."
+        },
+        {
+          "quarter": "Q4 FY26 (Apr 2026)",
+          "analyst_or_firm": "Moneycontrol (Chandra R. Srikanth) & CNBC TV18 (Ritu Singh)",
+          "question_summary": "Challenged management on why they provided a specific AI revenue figure (5.5%) during the Feb 2026 AI Day but refused to provide updated numbers in Q4 FY26, alongside asking whether CEO Salil Parekh's term ending in March 2027 would be extended.",
+          "why_this_was_uncomfortable": "Called out disclosure inconsistency on key strategic metrics and probed leadership continuity at the highest level.",
+          "management_response_type": "Defensive or Evasive Tone",
+          "response_summary": "CEO Salil Parekh stonewalled the leadership succession question with a blunt 'No comment' and evaded giving a concrete Q4 AI revenue figure, merely stating it was 'growing nicely' above 5.5% while withholding hard data."
+        },
+        {
+          "quarter": "Q4 FY26 (Apr 2026)",
+          "analyst_or_firm": "The Times of India (Shilpa Phadnis)",
+          "question_summary": "Asked whether the winding down of a flagship European automotive client (Daimler) reflected underlying capability gaps or severe AI-led revenue deflation.",
+          "why_this_was_uncomfortable": "Targeted the loss of a major marquee client account and questioned whether Infosys was losing competitive positioning.",
+          "management_response_type": "Partial Answer With Deflection",
+          "response_summary": "CEO Salil Parekh avoided commenting on the specific account, while CFO Jayesh Sanghrajka acknowledged account headwinds in the European auto sector, confirming the revenue wind-down was fully baked into FY27 guidance."
+        }
+      ]
+    },
+    "three_year_strategic_vision": {
+      "narrative_evolution_summary": "Over the 7 quarters, management's strategic narrative evolved from defensive cost-takeout and macro uncertainty management in early FY26 to an aggressive 'AI-First' architectural pivot by early FY27. Initial commentary focused on vendor consolidation and efficiency programs (Project Maximus). By mid-FY26, management repositioned Infosys around enterprise Generative AI agents, launching 'Topaz Fabric' and defining six core AI value pools (Strategy, Data, Process, Legacy Modernization, Physical AI, Trust). By Q4 FY26, management explicitly acknowledged a dual industry dynamic: AI services present a massive new total addressable market, but simultaneously induce revenue compression on legacy IT run-rates.",
+      "inferred_long_term_destination": "Infosys is steering toward becoming an AI-orchestrated enterprise transformer rather than a traditional headcount-indexed IT delivery vendor. Over the next 2-3 years, the company aims to capture high-margin brownfield legacy modernization, automated business process management, and proprietary AI agent deployments. Management intends to use value-based pricing and automation (Project Maximus) to defend its 20%-22% operating margin corridor while offsetting run-rate deflation in legacy services through market share gains from vendor consolidation.",
+      "key_evidence_timeline": [
+        {
+          "quarter": "Q3 FY25 (Jan 2025)",
+          "signal": "Emphasized value-based selling (+3.6% pricing improvement) and early deployment of 4 small language models and 100+ AI agents."
+        },
+        {
+          "quarter": "Q4 FY25 (Apr 2025)",
+          "signal": "Set conservative 0%-3% FY26 growth guidance amidst macro uncertainty, positioning cost optimization and vendor consolidation as primary growth engines."
+        },
+        {
+          "quarter": "Q1 FY26 (Jul 2025)",
+          "signal": "Scaled AI agent library to 300+ and cited strong client consolidation wins as Europe growth accelerated."
+        },
+        {
+          "quarter": "Q2 FY26 (Oct 2025)",
+          "signal": "Secured $1.6B NHS mega-deal and expanded forward-deployed engineer (FDE) teams to embed AI directly into client operations."
+        },
+        {
+          "quarter": "Q3 FY26 (Jan 2026)",
+          "signal": "Formally articulated 6 AI value pools and launched Topaz Fabric; announced intent to hold a dedicated Investor AI Day."
+        },
+        {
+          "quarter": "Investor AI Day (Feb 2026)",
+          "signal": "Nandan Nilekani and Salil Parekh outlined the 'deployment gap' in enterprise AI, disclosing AI services represented 5.5% of revenue and framing brownfield legacy modernization as the single largest structural opportunity."
+        },
+        {
+          "quarter": "Q4 FY26 (Apr 2026)",
+          "signal": "Framed FY27 guidance (1.5%-3.5%) around the dual forces of AI-driven growth acceleration in BFSI/Energy versus AI-led revenue deflation and competitive intensity in legacy run-rates."
+        }
+      ],
+      "vision_consistency_assessment": "Consistent Vision, Reinforced By Actions"
+    }
+  },
+  "AVANTIFEED.BO": {
+    "analysis_metadata": {
+      "company_name": "Avanti Feeds Limited",
+      "quarters_analyzed": [
+        "Q2FY25",
+        "Q3FY25",
+        "Q4FY25",
+        "Q1FY26",
+        "Q2FY26",
+        "Q3FY26",
+        "Q4FY26"
+      ],
+      "quarters_provided_count": 7,
+      "data_completeness_note": "Dataset contains 7 consecutive quarters from Q2FY25 to Q4FY26. Q1FY25 was omitted from the provided sequence. Analysis has been conducted across all 7 available transcripts."
+    },
+    "execution_tracker": {
+      "promises_evaluated": [
+        {
+          "promise_id": "pet-food-business-launch",
+          "category": "Strategic Pivot",
+          "quarter_first_promised": "Q2FY25",
+          "original_commitment_summary": "Promised to set up a Joint Venture with Bluefalo Thailand (Avanti Pet Care) for pet food manufacturing, starting trading activity before March 2025 and subsequently building a dedicated manufacturing facility on 30 acres in Hyderabad by December 2026.",
+          "status": "Partially Delivered",
+          "evidence_trail": "In Q3FY25, management confirmed trading of cat food under the 'Avant Furst' brand commenced in January 2025 across 5 cities, with dog food planned for July 2025. In Q4FY25, trading generated initial sales of INR 25.79 lakhs. In Q1FY26 and Q2FY26, sales expanded to INR 38.17 lakhs and INR 95.08 lakhs respectively, with dog food launched in August 2025 and e-commerce onboarded. However, regarding the plant, by Q3FY26 and Q4FY26 management was still finalizing engineering drawings, land development, and government approvals, quietly pushing factory commissioning past the original December 2026 operational timeline.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "fish-feed-market-entry",
+          "category": "Strategic Pivot",
+          "quarter_first_promised": "Q2FY25",
+          "original_commitment_summary": "Committed to conducting field trials importing fish feed from Thai Union, with commercial trading to begin within 3 to 6 months, followed by installing manufacturing machinery in existing feed plants once demand materialized.",
+          "status": "Missed - Silently Dropped",
+          "evidence_trail": "Management repeated almost identical boilerplate text in Q2FY25, Q3FY25, Q4FY25, Q1FY26, and Q2FY26 regarding 'conducting trials under Indian conditions in 5-6 farms.' By Q3FY26 and Q4FY26, updates on fish feed trials or plant setup vanished entirely from management's prepared remarks without any formal explanation or revenue contribution disclosures.",
+          "management_accountability": "Never Mentioned Again"
+        },
+        {
+          "promise_id": "shrimp-export-volume-fy25",
+          "category": "Revenue Guidance",
+          "quarter_first_promised": "Q2FY25",
+          "original_commitment_summary": "Targeted full-year FY25 shrimp processing exports of approximately 16,000 MT.",
+          "status": "Missed - Acknowledged By Management",
+          "evidence_trail": "In Q3FY25, management subtly lowered the target to 15,000 MT citing raw material price spikes, freight costs, and countervailing duty (CVD) headwinds. In Q4FY25, actual full-year FY25 exports came in at 14,149 MT, missing the original guidance by over 11%.",
+          "management_accountability": "Acknowledged Only When Pressed By Analyst"
+        },
+        {
+          "promise_id": "shrimp-export-volume-fy26",
+          "category": "Revenue Guidance",
+          "quarter_first_promised": "Q4FY25",
+          "original_commitment_summary": "Guided full-year FY26 shrimp processing export volumes at 17,000 MT.",
+          "status": "Delivered In Full",
+          "evidence_trail": "Despite facing severe macro disruptions including a 50% US reciprocal tariff shock announced in early FY26, management reiterated the 17,000 MT guidance in Q1FY26 and Q2FY26. In Q3FY26, guidance was marginally adjusted to 16,500 MT. In Q4FY26, actual full-year export volumes were delivered at 16,976 MT, effectively fulfilling the commitment.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "shrimp-feed-volume-fy26",
+          "category": "Revenue Guidance",
+          "quarter_first_promised": "Q4FY25",
+          "original_commitment_summary": "Guided FY26 shrimp feed sales volume between 550,000 MT and 560,000 MT.",
+          "status": "Delivered In Full",
+          "evidence_trail": "Management re-confirmed 560,000 MT in Q1FY26, raised it to 575,000 MT in Q2FY26, and revised it back to 555,000 MT in Q3FY26 due to raw material price inflation. In Q4FY26, actual feed sales reached 562,060 MT, delivering within the top end of the original guidance range.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "geographic-export-diversification",
+          "category": "New Geography or Market",
+          "quarter_first_promised": "Q3FY25",
+          "original_commitment_summary": "Committed to actively reducing reliance on the US market by expanding export volumes into Europe, Japan, South Korea, and the Middle East to cushion against US duty burdens.",
+          "status": "Delivered In Full",
+          "evidence_trail": "In Q4FY25, management highlighted new reciprocal tariff threats in the US. By Q4FY26, trade statistics verified that US export volumes dropped by 17.9% YoY while non-US destinations surged sharply: China exports rose 24%, European Union exports rose 36%, and Japan rose 5%, demonstrating concrete operational execution of the market shift.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "us-tariff-duty-recovery",
+          "category": "Other",
+          "quarter_first_promised": "Q3FY26",
+          "original_commitment_summary": "Committed to pursuing legal and operational mechanisms to recover reciprocal tariffs paid under the invalidated US IEEPA executive order.",
+          "status": "Delivered In Full",
+          "evidence_trail": "Following the US Supreme Court ruling in February 2026 invalidating IEEPA tariffs, management set up a dedicated US banking relationship and filed duty entry claims via the ACE portal. In Q4FY26, management confirmed that processing claims for an estimated USD 15-20 million in duty refunds was actively underway.",
+          "management_accountability": "Proactively Acknowledged"
+        }
+      ],
+      "overall_execution_pattern": "Management demonstrates strong operational discipline in its core feed and processing divisions, consistently hitting annual feed volume targets and maintaining over 50% domestic feed market share. However, strategic expansion initiatives show a split delivery record: brand-building and distribution for consumer-facing initiatives like pet food trading are executed efficiently, but civil project execution (pet food plant construction) suffers timeline drift. Furthermore, secondary strategic diversification targets like fish feed are repeatedly presented via copy-paste scripted phrases across multiple quarters before being quietly shelved when commercial traction fails to materialize."
+    },
+    "analyst_grill_vault": {
+      "sharpest_exchanges": [
+        {
+          "quarter": "Q4FY25",
+          "analyst_or_firm": "Ronak Shah (Equirus Securities)",
+          "question_summary": "Challenged management on why processing exports consistently fall short of annual volume guidance despite continuous capex, and pointed out the margin reversal where processing profitability collapsed relative to feed.",
+          "why_this_was_uncomfortable": "Directly called out management's habit of over-promising processing guidance and exposed the low return on capital from recently built processing capacity due to unabsorbed overheads and US duty pressures.",
+          "management_response_type": "Partial Answer With Deflection",
+          "response_summary": "Executive Director Nikhilesh defended the capex as necessary replacement for a 30-year-old facility rather than pure growth capacity, and deflected on exponential growth by asserting that processing must be scaled cautiously step-by-step due to labor training and stringent quality requirements."
+        },
+        {
+          "quarter": "Q2FY26",
+          "analyst_or_firm": "Akhilesh Rawat (Ridhanta Vision Pvt Ltd)",
+          "question_summary": "Pressed management to break down the key components of 'Other Income' that supported Q2FY26 profitability and asked how much of it was core, recurring operational income versus one-off items.",
+          "why_this_was_uncomfortable": "Exposed that headline processing margin resilience was being artificially supported by treasury income and foreign exchange forward contract gains rather than pure processing operational margin efficiency.",
+          "management_response_type": "Direct and Substantive Answer",
+          "response_summary": "Management candidly admitted that feed division other income was derived from mutual fund and fixed deposit interest, while processing division other income was driven by realized forex forward contract gains from currency fluctuations."
+        },
+        {
+          "quarter": "Q3FY26",
+          "analyst_or_firm": "Arjun Khanna (Kotak Mutual Fund)",
+          "question_summary": "Asked for precise operational details regarding the US Supreme Court tariff invalidation ruling, asking who the importer of record is and demanding a exact dollar estimate of duty refunds owed to Avanti.",
+          "why_this_was_uncomfortable": "Forced management to publicly commit to specific legal liability structures and quantify potential balance sheet recoveries amidst complex ongoing US administrative reviews.",
+          "management_response_type": "Direct and Substantive Answer",
+          "response_summary": "CFO Satyanarayana confirmed that subsidiary Avanti Frozen Foods is the importer of record, confirmed the opening of a dedicated US bank account for duty credits, and explicitly quantified the expected refund at USD 15 million to USD 20 million."
+        },
+        {
+          "quarter": "Q4FY26",
+          "analyst_or_firm": "Ronak Shah (Equirus Securities)",
+          "question_summary": "Confronted management with hyperinflation in raw material costs—noting fishmeal prices doubled to INR 240/kg and soybean meal jumped 45%—and demanded to know the exact quantum of feed price hikes planned to protect FY27 margins.",
+          "why_this_was_uncomfortable": "Highlighted an imminent margin crisis in the core feed business if raw material costs could not be immediately passed through to financially strained shrimp farmers.",
+          "management_response_type": "Partial Answer With Deflection",
+          "response_summary": "Joint Managing Director C. Ramachandra Rao acknowledged the extreme cost inflation, admitted that a minor price hike in February was insufficient, and stated that management was still evaluating what price increase would be 'acceptable to the market' before taking action in the coming weeks."
+        }
+      ]
+    },
+    "three_year_strategic_vision": {
+      "narrative_evolution_summary": "Management's narrative evolved from a traditional US-centric shrimp feed and processing monoline into a multi-region protein and domestic pet care group. In early quarters (Q2FY25-Q3FY25), strategic framing centered on maintaining feed market dominance (>50% share) and relying on US market demand supported by government PLI schemes. When US trade policy shocks hit in mid-series (Q4FY25-Q2FY26) via CVD and reciprocal tariffs peaking at 50%, management shifted narrative focus toward aggressive geographic diversification (EU, China, Japan), value-added product mix, and scaling the new pet care trading business ('Avant Furst'). By the final quarters (Q3FY26-Q4FY26), following favorable US legal rulings on tariffs and UK/EU FTA announcements, the narrative solidified around a de-risked tri-regional export base, domestic market promotion, and building a domestic pet food manufacturing ecosystem.",
+      "inferred_long_term_destination": "Over the next 2-3 years, Avanti is being steered to transform into a broader pet care and aquaculture protein company. Management aims to solidify non-US export channels (EU, East Asia) to ensure processing plant utilization above 80%, transition the 'Avant Furst' pet food brand from an import-trading operation into a locally manufactured high-margin domestic business via its Hyderabad factory, and protect core feed cash flows through disciplined raw material hedging and regulatory advocacy.",
+      "key_evidence_timeline": [
+        {
+          "quarter": "Q2FY25",
+          "signal": "Announced Joint Venture with Bluefalo Thailand for pet care entry and preliminary survey for fish feed import trials."
+        },
+        {
+          "quarter": "Q3FY25",
+          "signal": "Commercial launch of cat food trading across 5 major metro cities, establishing initial distribution pipelines."
+        },
+        {
+          "quarter": "Q4FY25",
+          "signal": "First introduction of US reciprocal tariff risks; management explicitly outlines strategic pivot toward value-added processing and European/Japanese market expansion."
+        },
+        {
+          "quarter": "Q1FY26",
+          "signal": "US reciprocal tariff escalates to 50%; company maintains processing shipments through front-loading and expands pet care into dog food segment."
+        },
+        {
+          "quarter": "Q2FY26",
+          "signal": "Pet food trading sales expand into Tier-2 cities and onboarding onto quick-commerce/e-commerce platforms begins."
+        },
+        {
+          "quarter": "Q3FY26",
+          "signal": "US Supreme Court invalidates reciprocal tariffs; Avanti establishes US bank infrastructure to reclaim USD 15-20 million in paid duties while leveraging new UK/EU FTA frameworks."
+        },
+        {
+          "quarter": "Q4FY26",
+          "signal": "India seafood exports reach historic high; non-US export volumes jump (EU +36%, China +24%); pet food sales reach 100 MT/month milestone across 31 distributors."
+        }
+      ],
+      "vision_consistency_assessment": "Consistent Vision, Reinforced By Actions"
+    }
+  },
+  "STLTECH.NS": {
+    "analysis_metadata": {
+      "company_name": "Sterlite Technologies Limited (STL)",
+      "quarters_analyzed": [
+        "Q1FY25 (Aug 2024)",
+        "Q2FY25 (Nov 2024)",
+        "Q3FY25 (Jan 2025)",
+        "Q4FY25 (May 2025)",
+        "Q1FY26 (Jul 2025)",
+        "Q2FY26 (Nov 2025)",
+        "Q3FY26 (Jan 2026)"
+      ],
+      "quarters_provided_count": 7,
+      "data_completeness_note": "7 consecutive full transcripts evaluated (Q1FY25 to Q3FY26); the Q4FY26 (May 2026) transcript header was present but contained no body text."
+    },
+    "execution_tracker": {
+      "promises_evaluated": [
+        {
+          "promise_id": "data-center-revenue-mix-target",
+          "category": "Strategic Pivot",
+          "quarter_first_promised": "Q1FY25",
+          "original_commitment_summary": "Achieve 25% of total optical business revenue from data center suite of products in the medium term.",
+          "status": "Partially Delivered",
+          "evidence_trail": "In Q1FY25, management announced a strategic push to derive 25% of optical revenue from data centers. In Q2FY25, they launched their AI-DC portfolio at IMC 2024. By Q3FY25, data center and enterprise suite products contributed 22% of revenues. This contribution held at 21% in Q4FY25, 23% in Q1FY26, and 21% in H1FY26. By Q3FY26, with data center/enterprise contribution at 20% YTD and order wins exceeding Rs 500 Cr, management expanded the target vision to 30% over the next 12-18 months.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "optical-ebitda-margin-20-percent",
+          "category": "Margin Guidance",
+          "quarter_first_promised": "Q1FY25",
+          "original_commitment_summary": "Return optical networking business EBITDA margins to historical levels of 20%+ as plant utilization recovers from ~50% to 70-80%.",
+          "status": "Partially Delivered",
+          "evidence_trail": "In Q1FY25, ONB EBITDA stood at 10.9%, with management asserting that 20% EBITDA margin was achievable once capacity utilization reached 75-80%. Utilization and margins steadily improved to 12.9% in Q2FY25, 12.8% in Q4FY25, and 14.3% in Q1FY26. By Q2FY26, operational EBITDA reached 16.7% (near the 18-20% target ex-tariff), but reported margins collapsed back to 14.1% due to a 300 bps mid-quarter US tariff reset. In Q3FY26, a full quarter of 50% US tariffs dragged reported ONB EBITDA margins down to 11.2% (a 760 bps tariff hit), preventing the target from being realized despite operational volume recovery.",
+          "management_accountability": "Deflected To External Factors"
+        },
+        {
+          "promise_id": "services-business-demerger",
+          "category": "Leadership or Org Change",
+          "quarter_first_promised": "Q1FY25",
+          "original_commitment_summary": "Complete the legal demerger and separate stock exchange listing of the Global Services EPC business within FY25.",
+          "status": "Delivered Late",
+          "evidence_trail": "In Q1FY25, management projected NCLT approval within 3-4 months and stock exchange listing by the end of FY25. Approvals were secured from shareholders in July 2024, but NCLT court schedules delayed final approval to February 2025. The demerger became legally effective on March 31, 2025 (carving out the entity as STL Networks / Invenia), and the listing of shares was finalized in August 2025.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "stl-digital-ebitda-breakeven",
+          "category": "Margin Guidance",
+          "quarter_first_promised": "Q1FY25",
+          "original_commitment_summary": "Turn the loss-making STL Digital business EBITDA positive by the end of FY25.",
+          "status": "Delivered In Full",
+          "evidence_trail": "STL Digital posted an EBITDA loss of Rs 17 Cr in Q1FY25 and Rs 15 Cr in Q2FY25. Under new leadership, the segment achieved its first positive EBITDA of Rs 4 Cr in Q3FY25. Profitability was sustained with positive EBITDA of Rs 5 Cr in Q4FY25, Rs 1 Cr in Q1FY26, Rs 1 Cr in Q2FY26, and Rs 1 Cr in Q3FY26.",
+          "management_accountability": "Proactively Acknowledged"
+        },
+        {
+          "promise_id": "working-capital-liquidation-legacy-projects",
+          "category": "Cost Reduction",
+          "quarter_first_promised": "Q2FY25",
+          "original_commitment_summary": "Liquidate ~Rs 1,000 Cr of unbilled receivables and working capital tied up in legacy state projects (Telangana T-Fiber and MahaNet) over 2 quarters.",
+          "status": "Partially Delivered",
+          "evidence_trail": "In Q2FY25, CFO Tushar Shroff highlighted liquidating Rs 700 Cr trapped in the Telangana T-Fiber project as a top priority. In Q3FY25, management acknowledged that collections were slower than expected due to delayed state government budget allocations. The issue was resolved structurally in Q4FY25 by transferring the unbilled receivables and project assets into the demerged services entity (Invenia), thereby removing the burden from parent STL's balance sheet rather than collecting the cash directly.",
+          "management_accountability": "Acknowledged Only When Pressed By Analyst"
+        },
+        {
+          "promise_id": "net-debt-deleveraging-target",
+          "category": "Cost Reduction",
+          "quarter_first_promised": "Q4FY25",
+          "original_commitment_summary": "Reduce Net Debt to EBITDA ratio to below 2.0x by the end of FY26 using operational cash generation.",
+          "status": "Missed - Acknowledged By Management",
+          "evidence_trail": "Following a Rs 1,000 Cr QIP in early FY25 and the demerger of the services debt in Q4FY25, net debt stood at Rs 1,350 Cr with Net Debt/EBITDA at 3.0x. CFO Ajay Jhanjhari committed to bringing leverage below 2.0x by end-FY26. Net Debt/EBITDA improved to 2.30x in Q1FY26 and 2.33x in Q2FY26. However, due to the US tariff impact compressing EBITDA, Net Debt/EBITDA ticked back up to 2.58x in Q3FY26 (Net Debt at Rs 1,331 Cr), making the <2.0x deadline unreachable within the promised timeframe.",
+          "management_accountability": "Proactively Acknowledged"
+        }
+      ],
+      "overall_execution_pattern": "Management demonstrates strong operational capabilities in product execution and structural reorganization, successfully completing the Global Services demerger and turning around STL Digital. However, financial execution against margin and deleveraging guidance has been repeatedly compromised. While internal cost optimization and capacity utilization were trending upward, management failed to insulate earnings against external trade shocks, resulting in severe margin compression in late FY26 when US export tariffs hit 50%. Commitments regarding legacy cash recoveries were met via corporate restructuring rather than organic collection."
+    },
+    "analyst_grill_vault": {
+      "sharpest_exchanges": [
+        {
+          "quarter": "Q3FY25",
+          "analyst_or_firm": "Sunny Gosar (MK Ventures) / Arun Malhotra",
+          "question_summary": "Why has quarterly finance cost dropped only marginally (from Rs 95 Cr to Rs 84 Cr) despite net debt being reduced by Rs 800 Cr following the QIP proceeds?",
+          "why_this_was_uncomfortable": "Exposed that equity dilution from the QIP did not yield proportional interest savings, revealing high hidden bank operational fees, project financing charges, and expensive short-term lines.",
+          "management_response_type": "Partial Answer With Deflection",
+          "response_summary": "CFO Tushar Shroff deflected to year-to-date aggregate figures and clarified that finance costs included non-borrowing bank operational charges and project-funding fees, promising that underlying interest rate drops would reflect by Q1FY26."
+        },
+        {
+          "quarter": "Q4FY25",
+          "analyst_or_firm": "Aditya Jhawar (AK Investments)",
+          "question_summary": "Challenged management on long-term shareholder value destruction over 5-6 years, cash burns, and Rs 1,000 Cr write-offs while late entrants like HFCL and Tata gained market share.",
+          "why_this_was_uncomfortable": "Directly attacked leadership's strategic track record, capital allocation history, and historical returns for minority investors.",
+          "management_response_type": "Defensive or Evasive Tone",
+          "response_summary": "MD Ankit Agarwal disputed the Rs 1,000 Cr write-off figure, rejected the notion that optical manufacturing is a commodity, cited past strategic exits from non-core wireless/software businesses, and insisted the company was fully invested for operating leverage."
+        },
+        {
+          "quarter": "Q2FY26",
+          "analyst_or_firm": "Saket Kapoor (Kapoor & Co)",
+          "question_summary": "Pressed management on the 300 bps EBITDA margin erosion in Q2FY26 caused by US tariffs, asking why STL absorbed the entire tariff hit rather than passing it on to US clients.",
+          "why_this_was_uncomfortable": "Exposed STL's lack of pricing power and contractual vulnerability in fixed-price 6-month US contracts, undermining prior claims that US customers would easily absorb import duties.",
+          "management_response_type": "Direct and Substantive Answer",
+          "response_summary": "Management admitted taking the financial hit on mid-execution contracts to protect long-term client relationships in the US, while expressing hope that contract renewals and US-India bilateral trade talks would enable future cost sharing."
+        },
+        {
+          "quarter": "Q3FY26",
+          "analyst_or_firm": "Aditya (AK Investments)",
+          "question_summary": "Highlighted that 50% US tariffs are burning ~Rs 80 Cr per quarter (~Rs 300 Cr annually), asking why STL cannot fulfill all US orders from its $50M South Carolina plant instead of shipping from India.",
+          "why_this_was_uncomfortable": "Uncovered qualification delays and capacity limitations at the US factory, proving it could not fully shield the company from export tariffs as previously claimed.",
+          "management_response_type": "Partial Answer With Deflection",
+          "response_summary": "Management explained that qualification for complex high-fiber count IBR cables takes time and the US plant lacks sufficient capacity to satisfy total US demand, forcing continued reliance on Indian mother plants while actively pursuing contract renegotiations."
+        }
+      ]
+    },
+    "three_year_strategic_vision": {
+      "narrative_evolution_summary": "Over the 8-quarter arc, STL transformed its identity from a debt-laden, hybrid EPC and optical cable supplier into a specialized, high-density passive optical infrastructure provider for AI Data Centers. Early quarters (Q1FY25-Q3FY25) were dominated by structural cleanup: demerging the capital-intensive EPC services business (Invenia), exiting non-core wireless units, and deleveraging via a QIP. From Q4FY25 onward, management aggressively pivoted its identity toward AI/Hyperscale Data Centers, launching specialized product suites (Celesta IBR cables, STS portfolio, Multi-Core Fiber 'Multiverse', and Hollow-Core Fiber) to capture non-telco capex.",
+      "inferred_long_term_destination": "STL is steering toward becoming a pure-play, high-margin optical technology vendor centered on AI Data Centers, Data Center Interconnects (DCI), and high-density connectivity across North America and Europe. It is shedding capital-heavy civil construction (EPC) to focus on asset-light technology solutions, utilizing its US (South Carolina) and European (Italy) facilities as local hubs to bypass global trade barriers.",
+      "key_evidence_timeline": [
+        {
+          "quarter": "Q1FY25",
+          "signal": "Set initial target of deriving 25% medium-term revenue from data center products."
+        },
+        {
+          "quarter": "Q2FY25",
+          "signal": "Formally unveiled Make-in-India AI-DC portfolio at India Mobile Congress."
+        },
+        {
+          "quarter": "Q4FY25",
+          "signal": "Completed demerger of Global Services EPC business (Invenia) to decouple pure manufacturing from high-working-capital contracting."
+        },
+        {
+          "quarter": "Q1FY26",
+          "signal": "Launched STS Data Center suite and commercialized Multi-Core Fiber in trials with C-DOT and IIT Madras."
+        },
+        {
+          "quarter": "Q2FY26",
+          "signal": "Launched world's slimmest 864-fiber IBR cable for hyperscalers; enterprise and DC revenue hit 21%."
+        },
+        {
+          "quarter": "Q3FY26",
+          "signal": "Secured Rs 500 Cr in DC/Enterprise orders; raised medium-term data center revenue contribution target to 30%."
+        }
+      ],
+      "vision_consistency_assessment": "Consistent Vision, Reinforced By Actions"
+    }
+  }
+}

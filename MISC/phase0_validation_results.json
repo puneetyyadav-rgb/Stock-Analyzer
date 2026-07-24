@@ -1,0 +1,353 @@
+[
+  {
+    "symbol": "INFY",
+    "date": "Apr 2026",
+    "segmentation_boundary": "With that, let us open it up for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 5.2,
+      "key_hedging_phrases_found": [
+        "competitive intensity",
+        "productivity impact"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "challenging environment",
+        "pending regulatory approvals",
+        "subject to",
+        "limited visibility"
+      ]
+    },
+    "divergence": -0.2
+  },
+  {
+    "symbol": "INFY",
+    "date": "Feb 2026",
+    "segmentation_boundary": "So good morning, and welcome. I think with that session from Nandan, I am sure you have a lot of clarity and a vision of where the industry is going, where AI is going and what are the real issues that one needs to look at. I want to share, in the next few minutes, wher",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "cannot be deferred anymore",
+        "subject to",
+        "deployment gap"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.75,
+      "hesitation_index": 4.5,
+      "key_hedging_phrases_found": [
+        "subject to",
+        "working through"
+      ]
+    },
+    "divergence": 0.09999999999999998
+  },
+  {
+    "symbol": "INFY",
+    "date": "Jan 2026",
+    "segmentation_boundary": "Rishi Basu: Thank you, Salil. We will now open the floor for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 5.2,
+      "key_hedging_phrases_found": [
+        "a little early",
+        "still want to see all of the other industries and segments start to show that",
+        "subject to"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "subject to",
+        "limited visibility",
+        "working through",
+        "deferred"
+      ]
+    },
+    "divergence": 0.10000000000000003
+  },
+  {
+    "symbol": "INFY",
+    "date": "Oct 2025",
+    "segmentation_boundary": "So on the modernization first, I think, in fact, modernization is a huge opportunity because of AI.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "environment still remains uncertain",
+        "see some changes in where the global environment macro is looking",
+        "subject to",
+        "working through"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 28.5,
+      "key_hedging_phrases_found": [
+        "market continues to remain uncertain",
+        "still not fully clarified",
+        "extreme uncertain conditions",
+        "do not know what is going to happen",
+        "subject to",
+        "seasonally softer part of the year"
+      ]
+    },
+    "divergence": -0.09999999999999998
+  },
+  {
+    "symbol": "INFY",
+    "date": "Jul 2025",
+    "segmentation_boundary": "Rishi Basu: Thank you, Salil. We will now open the floor for ques tions. Joining Salil is Mr. Jayesh Sanghrajka, Chief Financial Officer, Infosys. The first question is from Ritu Singh from CNBC TV18.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "not fully settled",
+        "still some open items",
+        "caution is now over"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "difficult macroeconomic environment",
+        "softness in some parts of the Manufacturing",
+        "changes in the economic situation",
+        "headwinds like lower growth"
+      ]
+    },
+    "divergence": 0.0
+  },
+  {
+    "symbol": "INFY",
+    "date": "Apr 2025",
+    "segmentation_boundary": "Thank you, Salil. Joining Salil is Mr. Jayesh Sanghrajka, Chief Financial Officer, Infosys. With that, the first question is from Ritu Singh from CNBC TV18.",
+    "prepared_remarks": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 78.5,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "uncertainty in the environment",
+        "heightened uncertainty",
+        "we will see how it plays out",
+        "some deterioration in the environment",
+        "macro environment",
+        "we have not seen a change in that",
+        "subject to"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "ongoing uncertainty",
+        "uncertain environment",
+        "uneven activity",
+        "short or medium term",
+        "we will have to sort of watch"
+      ]
+    },
+    "divergence": 0.0
+  },
+  {
+    "symbol": "INFY",
+    "date": "Jan 2025",
+    "segmentation_boundary": "With that, let us open it up for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [
+        "remains slow",
+        "discretionary pressures easing"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "wait and see",
+        "at this point in time",
+        "we will have to see",
+        "typically a seasonally weak quarter",
+        "subject to"
+      ]
+    },
+    "divergence": -0.2
+  },
+  {
+    "symbol": "INFY",
+    "date": "Oct 2024",
+    "segmentation_boundary": "With that let us open up for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [
+        "demand trends remain stable"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "subject to",
+        "limited visibility",
+        "challenging macro",
+        "deferred"
+      ]
+    },
+    "divergence": -0.4
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Jul 2026",
+    "segmentation_boundary": "We will now begin the Q&A session",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "challenge in this quarter",
+        "impacted by"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "challenging quarter",
+        "subject to"
+      ]
+    },
+    "divergence": 0.0
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Apr 2026",
+    "segmentation_boundary": "Good evening, everyone. On the retail business, we had a pretty strong quarter.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "subject to",
+        "challenge area",
+        "limiting factor",
+        "a bit soft"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "not necessarily a milestone",
+        "the growth would be even higher"
+      ]
+    },
+    "divergence": 0.19999999999999996
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Jan 2026",
+    "segmentation_boundary": "There is no impact of tariff increase in any of this.",
+    "prepared_remarks": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": []
+    },
+    "qa": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "if anything",
+        "where possible",
+        "arguable"
+      ]
+    },
+    "divergence": 0.0
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Jan 2026",
+    "segmentation_boundary": "There is no impact of tariff increase in any of this.",
+    "prepared_remarks": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": []
+    },
+    "qa": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "where possible",
+        "if anything"
+      ]
+    },
+    "divergence": 0.0
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Oct 2025",
+    "segmentation_boundary": "We will now begin the Q&A session.",
+    "prepared_remarks": {
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 45.691287139s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '45s'}]}}"
+    },
+    "qa": {
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 45.36454463s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash-lite', 'location': 'global'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '45s'}]}}"
+    },
+    "divergence": 0.0
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Jul 2025",
+    "error": {
+      "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\\nPlease retry in 39.120112149s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash-lite'}, 'quotaValue': '15'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '39s'}]}}"
+    }
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Apr 2025",
+    "segmentation_boundary": "We will now begin the Q&A session",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "subject to",
+        "working through"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "while the first half was weak"
+      ]
+    },
+    "divergence": 0.19999999999999996
+  },
+  {
+    "symbol": "RELIANCE",
+    "date": "Apr 2025",
+    "segmentation_boundary": "We will now begin the Q&A session",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "retail has been actually in some ways mixed",
+        "muted on EBITDA and PAT",
+        "little bit of impact that we saw a couple of quarters ago"
+      ]
+    },
+    "qa": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "while the first half was weak"
+      ]
+    },
+    "divergence": 0.19999999999999996
+  }
+]

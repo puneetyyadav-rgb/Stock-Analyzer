@@ -22,6 +22,7 @@ import stock_service as ss
 import ai_service as ai
 import extra_service as ex
 import concall_service as cs
+import concall_longitudinal_service as cls
 import kotak_service as ks
 import social_service as sc
 import legal_service as ls
@@ -244,6 +245,31 @@ async def factor_profile(symbol: str, min_adv_turnover_cr: float = 5.0):
     _cache_set(key, data)
     return data
 
+
+@api_router.get("/concall-synthesis/{symbol}")
+async def concall_synthesis(symbol: str, force_refresh: bool = False, auto_load: bool = False):
+    """Returns the 8-quarter longitudinal narrative synthesis."""
+    import concall_longitudinal_service as cls
+    key = f"concall-synthesis:{symbol}:False"  # Always use the same key for the actual data cache
+    
+    cached = _cache_get(key)
+    if cached and not force_refresh:
+        return cached
+        
+    # If the frontend is just polling on page load, do NOT run the 120s generation.
+    if auto_load:
+        return {"not_generated_yet": True}
+        
+    data = await cls.generate_longitudinal_synthesis(symbol, force_refresh=True)
+    if "error" not in data:
+        _cache_set(key, data)
+    return data
+
+@api_router.post("/concall-synthesis/{symbol}/download-transcripts")
+async def download_transcripts(symbol: str):
+    """Downloads missing 8-quarter transcripts to disk without running the AI analysis."""
+    import concall_longitudinal_service as cls
+    return await cls.sync_transcripts(symbol)
 
 @api_router.post("/backtest")
 async def backtest(config: dict):

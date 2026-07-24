@@ -1,0 +1,1155 @@
+{
+  "INFY::Apr 2026": {
+    "symbol": "INFY",
+    "date": "Apr 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:53:56.660442+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "With that, let us open it up for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The segment contains standard corporate forward-looking statements and full-year guidance (1.5% to 3.5% revenue growth and 20% to 22% operating margins) delivered alongside strong performance metrics ($14.9 bn large deals). None of the predefined hesitation phrases or extreme hedging terms were present in the transcript excerpt."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "challenging environment",
+        "subject to",
+        "wait and see",
+        "uncertain environment"
+      ],
+      "reasoning": "Management expresses steady confidence in large deal momentum, AI-driven growth in BFSI, and resilient margin protection programs, balancing a moderately positive sentiment score of 0.45. At the same time, the hesitation index of 29.4 reflects cautious acknowledgment of macro challenges in European automotive, regulatory approval delays for acquisitions, and geopolitical uncertainties impacting client visibility."
+    },
+    "concall_divergence": 0.1,
+    "concall_hesitation": 29.4,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.35 (hesitation=0.0). Q&A sentiment=0.45 (hesitation=29.4). Divergence=+0.10. Prepared Remarks rationale: The segment contains standard corporate forward-looking statements and full-year guidance (1.5% to 3.5% revenue growth and 20% to 22% operating margins) delivered alongside strong performance metrics ($14.9 bn large deals). None of the predefined hesitation phrases or extreme hedging terms were present in the transcript excerpt. Q&A rationale: Management expresses steady confidence in large deal momentum, AI-driven growth in BFSI, and resilient margin protection programs, balancing a moderately positive sentiment score of 0.45. At the same time, the hesitation index of 29.4 reflects cautious acknowledgment of macro challenges in European automotive, regulatory approval delays for acquisitions, and geopolitical uncertainties impacting client visibility.",
+    "qa_hedging_phrases": [
+      "challenging environment",
+      "subject to",
+      "wait and see",
+      "uncertain environment"
+    ]
+  },
+  "INFY::Feb 2026": {
+    "symbol": "INFY",
+    "date": "Feb 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:54:14.394769+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "That is how we are act",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [
+        "deferred"
+      ],
+      "reasoning": "The executive expresses strong bullish conviction regarding Infosys's role in the AI transition and enterprise modernization. The discussion frames technical debt and deployment challenges as massive demand drivers and opportunities for the company rather than existential threats, resulting in a high sentiment score and very low hesitation index."
+    },
+    "qa": {
+      "sentiment_score": 0.8,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "Management expresses strong confidence in the massive growth opportunities presented by AI, noting robust execution and client traction across 90% of large accounts, and accounting for 5.5% of revenue in Q3. There are no hesitation or hedging phrases identified in the text, highlighting a strongly bullish outlook on their strategic positioning and execution plans."
+    },
+    "concall_divergence": 0.15,
+    "concall_hesitation": 0.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=5.9). Q&A sentiment=0.80 (hesitation=0.0). Divergence=+0.15. Prepared Remarks rationale: The executive expresses strong bullish conviction regarding Infosys's role in the AI transition and enterprise modernization. The discussion frames technical debt and deployment challenges as massive demand drivers and opportunities for the company rather than existential threats, resulting in a high sentiment score and very low hesitation index. Q&A rationale: Management expresses strong confidence in the massive growth opportunities presented by AI, noting robust execution and client traction across 90% of large accounts, and accounting for 5.5% of revenue in Q3. There are no hesitation or hedging phrases identified in the text, highlighting a strongly bullish outlook on their strategic positioning and execution plans.",
+    "qa_hedging_phrases": []
+  },
+  "INFY::Jan 2026": {
+    "symbol": "INFY",
+    "date": "Jan 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:54:32.123662+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you, Salil. We will now open the floor for ques tions. Joining Salil is Mr. Jayesh Sanghrajka, Chief Financial Officer, Infosys. The first question is from Ritu Singh from CNBC TV18.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "we will have to see",
+        "too early to say"
+      ],
+      "reasoning": "The management expresses overall confidence citing strong large deals ($4.8 billion), AI adoption growth, and a guidance upgrade to 3%-3.5%, leading to a positive sentiment score. However, mild hedging is present when addressing forward-looking visibility and newer pricing models for AI, mentioning it is too early to call out specific pricing changes and noting certain segments still need to show broader recovery."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "Management projects strong demand and healthy traction across sectors like Financial Services, Manufacturing, and Europe, while confirming robust campus hiring targets of 20,000. Executives note that AI-led solutions are unlocking new project opportunities rather than causing a slowdown, reflecting confidence in future growth and guidance."
+    },
+    "concall_divergence": 0.3,
+    "concall_hesitation": 5.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.35 (hesitation=12.5). Q&A sentiment=0.65 (hesitation=5.0). Divergence=+0.30. Prepared Remarks rationale: The management expresses overall confidence citing strong large deals ($4.8 billion), AI adoption growth, and a guidance upgrade to 3%-3.5%, leading to a positive sentiment score. However, mild hedging is present when addressing forward-looking visibility and newer pricing models for AI, mentioning it is too early to call out specific pricing changes and noting certain segments still need to show broader recovery. Q&A rationale: Management projects strong demand and healthy traction across sectors like Financial Services, Manufacturing, and Europe, while confirming robust campus hiring targets of 20,000. Executives note that AI-led solutions are unlocking new project opportunities rather than causing a slowdown, reflecting confidence in future growth and guidance.",
+    "qa_hedging_phrases": []
+  },
+  "INFY::Oct 2025": {
+    "symbol": "INFY",
+    "date": "Oct 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:54:49.872318+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Rishi Basu: Thank you, Salil. We will now open the floor for ques tions. Joining Salil is Mr. Jayesh Sanghrajka, Chief Financial Officer, Infosys. The first question is from Ritu Singh from CNBC TV18.",
+    "prepared_remarks": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 20.0,
+      "key_hedging_phrases_found": [
+        "uncertain environment"
+      ],
+      "reasoning": "Management reported strong Q2 financial results, increased the lower end of their annual revenue growth guidance to 2%-3%, and highlighted robust large deals and AI deployment traction. Despite these positive indicators, they acknowledged that the macro environment still remains uncertain and noted specific constraints in sectors like retail, resulting in a mildly hedged positive stance."
+    },
+    "qa": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "not fully settled",
+        "remain cautious",
+        "too early to say",
+        "headwinds"
+      ],
+      "reasoning": "The transcript reflects a moderately positive tone driven by strong large deal pipelines, traction in AI, and cost optimization demand. However, management acknowledges ongoing macroeconomic uncertainty, seasonal headwinds in the second half, and legal/regulatory ambiguities regarding AI liabilities and visa norms, resulting in a balanced yet cautious stance."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 29.4,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.45 (hesitation=20.0). Q&A sentiment=0.25 (hesitation=29.4). Divergence=-0.20. Prepared Remarks rationale: Management reported strong Q2 financial results, increased the lower end of their annual revenue growth guidance to 2%-3%, and highlighted robust large deals and AI deployment traction. Despite these positive indicators, they acknowledged that the macro environment still remains uncertain and noted specific constraints in sectors like retail, resulting in a mildly hedged positive stance. Q&A rationale: The transcript reflects a moderately positive tone driven by strong large deal pipelines, traction in AI, and cost optimization demand. However, management acknowledges ongoing macroeconomic uncertainty, seasonal headwinds in the second half, and legal/regulatory ambiguities regarding AI liabilities and visa norms, resulting in a balanced yet cautious stance.",
+    "qa_hedging_phrases": [
+      "uncertain environment",
+      "not fully settled",
+      "remain cautious",
+      "too early to say",
+      "headwinds"
+    ]
+  },
+  "INFY::Jul 2025": {
+    "symbol": "INFY",
+    "date": "Jul 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:55:07.124113+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "With that, Rishi, let us open it up for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The sentiment score is positive driven by a strong start to the fiscal year, revenue growth of 2.6% sequentially, strong large deals at $3.8 billion, and an upward revision in the FY2026 growth guidance from 0%-3% to 1%-3%. There are no hesitation or hedging phrases identified in the transcript segment, resulting in a zero hesitation index."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "not fully settled",
+        "working through",
+        "remain cautious",
+        "too early to say",
+        "subject to"
+      ],
+      "reasoning": "Management presents a generally positive tone backed by a strong revenue beat and raised lower-end guidance, driven by AI traction and large deal consolidations. However, they temper this optimism with acknowledged macroeconomic uncertainties, localized sector softness (such as in Logistics, Consumer Products, and parts of Manufacturing), and cautious margin puts and takes, resulting in a moderate hedging presence."
+    },
+    "concall_divergence": -0.3,
+    "concall_hesitation": 29.4,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=0.0). Q&A sentiment=0.35 (hesitation=29.4). Divergence=-0.30. Prepared Remarks rationale: The sentiment score is positive driven by a strong start to the fiscal year, revenue growth of 2.6% sequentially, strong large deals at $3.8 billion, and an upward revision in the FY2026 growth guidance from 0%-3% to 1%-3%. There are no hesitation or hedging phrases identified in the transcript segment, resulting in a zero hesitation index. Q&A rationale: Management presents a generally positive tone backed by a strong revenue beat and raised lower-end guidance, driven by AI traction and large deal consolidations. However, they temper this optimism with acknowledged macroeconomic uncertainties, localized sector softness (such as in Logistics, Consumer Products, and parts of Manufacturing), and cautious margin puts and takes, resulting in a moderate hedging presence.",
+    "qa_hedging_phrases": [
+      "not fully settled",
+      "working through",
+      "remain cautious",
+      "too early to say",
+      "subject to"
+    ]
+  },
+  "INFY::Apr 2025": {
+    "symbol": "INFY",
+    "date": "Apr 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:55:24.172207+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you, and then let us open it up for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "we will have to see"
+      ],
+      "reasoning": "The sentiment is moderately positive due to solid FY25 performance, strong large deals, and robust AI demand, reflected in the 0.25 score. However, the hesitation index of 29.4 is driven by cautious guidance for FY26 (0% to 3% growth) and direct hedging phrases acknowledging an uncertain environment."
+    },
+    "qa": {
+      "sentiment_score": 0.15,
+      "hesitation_index": 52.9,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "headwinds",
+        "softer demand",
+        "deferred",
+        "remain cautious",
+        "contingent on"
+      ],
+      "reasoning": "Management acknowledges macroeconomic uncertainties and potential demand headwinds, reflected in a widened 0% to 3% guidance band and caution regarding tariff and regulatory impacts. However, this is balanced by strong execution in large deals, robust fresher hiring plans, and margin expansion progress. The tone overall remains measured and pragmatic rather than overly bearish."
+    },
+    "concall_divergence": -0.1,
+    "concall_hesitation": 52.9,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.25 (hesitation=29.4). Q&A sentiment=0.15 (hesitation=52.9). Divergence=-0.10. Prepared Remarks rationale: The sentiment is moderately positive due to solid FY25 performance, strong large deals, and robust AI demand, reflected in the 0.25 score. However, the hesitation index of 29.4 is driven by cautious guidance for FY26 (0% to 3% growth) and direct hedging phrases acknowledging an uncertain environment. Q&A rationale: Management acknowledges macroeconomic uncertainties and potential demand headwinds, reflected in a widened 0% to 3% guidance band and caution regarding tariff and regulatory impacts. However, this is balanced by strong execution in large deals, robust fresher hiring plans, and margin expansion progress. The tone overall remains measured and pragmatic rather than overly bearish.",
+    "qa_hedging_phrases": [
+      "uncertain environment",
+      "headwinds",
+      "softer demand",
+      "deferred",
+      "remain cautious",
+      "contingent on"
+    ]
+  },
+  "INFY::Jan 2025": {
+    "symbol": "INFY",
+    "date": "Jan 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:55:41.834828+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you, Salil. We will now open the floor for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The segment reflects strong financial performance with positive metrics including 6.1% YoY revenue growth in constant currency, an all-time high free cash flow of $1.26 bn, and an upward revision of revenue growth guidance to 4.5%-5%. Management commentary highlights easing discretionary pressures and strong demand drivers without utilizing any hesitation or hedging phrases."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "we will wait and see",
+        "headwinds",
+        "we will have to see"
+      ],
+      "reasoning": "Management demonstrates confidence by raising revenue guidance and noting improvements in discretionary spending and net new large deals. However, some hedging is present when discussing future macro risks, currency movements, and potential compensation headwinds, reflected in phrases like 'we will wait and see' and 'headwinds'."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 29.4,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=0.0). Q&A sentiment=0.45 (hesitation=29.4). Divergence=-0.20. Prepared Remarks rationale: The segment reflects strong financial performance with positive metrics including 6.1% YoY revenue growth in constant currency, an all-time high free cash flow of $1.26 bn, and an upward revision of revenue growth guidance to 4.5%-5%. Management commentary highlights easing discretionary pressures and strong demand drivers without utilizing any hesitation or hedging phrases. Q&A rationale: Management demonstrates confidence by raising revenue guidance and noting improvements in discretionary spending and net new large deals. However, some hedging is present when discussing future macro risks, currency movements, and potential compensation headwinds, reflected in phrases like 'we will wait and see' and 'headwinds'.",
+    "qa_hedging_phrases": [
+      "we will wait and see",
+      "headwinds",
+      "we will have to see"
+    ]
+  },
+  "INFY::Oct 2024": {
+    "symbol": "INFY",
+    "date": "Oct 2024",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T17:55:59.102004+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you, Salil. We will now open the floor for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The executive management delivered a positive update highlighting strong Q2 performance with broad-based growth, stable margins, robust large deals, and an upward revision of the full-year revenue growth guidance to 3.75% to 4.5%. There were no hedging or hesitation phrases detected in the provided transcript segment."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "wait and see",
+        "challenging macro",
+        "too early to say",
+        "we will monitor"
+      ],
+      "reasoning": "Management demonstrates overall constructive confidence driven by a strong H1 performance in Financial Services and an upgraded full-year revenue growth guidance, yielding a positive sentiment score. However, hedging remains present regarding broader discretionary spending recovery outside of BFSI, seasonal furloughs in H2, and persistent caution in retail and hi-tech verticals, resulting in a moderate hesitation index."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 29.4,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=0.0). Q&A sentiment=0.45 (hesitation=29.4). Divergence=-0.20. Prepared Remarks rationale: The executive management delivered a positive update highlighting strong Q2 performance with broad-based growth, stable margins, robust large deals, and an upward revision of the full-year revenue growth guidance to 3.75% to 4.5%. There were no hedging or hesitation phrases detected in the provided transcript segment. Q&A rationale: Management demonstrates overall constructive confidence driven by a strong H1 performance in Financial Services and an upgraded full-year revenue growth guidance, yielding a positive sentiment score. However, hedging remains present regarding broader discretionary spending recovery outside of BFSI, seasonal furloughs in H2, and persistent caution in retail and hi-tech verticals, resulting in a moderate hesitation index.",
+    "qa_hedging_phrases": [
+      "wait and see",
+      "challenging macro",
+      "too early to say",
+      "we will monitor"
+    ]
+  },
+  "TCS::Jul 2026": {
+    "symbol": "TCS",
+    "date": "Jul 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:00:00.793471+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much. We will now begin the question-and-answer session. We will take our \ufb01rst question from the line of Kumar Rakesh from BNP Paribas. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.8,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [
+        "headwinds"
+      ],
+      "reasoning": "The earnings call segment demonstrates strong positive momentum, highlighting four consecutive quarters of growth, a robust TCV of $9.5 billion, and accelerating AI services revenue reaching $2.6 billion. Management expresses confidence in their strategic positioning, deal wins, and technology partnerships, with minimal hedging language used aside from a passing mention of macroeconomic headwinds."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "geopolitical uncertainties",
+        "macro uncertainty"
+      ],
+      "reasoning": "Management acknowledges certain pockets of softness driven by geopolitical tensions, inflationary pressures, and some client project deferrals, which led to minor hedging. However, the overall tone remains constructive and optimistic regarding a demand pickup in Q2, backed by strong net-new deal wins and robust pipelines in segments like BFSI."
+    },
+    "concall_divergence": -0.45,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.80 (hesitation=2.5). Q&A sentiment=0.35 (hesitation=12.5). Divergence=-0.45. Prepared Remarks rationale: The earnings call segment demonstrates strong positive momentum, highlighting four consecutive quarters of growth, a robust TCV of $9.5 billion, and accelerating AI services revenue reaching $2.6 billion. Management expresses confidence in their strategic positioning, deal wins, and technology partnerships, with minimal hedging language used aside from a passing mention of macroeconomic headwinds. Q&A rationale: Management acknowledges certain pockets of softness driven by geopolitical tensions, inflationary pressures, and some client project deferrals, which led to minor hedging. However, the overall tone remains constructive and optimistic regarding a demand pickup in Q2, backed by strong net-new deal wins and robust pipelines in segments like BFSI.",
+    "qa_hedging_phrases": [
+      "geopolitical uncertainties",
+      "macro uncertainty"
+    ]
+  },
+  "TCS::Apr 2026": {
+    "symbol": "TCS",
+    "date": "Apr 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:00:19.296102+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "This five-year contract will",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The transcript reflects an upbeat and confident tone, highlighting sequential revenue growth for three consecutive quarters, a strong $12 billion TCV order book, expansions in high-value client bands, and accelerated AI service adoption. The management team notes solid execution and strong cash conversion without employing standard hesitation or cautious macroeconomic hedging phrases."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "cautious investment decision-making",
+        "macro and geopolitical volatility",
+        "challenging macro environment"
+      ],
+      "reasoning": "The sentiment is moderately positive, driven by strong deal wins, mega deals, and robust adoption of AI-led services across multiple verticals. However, management frequently highlights macro volatility, cautious client spending, and geopolitical tensions, which introduces mild hedging into the overall outlook."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 29.4,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=0.0). Q&A sentiment=0.45 (hesitation=29.4). Divergence=-0.20. Prepared Remarks rationale: The transcript reflects an upbeat and confident tone, highlighting sequential revenue growth for three consecutive quarters, a strong $12 billion TCV order book, expansions in high-value client bands, and accelerated AI service adoption. The management team notes solid execution and strong cash conversion without employing standard hesitation or cautious macroeconomic hedging phrases. Q&A rationale: The sentiment is moderately positive, driven by strong deal wins, mega deals, and robust adoption of AI-led services across multiple verticals. However, management frequently highlights macro volatility, cautious client spending, and geopolitical tensions, which introduces mild hedging into the overall outlook.",
+    "qa_hedging_phrases": [
+      "cautious investment decision-making",
+      "macro and geopolitical volatility",
+      "challenging macro environment"
+    ]
+  },
+  "TCS::Jan 2026": {
+    "symbol": "TCS",
+    "date": "Jan 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:00:38.435570+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you very much. We will now begin the question-and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.8,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The transcript reflects strong financial results with revenue growth, stable margins, high cash conversion, and robust AI momentum crossing USD 1.8 billion in annualized revenue. Management expresses clear confidence in the outlook for CY2026 without using any hedging or hesitation phrases."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [
+        "subject to"
+      ],
+      "reasoning": "The earnings call transcript reflects a generally positive tone with robust TCV numbers, strong AI revenue growth ($1.8 billion annualized), and steady demand trends across most verticals. Management notes normal seasonality and furloughs but expresses confidence in short-cycle projects and CY26 recovery, resulting in a positive sentiment and a very low hesitation index."
+    },
+    "concall_divergence": -0.15,
+    "concall_hesitation": 5.88,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.80 (hesitation=0.0). Q&A sentiment=0.65 (hesitation=5.9). Divergence=-0.15. Prepared Remarks rationale: The transcript reflects strong financial results with revenue growth, stable margins, high cash conversion, and robust AI momentum crossing USD 1.8 billion in annualized revenue. Management expresses clear confidence in the outlook for CY2026 without using any hedging or hesitation phrases. Q&A rationale: The earnings call transcript reflects a generally positive tone with robust TCV numbers, strong AI revenue growth ($1.8 billion annualized), and steady demand trends across most verticals. Management notes normal seasonality and furloughs but expresses confidence in short-cycle projects and CY26 recovery, resulting in a positive sentiment and a very low hesitation index.",
+    "qa_hedging_phrases": [
+      "subject to"
+    ]
+  },
+  "TCS::Dec 2025": {
+    "symbol": "TCS",
+    "date": "Dec 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:00:56.939904+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "I'll be happy to take questions after Aarthi, Samir and Mangesh's presentations.",
+    "prepared_remarks": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The CEO's remarks reflect extreme confidence in TCS's positioning for the AI era, highlighting rapid sequential growth in AI-related revenue (16.3% QoQ), massive training initiatives, and strong customer validation across over 5,000 projects. There are no hesitation phrases or hedging present in the text as the tone remains strongly bullish and forward-looking regarding their AI strategy."
+    },
+    "qa": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The transcript segment reflects high confidence and extreme optimism regarding TCS's internal AI transformation initiatives. The COO details massive employee engagement, robust infrastructure rollout across 600,000 employees, and tangible productivity gains of 20-30% without expressing any uncertainty or hedging phrases."
+    },
+    "concall_divergence": 0.0,
+    "concall_hesitation": 0.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.85 (hesitation=0.0). Q&A sentiment=0.85 (hesitation=0.0). Divergence=+0.00. Prepared Remarks rationale: The CEO's remarks reflect extreme confidence in TCS's positioning for the AI era, highlighting rapid sequential growth in AI-related revenue (16.3% QoQ), massive training initiatives, and strong customer validation across over 5,000 projects. There are no hesitation phrases or hedging present in the text as the tone remains strongly bullish and forward-looking regarding their AI strategy. Q&A rationale: The transcript segment reflects high confidence and extreme optimism regarding TCS's internal AI transformation initiatives. The COO details massive employee engagement, robust infrastructure rollout across 600,000 employees, and tangible productivity gains of 20-30% without expressing any uncertainty or hedging phrases.",
+    "qa_hedging_phrases": []
+  },
+  "TCS::Nov 2025": {
+    "symbol": "TCS",
+    "date": "Nov 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:01:15.806895+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Okay, that's clear. Now we'll open the floor up for participants to ask questions. The first question, which is there in my chat window, let's go with that.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 2.5,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The transcript reflects strong bullish conviction regarding TCS's new AI data center strategy, backed by clear market demand projections and structured capital plans. Management outlines concrete metrics like rack densities and PUE targets without displaying significant evasiveness or hesitation phrases."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The management team expresses high confidence in entering the data center and AI infrastructure space, emphasizing firm demand, strong balance sheet support, and solid return expectations (mid-to-high teens IRR). There is minimal hedging or hesitation present in the transcript, as leaders clearly outline their strategy, capital allocation continuity, and structural growth drivers."
+    },
+    "concall_divergence": 0.0,
+    "concall_hesitation": 5.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=2.5). Q&A sentiment=0.65 (hesitation=5.0). Divergence=+0.00. Prepared Remarks rationale: The transcript reflects strong bullish conviction regarding TCS's new AI data center strategy, backed by clear market demand projections and structured capital plans. Management outlines concrete metrics like rack densities and PUE targets without displaying significant evasiveness or hesitation phrases. Q&A rationale: The management team expresses high confidence in entering the data center and AI infrastructure space, emphasizing firm demand, strong balance sheet support, and solid return expectations (mid-to-high teens IRR). There is minimal hedging or hesitation present in the transcript, as leaders clearly outline their strategy, capital allocation continuity, and structural growth drivers.",
+    "qa_hedging_phrases": []
+  },
+  "TCS::Oct 2025": {
+    "symbol": "TCS",
+    "date": "Oct 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:01:35.407000+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "I'll now open the line for questions.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "lingering uncertainties in the broader economic environment continue to remain a key challenge"
+      ],
+      "reasoning": "The transcript reflects an overall positive tone driven by solid TCV growth ($10 billion), strong execution, margin expansion, and ambitious strategic initiatives in AI. Management acknowledges some external macroeconomic challenges, but these are balanced by robust demand, a healthy pipeline, and an optimistic outlook for FY26 International revenue growth."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "too early to call out"
+      ],
+      "reasoning": "Management expresses positive momentum regarding demand stability, better sequential growth, and confidence in AI-led transformation initiatives. Hedging is minimal, restricted mostly to declining to share early financial metrics for the newly announced data center subsidiary by noting it is 'too early to call out'."
+    },
+    "concall_divergence": -0.3,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=12.5). Q&A sentiment=0.35 (hesitation=12.5). Divergence=-0.30. Prepared Remarks rationale: The transcript reflects an overall positive tone driven by solid TCV growth ($10 billion), strong execution, margin expansion, and ambitious strategic initiatives in AI. Management acknowledges some external macroeconomic challenges, but these are balanced by robust demand, a healthy pipeline, and an optimistic outlook for FY26 International revenue growth. Q&A rationale: Management expresses positive momentum regarding demand stability, better sequential growth, and confidence in AI-led transformation initiatives. Hedging is minimal, restricted mostly to declining to share early financial metrics for the newly announced data center subsidiary by noting it is 'too early to call out'.",
+    "qa_hedging_phrases": [
+      "too early to call out"
+    ]
+  },
+  "TCS::Jul 2025": {
+    "symbol": "TCS",
+    "date": "Jul 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:01:53.787723+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "We will now open the floor for questions.",
+    "prepared_remarks": {
+      "sentiment_score": -0.35,
+      "hesitation_index": 45.0,
+      "key_hedging_phrases_found": [
+        "economic uncertainties",
+        "project pauses",
+        "deferrals",
+        "decision delays",
+        "caution",
+        "uncertain environment"
+      ],
+      "reasoning": "The transcript reflects a cautious tone as management highlights revenue contraction, discretionary spend pressures, and project deferrals across multiple verticals like BFSI and Consumer business. While long-term confidence is maintained, the immediate reality of declining constant currency revenues and heightened scrutiny keeps the sentiment negative and the hesitation index elevated."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [
+        "budget constraints"
+      ],
+      "reasoning": "The transcript conveys an overall positive sentiment driven by robust deal closures ($9.4 billion TCV), strong adoption of AI and GenAI platforms (like ignio and BaNCS), and successful customer case studies. While there are minor mentions of budgetary constraints and regulatory scrutiny, the tone is confident with very little structural hedging, resulting in a high sentiment score and a very low hesitation index."
+    },
+    "concall_divergence": 1.0,
+    "concall_hesitation": 5.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=-0.35 (hesitation=45.0). Q&A sentiment=0.65 (hesitation=5.0). Divergence=+1.00. Prepared Remarks rationale: The transcript reflects a cautious tone as management highlights revenue contraction, discretionary spend pressures, and project deferrals across multiple verticals like BFSI and Consumer business. While long-term confidence is maintained, the immediate reality of declining constant currency revenues and heightened scrutiny keeps the sentiment negative and the hesitation index elevated. Q&A rationale: The transcript conveys an overall positive sentiment driven by robust deal closures ($9.4 billion TCV), strong adoption of AI and GenAI platforms (like ignio and BaNCS), and successful customer case studies. While there are minor mentions of budgetary constraints and regulatory scrutiny, the tone is confident with very little structural hedging, resulting in a high sentiment score and a very low hesitation index.",
+    "qa_hedging_phrases": [
+      "budget constraints"
+    ]
+  },
+  "HDFCBANK::Jul 2026": {
+    "symbol": "HDFCBANK",
+    "date": "Jul 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:02:14.859424+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much. We will now begin the question-and-answer session. First question is from the line of Mahrukh Adajania from Tara Capital Partners. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [
+        "headwinds"
+      ],
+      "reasoning": "The management exhibits strong confidence in franchise resilience, market share gains, and deposit growth momentum despite acknowledging general macro risks and margin timing factors. The sentiment is robustly positive, reflected in the CFO's discussion of high per-branch productivity and the CEO's remarks on stepping up growth and strategic technology implementation. Hedging is minimal, with only a passing mention of margin headwinds."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "may happen, may not happen",
+        "not something that I'm necessarily focusing"
+      ],
+      "reasoning": "The management expresses a constructive and forward-looking tone regarding unit economics, digital investments, and long-term deposit recovery, despite near-term headwinds in CASA and margins. The hesitation index remains relatively low because leadership speaks with structural confidence about strategic guardrails and efficiency drivers, utilizing only mild hedging language when discussing macro deposit trends."
+    },
+    "concall_divergence": -0.3,
+    "concall_hesitation": 11.76,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=5.9). Q&A sentiment=0.35 (hesitation=11.8). Divergence=-0.30. Prepared Remarks rationale: The management exhibits strong confidence in franchise resilience, market share gains, and deposit growth momentum despite acknowledging general macro risks and margin timing factors. The sentiment is robustly positive, reflected in the CFO's discussion of high per-branch productivity and the CEO's remarks on stepping up growth and strategic technology implementation. Hedging is minimal, with only a passing mention of margin headwinds. Q&A rationale: The management expresses a constructive and forward-looking tone regarding unit economics, digital investments, and long-term deposit recovery, despite near-term headwinds in CASA and margins. The hesitation index remains relatively low because leadership speaks with structural confidence about strategic guardrails and efficiency drivers, utilizing only mild hedging language when discussing macro deposit trends.",
+    "qa_hedging_phrases": [
+      "may happen, may not happen",
+      "not something that I'm necessarily focusing"
+    ]
+  },
+  "HDFCBANK::Mar 2026": {
+    "symbol": "HDFCBANK",
+    "date": "Mar 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:02:34.202371+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you. We will now begin the question-and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.2,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The sentiment is mildly positive as management strongly reassures investors regarding the resignation of the chairman, emphasizing robust governance, internal controls, and the absence of material operational issues. No hesitation phrases from the specified list were found in the transcript segment."
+    },
+    "qa": {
+      "sentiment_score": -0.45,
+      "hesitation_index": 45.0,
+      "key_hedging_phrases_found": [
+        "too premature to say",
+        "subject to"
+      ],
+      "reasoning": "The transcript captures an emergency earnings call addressing the sudden, cryptic resignation of the bank's Chairman citing personal values and ethics. While management strongly defends the bank's operational stability and governance, the uncertainty surrounding the actual reasons for the resignation and the use of hedging regarding timelines ('too premature to say') result in a negative sentiment score and moderate hesitation index."
+    },
+    "concall_divergence": -0.65,
+    "concall_hesitation": 45.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.20 (hesitation=0.0). Q&A sentiment=-0.45 (hesitation=45.0). Divergence=-0.65. Prepared Remarks rationale: The sentiment is mildly positive as management strongly reassures investors regarding the resignation of the chairman, emphasizing robust governance, internal controls, and the absence of material operational issues. No hesitation phrases from the specified list were found in the transcript segment. Q&A rationale: The transcript captures an emergency earnings call addressing the sudden, cryptic resignation of the bank's Chairman citing personal values and ethics. While management strongly defends the bank's operational stability and governance, the uncertainty surrounding the actual reasons for the resignation and the use of hedging regarding timelines ('too premature to say') result in a negative sentiment score and moderate hesitation index.",
+    "qa_hedging_phrases": [
+      "too premature to say",
+      "subject to"
+    ]
+  },
+  "HDFCBANK::Jan 2026": {
+    "symbol": "HDFCBANK",
+    "date": "Jan 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:02:52.861178+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you very much. We now begin with the question-and-answer session. First question is from the line of Mahrukh Adajania.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The management expresses strong optimism regarding credit growth buildup, returning to downward glide paths on the CD ratio, and outpacing system loan growth in FY27. Despite acknowledging falling slightly short of granular deposit ambitions, the overall tone is highly confident and constructive with no systemic hesitation markers from the provided list found."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "subject to",
+        "all things remaining same"
+      ],
+      "reasoning": "Management expresses strong confidence in the bank's deposit growth, asset quality, and loan-to-deposit ratio trajectory, noting that asset quality remains pristine and economic momentum is healthy. While there are standard cautious remarks regarding actuarial estimates and macro assumptions ('all things remaining same'), the overall tone is highly constructive and optimistic."
+    },
+    "concall_divergence": 0.0,
+    "concall_hesitation": 11.76,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=0.0). Q&A sentiment=0.65 (hesitation=11.8). Divergence=+0.00. Prepared Remarks rationale: The management expresses strong optimism regarding credit growth buildup, returning to downward glide paths on the CD ratio, and outpacing system loan growth in FY27. Despite acknowledging falling slightly short of granular deposit ambitions, the overall tone is highly confident and constructive with no systemic hesitation markers from the provided list found. Q&A rationale: Management expresses strong confidence in the bank's deposit growth, asset quality, and loan-to-deposit ratio trajectory, noting that asset quality remains pristine and economic momentum is healthy. While there are standard cautious remarks regarding actuarial estimates and macro assumptions ('all things remaining same'), the overall tone is highly constructive and optimistic.",
+    "qa_hedging_phrases": [
+      "subject to",
+      "all things remaining same"
+    ]
+  },
+  "HDFCBANK::Oct 2025": {
+    "symbol": "HDFCBANK",
+    "date": "Oct 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:03:12.076435+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "We will now begin with the question -and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The sentiment is largely positive as the management highlights accelerating loan growth, strong domestic economic activity, healthy asset quality, and market share gains in deposits. Although there is a minor mention of global volatility, it is balanced by strong domestic tailwinds and stable operational metrics, resulting in minimal hesitation and a confident outlook."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "wait and watch",
+        "wait and see"
+      ],
+      "reasoning": "Management expresses measured optimism regarding credit demand recovery, stable margins, and upcoming growth targets for FY27. While some cautious language around regulatory guidelines and deposit repricing timelines ('wait and watch') is present, the overall tone remains constructive and focused on strategic execution post-merger."
+    },
+    "concall_divergence": -0.3,
+    "concall_hesitation": 11.76,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=5.0). Q&A sentiment=0.35 (hesitation=11.8). Divergence=-0.30. Prepared Remarks rationale: The sentiment is largely positive as the management highlights accelerating loan growth, strong domestic economic activity, healthy asset quality, and market share gains in deposits. Although there is a minor mention of global volatility, it is balanced by strong domestic tailwinds and stable operational metrics, resulting in minimal hesitation and a confident outlook. Q&A rationale: Management expresses measured optimism regarding credit demand recovery, stable margins, and upcoming growth targets for FY27. While some cautious language around regulatory guidelines and deposit repricing timelines ('wait and watch') is present, the overall tone remains constructive and focused on strategic execution post-merger.",
+    "qa_hedging_phrases": [
+      "wait and watch",
+      "wait and see"
+    ]
+  },
+  "HDFCBANK::Jul 2025": {
+    "symbol": "HDFCBANK",
+    "date": "Jul 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:03:30.504600+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much. We will now begin with the question and answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "challenging environment"
+      ],
+      "reasoning": "The transcript reflects an overall optimistic tone regarding the bank's strategy, asset growth recovery, and healthy asset quality, leading to a positive sentiment score. The management expresses confidence in loan growth matching or exceeding system levels going forward. Minimal hesitation was detected, with only a single reference to a challenging environment and some standard acknowledgment of macro volatility."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "uncertain environment"
+      ],
+      "reasoning": "Management expresses a constructive outlook on loan growth recovery, festival season demand, and stabilizing credit-deposit ratios, reflecting an underlying positive sentiment. Hedging language is minimal and mostly context-driven regarding lingering macro adjustments or competitive dynamics in specific segments like mortgages."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=11.8). Q&A sentiment=0.45 (hesitation=12.5). Divergence=-0.20. Prepared Remarks rationale: The transcript reflects an overall optimistic tone regarding the bank's strategy, asset growth recovery, and healthy asset quality, leading to a positive sentiment score. The management expresses confidence in loan growth matching or exceeding system levels going forward. Minimal hesitation was detected, with only a single reference to a challenging environment and some standard acknowledgment of macro volatility. Q&A rationale: Management expresses a constructive outlook on loan growth recovery, festival season demand, and stabilizing credit-deposit ratios, reflecting an underlying positive sentiment. Hedging language is minimal and mostly context-driven regarding lingering macro adjustments or competitive dynamics in specific segments like mortgages.",
+    "qa_hedging_phrases": [
+      "uncertain environment"
+    ]
+  },
+  "HDFCBANK::Apr 2025": {
+    "symbol": "HDFCBANK",
+    "date": "Apr 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:03:49.177705+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much sir.  We'll take a first question from the line of Chintan Joshi  from  Autonomous. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 29.41,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "wait-and-watch stance",
+        "remain watchful"
+      ],
+      "reasoning": "The management exhibits a cautious yet stable sentiment regarding the bank's operational metrics, highlighting a successful reduction in the CD ratio and resilient asset quality. However, moderate hedging is present due to external macroeconomic uncertainties and trade tariff volatility, prompting the adoption of a wait-and-watch approach by corporates."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "Management expresses strong confidence in their deposit growth, market share gains, and structural re-organization efficiencies to drive productivity. The tone remains highly optimistic regarding defending ROA bands and managing net interest margins, showing minimal structural hedging despite addressing cyclical rate cut scenarios."
+    },
+    "concall_divergence": 0.4,
+    "concall_hesitation": 5.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.25 (hesitation=29.4). Q&A sentiment=0.65 (hesitation=5.0). Divergence=+0.40. Prepared Remarks rationale: The management exhibits a cautious yet stable sentiment regarding the bank's operational metrics, highlighting a successful reduction in the CD ratio and resilient asset quality. However, moderate hedging is present due to external macroeconomic uncertainties and trade tariff volatility, prompting the adoption of a wait-and-watch approach by corporates. Q&A rationale: Management expresses strong confidence in their deposit growth, market share gains, and structural re-organization efficiencies to drive productivity. The tone remains highly optimistic regarding defending ROA bands and managing net interest margins, showing minimal structural hedging despite addressing cyclical rate cut scenarios.",
+    "qa_hedging_phrases": []
+  },
+  "HDFCBANK::Jan 2025": {
+    "symbol": "HDFCBANK",
+    "date": "Jan 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:04:09.117853+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Srinivasan Vaidyanathan: Okay. Thank you, Neerav. Good evening to all. Thanks for participating and coming in today. I will kick it off. I'll request our CEO, Mr. Sashi Jagdishan, to get started and give some opening remarks, then we will go straight to any questions that you all have.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 11.8,
+      "key_hedging_phrases_found": [
+        "challenging macro",
+        "headwinds"
+      ],
+      "reasoning": "The management exhibits a cautiously optimistic tone, reporting robust deposit growth and stable credit parameters despite acknowledging macro challenges. Hesitation language is minimal, used primarily to contextualize tight liquidity and sector-specific seasonality rather than express fundamental doubt."
+    },
+    "qa": {
+      "sentiment_score": 0.2,
+      "hesitation_index": 35.0,
+      "key_hedging_phrases_found": [
+        "macro started to change",
+        "outlook on credit started to change negatively",
+        "remain cautious"
+      ],
+      "reasoning": "Management acknowledges macroeconomic challenges and a shift in credit outlook that forced them to recalibrate growth and strategy post-merger. While they highlight stable asset quality and good long-term traction, the commentary contains noticeable hedging around margin recovery and credit cost normalization."
+    },
+    "concall_divergence": -0.15,
+    "concall_hesitation": 35.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.35 (hesitation=11.8). Q&A sentiment=0.20 (hesitation=35.0). Divergence=-0.15. Prepared Remarks rationale: The management exhibits a cautiously optimistic tone, reporting robust deposit growth and stable credit parameters despite acknowledging macro challenges. Hesitation language is minimal, used primarily to contextualize tight liquidity and sector-specific seasonality rather than express fundamental doubt. Q&A rationale: Management acknowledges macroeconomic challenges and a shift in credit outlook that forced them to recalibrate growth and strategy post-merger. While they highlight stable asset quality and good long-term traction, the commentary contains noticeable hedging around margin recovery and credit cost normalization.",
+    "qa_hedging_phrases": [
+      "macro started to change",
+      "outlook on credit started to change negatively",
+      "remain cautious"
+    ]
+  },
+  "WIPRO::Jul 2026": {
+    "symbol": "WIPRO",
+    "date": "Jul 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:04:30.128534+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you very much. We will now begin the question and answer session. We'll take our first question from the line of Ravi Menon from Axis Capital. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "headwinds",
+        "remain cautious"
+      ],
+      "reasoning": "The sentiment leans moderately positive as management highlights strong AI capabilities, stable large deal bookings, and improving momentum in key sectors like BFSI. However, the hesitation index reflects ongoing conservatism driven by acknowledgment of persistent macro uncertainty, softer demand in specific geographies like Americas, and cautious revenue guidance for the upcoming quarter."
+    },
+    "qa": {
+      "sentiment_score": -0.15,
+      "hesitation_index": 35.2,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "softer demand",
+        "limited visibility"
+      ],
+      "reasoning": "The management acknowledges slower discretionary spending, demand softness, and near-term margin dilution due to strategic investments in AI. While expressing long-term optimism regarding structural AI opportunities and deal wins, management deliberately avoids giving a timeline for growth recovery or margin target achievement due to macro volatility."
+    },
+    "concall_divergence": -0.4,
+    "concall_hesitation": 35.2,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.25 (hesitation=29.4). Q&A sentiment=-0.15 (hesitation=35.2). Divergence=-0.40. Prepared Remarks rationale: The sentiment leans moderately positive as management highlights strong AI capabilities, stable large deal bookings, and improving momentum in key sectors like BFSI. However, the hesitation index reflects ongoing conservatism driven by acknowledgment of persistent macro uncertainty, softer demand in specific geographies like Americas, and cautious revenue guidance for the upcoming quarter. Q&A rationale: The management acknowledges slower discretionary spending, demand softness, and near-term margin dilution due to strategic investments in AI. While expressing long-term optimism regarding structural AI opportunities and deal wins, management deliberately avoids giving a timeline for growth recovery or margin target achievement due to macro volatility.",
+    "qa_hedging_phrases": [
+      "headwinds",
+      "softer demand",
+      "limited visibility"
+    ]
+  },
+  "WIPRO::Apr 2026": {
+    "symbol": "WIPRO",
+    "date": "Apr 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:04:49.326070+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "We'll take our first question from the line of Prateek Maheshwari, from HSBC Securities.",
+    "prepared_remarks": {
+      "sentiment_score": 0.15,
+      "hesitation_index": 29.4,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "subject to"
+      ],
+      "reasoning": "The management reports modest flat sequential revenue growth (0.2%) alongside a subdued Q1 guidance range of minus 2% to 0%, reflecting ongoing macro headwinds and deal ramp-up delays. However, sentiment is balanced positively by a massive $15,000 crore buyback announcement, strong cash generation, and solid large deal wins like the $1B+ Olam Group engagement."
+    },
+    "qa": {
+      "sentiment_score": 0.2,
+      "hesitation_index": 29.41,
+      "key_hedging_phrases_found": [
+        "working through",
+        "wait and see"
+      ],
+      "reasoning": "The transcript reflects a cautious yet moderately constructive tone regarding deal ramps and strategic wins, tempered by ongoing client-specific headwinds in BFSI and questions about organic growth. Management addresses volatility in top accounts and margin pressures while expressing confidence in medium-term execution, resulting in mild positive sentiment backed by a moderate amount of hedging language."
+    },
+    "concall_divergence": 0.05,
+    "concall_hesitation": 29.41,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.15 (hesitation=29.4). Q&A sentiment=0.20 (hesitation=29.4). Divergence=+0.05. Prepared Remarks rationale: The management reports modest flat sequential revenue growth (0.2%) alongside a subdued Q1 guidance range of minus 2% to 0%, reflecting ongoing macro headwinds and deal ramp-up delays. However, sentiment is balanced positively by a massive $15,000 crore buyback announcement, strong cash generation, and solid large deal wins like the $1B+ Olam Group engagement. Q&A rationale: The transcript reflects a cautious yet moderately constructive tone regarding deal ramps and strategic wins, tempered by ongoing client-specific headwinds in BFSI and questions about organic growth. Management addresses volatility in top accounts and margin pressures while expressing confidence in medium-term execution, resulting in mild positive sentiment backed by a moderate amount of hedging language.",
+    "qa_hedging_phrases": [
+      "working through",
+      "wait and see"
+    ]
+  },
+  "WIPRO::Jan 2026": {
+    "symbol": "WIPRO",
+    "date": "Jan 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:05:28.048532+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Afterwards, the Operator will open the bridge for Q&A with our Management Team.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The segment exhibits a moderately positive sentiment driven by sequential revenue growth, margin expansion, and solid large deal bookings ($3.3 billion total contract value), alongside positive commentary on AI integration and recent acquisitions like HARMAN DTS. No specific hedging or hesitation phrases from the target list were identified in the text, reflecting a straightforward, execution-focused management update."
+    },
+    "qa": {
+      "sentiment_score": 0.15,
+      "hesitation_index": 28.5,
+      "key_hedging_phrases_found": [
+        "macroeconomic uncertainty",
+        "take some time",
+        "incremental dilution",
+        "mixed here for us"
+      ],
+      "reasoning": "The transcript reflects a generally neutral-to-mildly positive tone with solid operational metrics and strong pipelines, offset by specific sectoral headwinds and execution delays. Management acknowledges challenges such as macroeconomic uncertainty impacting EMR and mixed trends in consumer, leading to a moderate hedging presence without extreme pessimism."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 28.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.35 (hesitation=0.0). Q&A sentiment=0.15 (hesitation=28.5). Divergence=-0.20. Prepared Remarks rationale: The segment exhibits a moderately positive sentiment driven by sequential revenue growth, margin expansion, and solid large deal bookings ($3.3 billion total contract value), alongside positive commentary on AI integration and recent acquisitions like HARMAN DTS. No specific hedging or hesitation phrases from the target list were identified in the text, reflecting a straightforward, execution-focused management update. Q&A rationale: The transcript reflects a generally neutral-to-mildly positive tone with solid operational metrics and strong pipelines, offset by specific sectoral headwinds and execution delays. Management acknowledges challenges such as macroeconomic uncertainty impacting EMR and mixed trends in consumer, leading to a moderate hedging presence without extreme pessimism.",
+    "qa_hedging_phrases": [
+      "macroeconomic uncertainty",
+      "take some time",
+      "incremental dilution",
+      "mixed here for us"
+    ]
+  },
+  "WIPRO::Oct 2025": {
+    "symbol": "WIPRO",
+    "date": "Oct 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:05:47.485806+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Ladies and gentlemen, we will wait for a moment while the question queue assembles.",
+    "prepared_remarks": {
+      "sentiment_score": 0.25,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The management commentary reflects stable performance with sequential revenue growth, a solid deal win total of $4.7 billion including mega deals, and a positive Q3 revenue guidance range of -0.5% to +1.5%. While there are mentions of macroeconomic pressures like tariff uncertainties and sector-specific challenges, the overall tone is confident and driven by AI momentum rather than excessive hedging."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "we will have to see",
+        "at least as they start"
+      ],
+      "reasoning": "The management expresses cautious optimism regarding deal conversions, revenue momentum, and margin stability within a narrow band, while noting typical operational headwinds and competitive pressures. The presence of hedging is minimal, reflecting confidence in ongoing deal ramp-ups and improving execution."
+    },
+    "concall_divergence": 0.1,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.25 (hesitation=5.9). Q&A sentiment=0.35 (hesitation=12.5). Divergence=+0.10. Prepared Remarks rationale: The management commentary reflects stable performance with sequential revenue growth, a solid deal win total of $4.7 billion including mega deals, and a positive Q3 revenue guidance range of -0.5% to +1.5%. While there are mentions of macroeconomic pressures like tariff uncertainties and sector-specific challenges, the overall tone is confident and driven by AI momentum rather than excessive hedging. Q&A rationale: The management expresses cautious optimism regarding deal conversions, revenue momentum, and margin stability within a narrow band, while noting typical operational headwinds and competitive pressures. The presence of hedging is minimal, reflecting confidence in ongoing deal ramp-ups and improving execution.",
+    "qa_hedging_phrases": [
+      "we will have to see",
+      "at least as they start"
+    ]
+  },
+  "WIPRO::Jul 2025": {
+    "symbol": "WIPRO",
+    "date": "Jul 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:06:07.543875+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much. We will now begin the question -and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "subject to"
+      ],
+      "reasoning": "The transcript reflects a balanced tone with strong large deal bookings ($5 billion total contract value, up 51% YoY) and solid margin expansion, giving a moderately positive sentiment score. However, management notes lingering macroeconomic uncertainty, muted demand in certain segments, and European headwinds. The hesitation index is relatively low as leadership expresses clear confidence through a robust order book and specific AI deployment metrics, while only utilizing minimal hedging language like 'headwinds' and 'subject to'."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 22.5,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "subject to"
+      ],
+      "reasoning": "Management expresses solid confidence in strong deal wins, robust pipelines, and second-half recovery, driving a positive sentiment score. However, mild hedging is present when acknowledging macroeconomic and tariff-related headwinds in specific verticals like manufacturing and retail, as well as pressures on near-term margins from upfront investments."
+    },
+    "concall_divergence": 0.1,
+    "concall_hesitation": 22.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.35 (hesitation=12.5). Q&A sentiment=0.45 (hesitation=22.5). Divergence=+0.10. Prepared Remarks rationale: The transcript reflects a balanced tone with strong large deal bookings ($5 billion total contract value, up 51% YoY) and solid margin expansion, giving a moderately positive sentiment score. However, management notes lingering macroeconomic uncertainty, muted demand in certain segments, and European headwinds. The hesitation index is relatively low as leadership expresses clear confidence through a robust order book and specific AI deployment metrics, while only utilizing minimal hedging language like 'headwinds' and 'subject to'. Q&A rationale: Management expresses solid confidence in strong deal wins, robust pipelines, and second-half recovery, driving a positive sentiment score. However, mild hedging is present when acknowledging macroeconomic and tariff-related headwinds in specific verticals like manufacturing and retail, as well as pressures on near-term margins from upfront investments.",
+    "qa_hedging_phrases": [
+      "headwinds",
+      "subject to"
+    ]
+  },
+  "WIPRO::Apr 2025": {
+    "symbol": "WIPRO",
+    "date": "Apr 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:06:27.877640+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much. We will now begin the question -and-answer session. We will now begin the question-and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": -0.25,
+      "hesitation_index": 58.8,
+      "key_hedging_phrases_found": [
+        "uncertain environment",
+        "headwinds",
+        "remain cautious",
+        "limited visibility"
+      ],
+      "reasoning": "While Wipro reported steady execution, stable margins, and good large deal bookings, the management repeatedly emphasized a cautious outlook due to macroeconomic uncertainty, tariff announcements, and negative sequential revenue guidance (-3.5% to -1.5%). Specific references to 'uncertain environment', 'headwinds', and clients taking a 'more cautious approach' drove the hedging score upward while capping sentiment in mildly negative territory."
+    },
+    "qa": {
+      "sentiment_score": -0.35,
+      "hesitation_index": 45.0,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "deferred",
+        "uncertain environment"
+      ],
+      "reasoning": "The transcript reveals a cautious management tone due to macroeconomic pressures, tariff concerns, and delayed client spending decisions, particularly in BFSI and Europe. While management highlights strong deal pipelines and cost-takeout execution, the presence of specific growth pauses and margin headwinds keeps the overall sentiment moderately negative and hedged."
+    },
+    "concall_divergence": -0.1,
+    "concall_hesitation": 45.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=-0.25 (hesitation=58.8). Q&A sentiment=-0.35 (hesitation=45.0). Divergence=-0.10. Prepared Remarks rationale: While Wipro reported steady execution, stable margins, and good large deal bookings, the management repeatedly emphasized a cautious outlook due to macroeconomic uncertainty, tariff announcements, and negative sequential revenue guidance (-3.5% to -1.5%). Specific references to 'uncertain environment', 'headwinds', and clients taking a 'more cautious approach' drove the hedging score upward while capping sentiment in mildly negative territory. Q&A rationale: The transcript reveals a cautious management tone due to macroeconomic pressures, tariff concerns, and delayed client spending decisions, particularly in BFSI and Europe. While management highlights strong deal pipelines and cost-takeout execution, the presence of specific growth pauses and margin headwinds keeps the overall sentiment moderately negative and hedged.",
+    "qa_hedging_phrases": [
+      "headwinds",
+      "deferred",
+      "uncertain environment"
+    ]
+  },
+  "WIPRO::Jan 2025": {
+    "symbol": "WIPRO",
+    "date": "Jan 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:06:47.236220+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you. We will now begin the question-and-answer session. We will take our first question from the line of Vibor Singhal from Nuvama Equities.",
+    "prepared_remarks": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "challenging macro",
+        "challenged"
+      ],
+      "reasoning": "The sentiment is moderately positive driven by strong margin expansion to a 12-quarter high of 17.5%, a solid TCV of $3.5 billion, and beats on revenue guidance. However, some hesitation remains with management acknowledging a challenging macro environment in Europe and pointing out that discretionary spending recovery is not yet secular."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "wait and watch",
+        "headwinds"
+      ],
+      "reasoning": "Management expresses cautious optimism highlighted by strong execution, margin expansion to a 12-quarter high (17.5%), and improving demand in key verticals like BFSI and Healthcare. However, some hesitation remains regarding volatile foreign exchange rates, soft demand in Europe and APMEA, and adopting a wait-and-watch approach on deal tenure trends."
+    },
+    "concall_divergence": 0.0,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.35 (hesitation=11.8). Q&A sentiment=0.35 (hesitation=12.5). Divergence=+0.00. Prepared Remarks rationale: The sentiment is moderately positive driven by strong margin expansion to a 12-quarter high of 17.5%, a solid TCV of $3.5 billion, and beats on revenue guidance. However, some hesitation remains with management acknowledging a challenging macro environment in Europe and pointing out that discretionary spending recovery is not yet secular. Q&A rationale: Management expresses cautious optimism highlighted by strong execution, margin expansion to a 12-quarter high (17.5%), and improving demand in key verticals like BFSI and Healthcare. However, some hesitation remains regarding volatile foreign exchange rates, soft demand in Europe and APMEA, and adopting a wait-and-watch approach on deal tenure trends.",
+    "qa_hedging_phrases": [
+      "wait and watch",
+      "headwinds"
+    ]
+  },
+  "HCLTECH::Jul 2026": {
+    "symbol": "HCLTECH",
+    "date": "Jul 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:07:07.528024+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "We will now begin the question-and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The transcript reflects an exceptionally confident management tone, highlighting robust advanced AI revenue growth, record-high Q1 bookings of $2.4 billion, and major strategic investments without expressing uncertainty or hesitation. There are no standard hedging or hesitation phrases detected in the provided segment, indicating strong conviction in near-term and long-term execution."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "we would like to see how things pan out",
+        "too early to say"
+      ],
+      "reasoning": "The management exhibits strong confidence backed by solid deal wins, strong cash generation, and robust ROIC, leading to a positive sentiment score. However, a minor degree of hedging is present as they maintain their annual guidance range and state they want to see how the next quarter pans out before revising estimates."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 11.76,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.85 (hesitation=0.0). Q&A sentiment=0.65 (hesitation=11.8). Divergence=-0.20. Prepared Remarks rationale: The transcript reflects an exceptionally confident management tone, highlighting robust advanced AI revenue growth, record-high Q1 bookings of $2.4 billion, and major strategic investments without expressing uncertainty or hesitation. There are no standard hedging or hesitation phrases detected in the provided segment, indicating strong conviction in near-term and long-term execution. Q&A rationale: The management exhibits strong confidence backed by solid deal wins, strong cash generation, and robust ROIC, leading to a positive sentiment score. However, a minor degree of hedging is present as they maintain their annual guidance range and state they want to see how the next quarter pans out before revising estimates.",
+    "qa_hedging_phrases": [
+      "we would like to see how things pan out",
+      "too early to say"
+    ]
+  },
+  "HCLTECH::Jan 2026": {
+    "symbol": "HCLTECH",
+    "date": "Jan 2026",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:07:26.227447+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "And I would like to hand over the session to our moderator for a Q&A session. Thank you.",
+    "prepared_remarks": {
+      "sentiment_score": 0.85,
+      "hesitation_index": 0.0,
+      "key_hedging_phrases_found": [],
+      "reasoning": "The executive commentary conveys exceptionally strong confidence, highlighting robust revenue growth ($3.79 billion, crossing $15 billion annualized), record net new bookings of $3 billion (up 43% YoY), and strong performance across segments like ER&D and Software. The tone is highly optimistic regarding AI adoption and large deal wins with zero hesitation phrases or hedging present in the transcript segment."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [
+        "muted growth"
+      ],
+      "reasoning": "The sentiment is generally positive, driven by strong revenue growth, raising of full-year guidance, and robust cash generation, along with healthy client additions. Management does acknowledge some cautious elements, such as muted growth in broader enterprise adoption of AI business processes and lingering global uncertainties, but these are outweighed by strong momentum and strategic wins."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 5.88,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.85 (hesitation=0.0). Q&A sentiment=0.65 (hesitation=5.9). Divergence=-0.20. Prepared Remarks rationale: The executive commentary conveys exceptionally strong confidence, highlighting robust revenue growth ($3.79 billion, crossing $15 billion annualized), record net new bookings of $3 billion (up 43% YoY), and strong performance across segments like ER&D and Software. The tone is highly optimistic regarding AI adoption and large deal wins with zero hesitation phrases or hedging present in the transcript segment. Q&A rationale: The sentiment is generally positive, driven by strong revenue growth, raising of full-year guidance, and robust cash generation, along with healthy client additions. Management does acknowledge some cautious elements, such as muted growth in broader enterprise adoption of AI business processes and lingering global uncertainties, but these are outweighed by strong momentum and strategic wins.",
+    "qa_hedging_phrases": [
+      "muted growth"
+    ]
+  },
+  "HCLTECH::Oct 2025": {
+    "symbol": "HCLTECH",
+    "date": "Oct 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:07:44.673152+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Thank you very much. We will now begin the question-and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "remain cautious",
+        "uncertain environment"
+      ],
+      "reasoning": "The transcript reflects a strong and upbeat earnings call with robust revenue growth, expanding operating margins, raised services guidance, and solid bookings exceeding $2.5 billion. Management expresses high confidence in their AI strategy and execution, while only briefly acknowledging broader external uncertainties and maintaining a prudent outlook."
+    },
+    "qa": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "don't have a full picture"
+      ],
+      "reasoning": "The sentiment is generally positive as the management discusses strong adoption of Advanced AI revenues, successful IP monetization via 'AI Force', and competitive wins. There is minor hesitation regarding the exact future investment quantum and long-term revenue numbers for the IP strategy, but overall confidence remains high."
+    },
+    "concall_divergence": 0.0,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=12.5). Q&A sentiment=0.65 (hesitation=12.5). Divergence=+0.00. Prepared Remarks rationale: The transcript reflects a strong and upbeat earnings call with robust revenue growth, expanding operating margins, raised services guidance, and solid bookings exceeding $2.5 billion. Management expresses high confidence in their AI strategy and execution, while only briefly acknowledging broader external uncertainties and maintaining a prudent outlook. Q&A rationale: The sentiment is generally positive as the management discusses strong adoption of Advanced AI revenues, successful IP monetization via 'AI Force', and competitive wins. There is minor hesitation regarding the exact future investment quantum and long-term revenue numbers for the IP strategy, but overall confidence remains high.",
+    "qa_hedging_phrases": [
+      "don't have a full picture"
+    ]
+  },
+  "HCLTECH::Jul 2025": {
+    "symbol": "HCLTECH",
+    "date": "Jul 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:08:03.574666+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you very much. We will now begin the question-and-answer session. Our first question comes from the line of Ravi Menon from Macquarie. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [
+        "some stress"
+      ],
+      "reasoning": "The management expressed solid confidence in overall growth, robust deal pipelines, and strong execution in AI-led transformational propositions. While acknowledging minor headwinds in specific segments like manufacturing and automotive along with a lower-than-planned operating margin, the overall tone remains constructive and forward-looking with minimal hedging."
+    },
+    "qa": {
+      "sentiment_score": 0.4,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "too early to call"
+      ],
+      "reasoning": "Management demonstrates overall confidence by upgrading revenue guidance for FY26 to 3%-5% and highlighting robust pipeline demand in Financial Services and Tech verticals. However, some hesitation is present due to margin pressures, one-off impacts, restructuring costs, and broader macroeconomic uncertainties in segments like Auto, Manufacturing, and Retail."
+    },
+    "concall_divergence": -0.25,
+    "concall_hesitation": 12.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=5.9). Q&A sentiment=0.40 (hesitation=12.5). Divergence=-0.25. Prepared Remarks rationale: The management expressed solid confidence in overall growth, robust deal pipelines, and strong execution in AI-led transformational propositions. While acknowledging minor headwinds in specific segments like manufacturing and automotive along with a lower-than-planned operating margin, the overall tone remains constructive and forward-looking with minimal hedging. Q&A rationale: Management demonstrates overall confidence by upgrading revenue guidance for FY26 to 3%-5% and highlighting robust pipeline demand in Financial Services and Tech verticals. However, some hesitation is present due to margin pressures, one-off impacts, restructuring costs, and broader macroeconomic uncertainties in segments like Auto, Manufacturing, and Retail.",
+    "qa_hedging_phrases": [
+      "headwinds",
+      "too early to call"
+    ]
+  },
+  "HCLTECH::Apr 2025": {
+    "symbol": "HCLTECH",
+    "date": "Apr 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:08:22.431096+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: Thank you. We will now begin the question-and-answer session. The first  question comes from the line of Ravi Menon with Macquarie. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 12.5,
+      "key_hedging_phrases_found": [
+        "uncertainty in the global economy",
+        "reduced discretionary spending"
+      ],
+      "reasoning": "The transcript conveys a solid, positive sentiment driven by strong bookings ($3 billion net-new), steady revenue growth of 4.7% in constant currency, and robust traction in AI/GenAI initiatives. Management acknowledges past macro hurdles such as reduced discretionary spending and global economic uncertainty, but the overall tone emphasizes resilience, margin control, and confident execution, resulting in low hedging and a moderately high bullish sentiment score."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 45.0,
+      "key_hedging_phrases_found": [
+        "deferred",
+        "uncertain environment",
+        "headwinds",
+        "remain cautious",
+        "contingent on",
+        "too early to say"
+      ],
+      "reasoning": "Management presents a balanced view for FY26, guiding a modest 2% to 5% revenue growth while acknowledging potential macro headwinds and deal deferrals. Although Q4 bookings were strong and cash generation remains robust, explicit mentions of subdued discretionary spend, geopolitical risks, and multiple downside guidance scenarios keep the hesitation index elevated."
+    },
+    "concall_divergence": -0.3,
+    "concall_hesitation": 45.0,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=12.5). Q&A sentiment=0.35 (hesitation=45.0). Divergence=-0.30. Prepared Remarks rationale: The transcript conveys a solid, positive sentiment driven by strong bookings ($3 billion net-new), steady revenue growth of 4.7% in constant currency, and robust traction in AI/GenAI initiatives. Management acknowledges past macro hurdles such as reduced discretionary spending and global economic uncertainty, but the overall tone emphasizes resilience, margin control, and confident execution, resulting in low hedging and a moderately high bullish sentiment score. Q&A rationale: Management presents a balanced view for FY26, guiding a modest 2% to 5% revenue growth while acknowledging potential macro headwinds and deal deferrals. Although Q4 bookings were strong and cash generation remains robust, explicit mentions of subdued discretionary spend, geopolitical risks, and multiple downside guidance scenarios keep the hesitation index elevated.",
+    "qa_hedging_phrases": [
+      "deferred",
+      "uncertain environment",
+      "headwinds",
+      "remain cautious",
+      "contingent on",
+      "too early to say"
+    ]
+  },
+  "HCLTECH::Jan 2025": {
+    "symbol": "HCLTECH",
+    "date": "Jan 2025",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:08:48.623658+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "We will now begin the question -and-answer session.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 11.76,
+      "key_hedging_phrases_found": [
+        "cautious discretionary spending",
+        "deferring their renewal decisions"
+      ],
+      "reasoning": "The earnings call reflects a largely positive sentiment driven by solid sequential revenue growth, a strong pipeline near all-time highs, robust cash generation, and higher dividend payouts. Management notes some minor headwinds, such as cautious discretionary spending in certain sectors and some customers deferring renewal decisions in the software division, but overall confidence remains high."
+    },
+    "qa": {
+      "sentiment_score": 0.35,
+      "hesitation_index": 28.5,
+      "key_hedging_phrases_found": [
+        "you probably will have to wait",
+        "taking time",
+        "take some time"
+      ],
+      "reasoning": "The management expresses fundamental confidence in underlying demand momentum, pointing to strong ACV, faster conversion of small deals, and tailwinds from Agentic AI and legacy modernization. However, hedging is present regarding near-term Q4 software metrics, the exact timing of discretionary ramp-ups, and forward guidance for FY26, leading to a moderate hesitation score."
+    },
+    "concall_divergence": -0.3,
+    "concall_hesitation": 28.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=11.8). Q&A sentiment=0.35 (hesitation=28.5). Divergence=-0.30. Prepared Remarks rationale: The earnings call reflects a largely positive sentiment driven by solid sequential revenue growth, a strong pipeline near all-time highs, robust cash generation, and higher dividend payouts. Management notes some minor headwinds, such as cautious discretionary spending in certain sectors and some customers deferring renewal decisions in the software division, but overall confidence remains high. Q&A rationale: The management expresses fundamental confidence in underlying demand momentum, pointing to strong ACV, faster conversion of small deals, and tailwinds from Agentic AI and legacy modernization. However, hedging is present regarding near-term Q4 software metrics, the exact timing of discretionary ramp-ups, and forward guidance for FY26, leading to a moderate hesitation score.",
+    "qa_hedging_phrases": [
+      "you probably will have to wait",
+      "taking time",
+      "take some time"
+    ]
+  },
+  "HCLTECH::Oct 2024": {
+    "symbol": "HCLTECH",
+    "date": "Oct 2024",
+    "schema_version": "v1",
+    "scored_at": "2026-07-24T18:09:07.709552+00:00",
+    "model": "gemini-3.5-flash-lite",
+    "segmentation_boundary": "Moderator: We will now begin the question-and-answer session. The first question is from the line of Abhishek Pathak from Motilal Oswal. Please go ahead.",
+    "prepared_remarks": {
+      "sentiment_score": 0.65,
+      "hesitation_index": 5.88,
+      "key_hedging_phrases_found": [
+        "remain cognizant of"
+      ],
+      "reasoning": "The management exhibits strong bullish sentiment driven by solid revenue growth across geographies and verticals, robust software performance, and expanding large deal wins. The hesitation index is very low, with only a mild precautionary acknowledgment regarding geopolitical and global economic factors."
+    },
+    "qa": {
+      "sentiment_score": 0.45,
+      "hesitation_index": 23.5,
+      "key_hedging_phrases_found": [
+        "headwinds",
+        "remain cautious"
+      ],
+      "reasoning": "The sentiment is generally positive, driven by strong ROIC improvement, solid cash generation, and an upward revision in the lower end of the revenue guidance. However, management exercises some caution by acknowledging specific sector pressures (like automotive) and macroeconomic uncertainties, leading to a moderate hesitation index."
+    },
+    "concall_divergence": -0.2,
+    "concall_hesitation": 23.5,
+    "divergence_reasoning": "Prepared Remarks sentiment=0.65 (hesitation=5.9). Q&A sentiment=0.45 (hesitation=23.5). Divergence=-0.20. Prepared Remarks rationale: The management exhibits strong bullish sentiment driven by solid revenue growth across geographies and verticals, robust software performance, and expanding large deal wins. The hesitation index is very low, with only a mild precautionary acknowledgment regarding geopolitical and global economic factors. Q&A rationale: The sentiment is generally positive, driven by strong ROIC improvement, solid cash generation, and an upward revision in the lower end of the revenue guidance. However, management exercises some caution by acknowledging specific sector pressures (like automotive) and macroeconomic uncertainties, leading to a moderate hesitation index.",
+    "qa_hedging_phrases": [
+      "headwinds",
+      "remain cautious"
+    ]
+  }
+}

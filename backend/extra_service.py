@@ -117,7 +117,7 @@ def get_concalls(symbol: str) -> list:
     return []
 
 
-def fetch_pdf_text(url: str, max_chars: int = 30000) -> str:
+def fetch_pdf_text(url: str, max_chars: int = 10000000) -> str:
     """Download a PDF and extract text. Returns empty if PDF unreachable (geo-block)."""
     try:
         from pypdf import PdfReader
@@ -126,11 +126,11 @@ def fetch_pdf_text(url: str, max_chars: int = 30000) -> str:
             import curl_cffi.requests as creq
             r = creq.get(url, impersonate="chrome120",
                          headers={"Referer": "https://www.bseindia.com/", "Accept": "*/*"},
-                         timeout=20, allow_redirects=True)
+                         timeout=30, allow_redirects=True)
             content = r.content
             ctype = r.headers.get("content-type", "")
         except Exception:
-            r = requests.get(url, headers=HEADERS, timeout=20, allow_redirects=True)
+            r = requests.get(url, headers=HEADERS, timeout=30, allow_redirects=True)
             content = r.content
             ctype = r.headers.get("content-type", "")
         # Detect geo-block: BSE returns HTML instead of PDF

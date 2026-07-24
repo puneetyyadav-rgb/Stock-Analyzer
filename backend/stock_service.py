@@ -70,6 +70,7 @@ def search_stocks(query: str) -> list:
         "infosys": [{"symbol": "INFY.NS", "name": "Infosys Limited", "exchange": "NSI", "type": "EQUITY"}],
         "tcs": [{"symbol": "TCS.NS", "name": "Tata Consultancy Services Limited", "exchange": "NSI", "type": "EQUITY"}],
         "reliance": [{"symbol": "RELIANCE.NS", "name": "Reliance Industries Limited", "exchange": "NSI", "type": "EQUITY"}],
+        "ril": [{"symbol": "RELIANCE.NS", "name": "Reliance Industries Limited", "exchange": "NSI", "type": "EQUITY"}],
         "zomato": [{"symbol": "ZOMATO.NS", "name": "Zomato Limited", "exchange": "NSI", "type": "EQUITY"}],
         "paytm": [{"symbol": "PAYTM.NS", "name": "One 97 Communications Ltd. (Paytm)", "exchange": "NSI", "type": "EQUITY"}],
         "suzlon": [{"symbol": "SUZLON.NS", "name": "Suzlon Energy Limited", "exchange": "NSI", "type": "EQUITY"}],

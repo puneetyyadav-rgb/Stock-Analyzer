@@ -90,7 +90,7 @@ def _call_gemini_with_retry(client, prompt: str, retries=3, backoff=2) -> str:
     for i in range(retries):
         try:
             response = client.models.generate_content(
-                model="gemini-3.5-flash",
+                model="gemini-3.6-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",

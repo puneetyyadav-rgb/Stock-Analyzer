@@ -22,6 +22,11 @@ from quant_service import _rank_corr, walk_forward_validate
 logger = logging.getLogger(__name__)
 
 # Composite weights (renormalized over whatever factors have enough history).
+# NOTE: Concall transcripts are intentionally NOT a numeric factor here.
+# They are used as a qualitative narrative tool (managementGuidance, capexPlans,
+# newOrders, futureConclusion) surfaced directly in the UI via concall_service.py.
+# A numeric divergence/hesitation score was backtested across 29 quarters (5 stocks)
+# and produced IC=-0.10, HitRate=44.8% — no statistically significant edge found.
 _WEIGHTS = {
     "mom_120": 0.22, "mom_60": 0.18, "reversal_5": 0.10,
     "deliv_trend": 0.16, "liquidity": 0.10, "low_vol": 0.10, "turnover_shock": 0.14,
@@ -120,6 +125,13 @@ def _factors_at(wc: pd.DataFrame, wd: pd.DataFrame, wt: pd.DataFrame, i: int) ->
         F["turnover_shock"] = wt.iloc[i] / wt.iloc[i - 19:i + 1].mean()
     if i - 60 >= 0:
         F["low_vol"] = -wc.iloc[i - 60:i + 1].pct_change().std()      # low-vol anomaly
+
+    # ── Phase 4: Concall Divergence (per-symbol, not cross-sectional date-indexed) ──
+    # concall_factor_service provides the most recent quarter's divergence score.
+    # We attach it to every symbol row in the factor frame; the IC engine handles
+    # the cross-sectional z-scoring the same way as every other factor.
+    # This block is symbol-agnostic at this level — the per-symbol lookup happens
+    # in get_factor_profile() below where the symbol name is known.
     return pd.DataFrame(F)
 
 

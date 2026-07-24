@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import { Sparkles, Loader2, ExternalLink, FileText, Presentation, Youtube } from "lucide-react";
+import { Sparkles, Loader2, FileText, Presentation, Youtube } from "lucide-react";
 import axios from "axios";
 import SourceQA from "./SourceQA";
+import ConcallSynthesisPanel from "./ConcallSynthesisPanel";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -53,6 +54,13 @@ export default function ConcallsPanel({ symbol }) {
 
   return (
     <Panel title="Concalls & Management Commentary (Screener)" testId="concalls-panel">
+      {/* 2-Year Longitudinal Synthesis — always shown first */}
+      <div className="mb-4">
+        <ConcallSynthesisPanel symbol={symbol} />
+      </div>
+
+      {/* Per-Quarter AI Summaries */}
+      <p className="text-[9px] tracking-widest uppercase text-zinc-500 mb-2">Quarter-by-Quarter Summaries</p>
       {items === null && <p className="text-xs text-zinc-500">Loading concalls…</p>}
       {items && items.length === 0 && <p className="text-xs text-zinc-600">No concall data found</p>}
       {items && items.length > 0 && (
