@@ -5,6 +5,7 @@ import {
   MessageSquareWarning, TrendingUp, Target
 } from "lucide-react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -254,6 +255,62 @@ function StrategicVisionCard({ data }) {
   );
 }
 
+// ── CARD 4: Custom Q&A Engine ────────────────────────────────────────────────
+function CustomQASection({ symbol }) {
+  const [query, setQuery] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const ask = async () => {
+    if (!query.trim() || !symbol) return;
+    setLoading(true);
+    setError(null);
+    setAnswer(null);
+    try {
+      const res = await axios.post(`${API}/concall-synthesis/${symbol}/ask`, { query });
+      if (res.data.error) setError(res.data.error);
+      else setAnswer(res.data.answer);
+    } catch (e) {
+      setError(e.response?.data?.detail || e.message || "Failed to get answer");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SectionCard icon={MessageSquareWarning} title="Ask the Transcripts" badge="Custom Query">
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            placeholder="e.g. What did management say about debt reduction over the last 2 years?"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && ask()}
+            className="flex-1 bg-zinc-900/50 border border-zinc-700 p-2 text-[11px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+          />
+          <button 
+            onClick={ask}
+            disabled={loading || !query.trim()}
+            className="px-3 py-1.5 text-[10px] tracking-widest uppercase border border-indigo-700 bg-indigo-900/30 text-indigo-300 hover:bg-indigo-800/40 transition-colors disabled:opacity-40"
+          >
+            {loading ? "Thinking..." : "Ask AI"}
+          </button>
+        </div>
+        
+        {error && <p className="text-xs text-red-400 p-2 bg-red-950/20 border border-red-900/50">{error}</p>}
+        
+        {answer && (
+           <div className="p-3 bg-zinc-900/40 border border-zinc-800 text-[12px] text-zinc-300 leading-relaxed max-w-none">
+             <ReactMarkdown>{answer}</ReactMarkdown>
+           </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
 // ── MAIN EXPORT ───────────────────────────────────────────────────────────────
 export default function ConcallSynthesisPanel({ symbol }) {
   const [data, setData]         = useState(null);
@@ -404,6 +461,7 @@ export default function ConcallSynthesisPanel({ symbol }) {
             <ExecutionTrackerCard data={data.execution_tracker} />
             <AnalystGrillCard    data={data.analyst_grill_vault} />
             <StrategicVisionCard data={data.three_year_strategic_vision} />
+            <CustomQASection symbol={symbol} />
           </div>
         )}
       </div>

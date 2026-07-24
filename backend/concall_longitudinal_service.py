@@ -206,6 +206,72 @@ async def sync_transcripts(symbol: str) -> Dict[str, Any]:
         "message": f"Successfully synced transcripts. {downloaded} downloaded, {already_local} already local."
     }
 
+async def ask_concalls(symbol: str, query: str) -> Dict[str, Any]:
+    """
+    Loads all available local transcripts for a given symbol and uses Gemini
+    to answer a custom user query in rich Markdown.
+    """
+    logger.info(f"[{symbol}] Custom query: {query}")
+    clean_sym = symbol.split(".")[0]
+    concalls_dir = os.path.join(os.path.dirname(__file__), "data", "concalls", clean_sym)
+    
+    if not os.path.exists(concalls_dir):
+        return {"error": "No transcripts found. Please sync transcripts first."}
+        
+    combined_transcript_text = ""
+    files = sorted([f for f in os.listdir(concalls_dir) if f.endswith(".txt")])
+    if not files:
+        return {"error": "No transcripts found. Please sync transcripts first."}
+        
+    for file_name in files:
+        file_path = os.path.join(concalls_dir, file_name)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                text = f.read()
+            date_str = file_name.replace(".txt", "")
+            combined_transcript_text += f"\n\n{'='*50}\nTRANSCRIPT FOR: {symbol} - {date_str}\n{'='*50}\n\n"
+            combined_transcript_text += text
+        except Exception as e:
+            logger.warning(f"[{symbol}] Could not read {file_path}: {e}")
+            
+    if not combined_transcript_text.strip():
+         return {"error": "Transcripts were empty or could not be read."}
+         
+    system_instruction = (
+        "You are a Senior Institutional Equity Research Analyst.\n"
+        "You will be given up to 8 quarters of earnings call transcripts for a company.\n"
+        "Your task is to answer the user's specific query comprehensively using only the provided transcripts as evidence.\n"
+        "Do NOT format your response as JSON. Instead, provide a rich, detailed, plain-English response using Markdown formatting.\n"
+        "Use bullet points, bold text for emphasis, and explicitly cite the relevant quarter (e.g., 'In Q3FY24...') when making claims.\n"
+        "If the transcripts do not contain the answer, say so clearly instead of guessing."
+    )
+    
+    global current_key_idx
+    for attempt in range(len(all_keys)):
+        model = genai.GenerativeModel(
+            model_name="gemini-3.6-flash",
+            system_instruction=system_instruction,
+            generation_config=genai.GenerationConfig(
+                temperature=0.3
+            )
+        )
+        try:
+            prompt = f"USER QUERY: {query}\n\n{combined_transcript_text}"
+            response = await model.generate_content_async(prompt)
+            return {"answer": response.text}
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "quota" in err_str or "exceeded" in err_str or "exhausted" in err_str:
+                if attempt < len(all_keys) - 1:
+                    current_key_idx = (current_key_idx + 1) % len(all_keys)
+                    logger.warning(f"[{symbol}] Quota exceeded on key index {attempt}. Swapping to backup key index {current_key_idx} and retrying...")
+                    genai.configure(api_key=all_keys[current_key_idx])
+                    continue
+            logger.error(f"[{symbol}] LLM Q&A failed: {e}")
+            return {"error": str(e)}
+            
+    return {"error": "All backup Gemini API keys exhausted their quotas."}
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, format="%(message)s")

@@ -76,7 +76,7 @@ def _cache_get(key: str, custom_ttl: float = None):
             return val
 
     # If key is an AI analysis or expensive query, check persistent disk cache (default 24h TTL)
-    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict", "guidance_extract")):
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "concall-synthesis", "verdict", "guidance_extract")):
         import json, os, time
         try:
             path = _disk_cache_path()
@@ -99,7 +99,7 @@ def _cache_get(key: str, custom_ttl: float = None):
 def _cache_set(key: str, val):
     _CACHE[key] = (datetime.now(timezone.utc), val)
     # If key is an AI analysis or expensive query, persist to disk cache
-    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "verdict", "guidance_extract")):
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "concall-synthesis", "verdict", "guidance_extract")):
         import json, os, time
         try:
             path = _disk_cache_path()
@@ -260,7 +260,7 @@ async def concall_synthesis(symbol: str, force_refresh: bool = False, auto_load:
     if auto_load:
         return {"not_generated_yet": True}
         
-    data = await cls.generate_longitudinal_synthesis(symbol, force_refresh=True)
+    data = await cls.generate_longitudinal_synthesis(symbol, force_refresh=force_refresh)
     if "error" not in data:
         _cache_set(key, data)
     return data
@@ -270,6 +270,16 @@ async def download_transcripts(symbol: str):
     """Downloads missing 8-quarter transcripts to disk without running the AI analysis."""
     import concall_longitudinal_service as cls
     return await cls.sync_transcripts(symbol)
+
+@api_router.post("/concall-synthesis/{symbol}/ask")
+async def ask_concalls_endpoint(symbol: str, payload: dict):
+    """Answers custom queries against the local transcripts."""
+    import concall_longitudinal_service as cls
+    query = payload.get("query")
+    if not query:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Query required")
+    return await cls.ask_concalls(symbol, query)
 
 @api_router.post("/backtest")
 async def backtest(config: dict):
