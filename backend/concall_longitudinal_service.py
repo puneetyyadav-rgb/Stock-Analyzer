@@ -209,9 +209,25 @@ async def sync_transcripts(symbol: str) -> Dict[str, Any]:
 async def ask_concalls(symbol: str, query: str) -> Dict[str, Any]:
     """
     Loads all available local transcripts for a given symbol and uses Gemini
-    to answer a custom user query in rich Markdown.
+    to answer a custom user query in rich Markdown. Caches questions and answers.
     """
     logger.info(f"[{symbol}] Custom query: {query}")
+    store = _load_store()
+    if symbol not in store or not isinstance(store[symbol], dict):
+        store[symbol] = {}
+        
+    qa_history = store[symbol].get("qa_history", [])
+    
+    # Check cache first
+    for entry in qa_history:
+        if entry.get("query", "").strip().lower() == query.strip().lower():
+            logger.info(f"[{symbol}] Returning cached Q&A answer.")
+            return {
+                "answer": entry.get("answer"),
+                "cached": True,
+                "qa_history": qa_history
+            }
+
     clean_sym = symbol.split(".")[0]
     concalls_dir = os.path.join(os.path.dirname(__file__), "data", "concalls", clean_sym)
     
@@ -258,7 +274,35 @@ async def ask_concalls(symbol: str, query: str) -> Dict[str, Any]:
         try:
             prompt = f"USER QUERY: {query}\n\n{combined_transcript_text}"
             response = await model.generate_content_async(prompt)
-            return {"answer": response.text}
+            
+            # Save to history
+            from datetime import datetime, timezone
+            new_entry = {
+                "id": len(qa_history) + 1,
+                "query": query.strip(),
+                "answer": response.text,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            qa_history.append(new_entry)
+            store[symbol]["qa_history"] = qa_history
+            _save_store(store)
+            
+            # Also sync server cache so history persists across page navigation immediately
+            try:
+                import server
+                cache_key = f"concall-synthesis:{symbol}:False"
+                cached_data = server._cache_get(cache_key)
+                if cached_data and isinstance(cached_data, dict):
+                    cached_data["qa_history"] = qa_history
+                    server._cache_set(cache_key, cached_data)
+            except Exception as ex:
+                logger.warning(f"Failed to sync cache: {ex}")
+            
+            return {
+                "answer": response.text,
+                "cached": False,
+                "qa_history": qa_history
+            }
         except Exception as e:
             err_str = str(e).lower()
             if "429" in err_str or "quota" in err_str or "exceeded" in err_str or "exhausted" in err_str:

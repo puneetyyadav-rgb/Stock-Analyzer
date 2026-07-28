@@ -256,11 +256,16 @@ function StrategicVisionCard({ data }) {
 }
 
 // ── CARD 4: Custom Q&A Engine ────────────────────────────────────────────────
-function CustomQASection({ symbol }) {
+function CustomQASection({ symbol, initialHistory = [] }) {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [history, setHistory] = useState(initialHistory);
+
+  useEffect(() => {
+    setHistory(initialHistory || []);
+  }, [initialHistory]);
 
   const ask = async () => {
     if (!query.trim() || !symbol) return;
@@ -270,7 +275,10 @@ function CustomQASection({ symbol }) {
     try {
       const res = await axios.post(`${API}/concall-synthesis/${symbol}/ask`, { query });
       if (res.data.error) setError(res.data.error);
-      else setAnswer(res.data.answer);
+      else {
+        setAnswer(res.data.answer);
+        if (res.data.qa_history) setHistory(res.data.qa_history);
+      }
     } catch (e) {
       setError(e.response?.data?.detail || e.message || "Failed to get answer");
     } finally {
@@ -305,6 +313,29 @@ function CustomQASection({ symbol }) {
            <div className="p-3 bg-zinc-900/40 border border-zinc-800 text-[12px] text-zinc-300 leading-relaxed max-w-none">
              <ReactMarkdown>{answer}</ReactMarkdown>
            </div>
+        )}
+
+        {/* Question History with Arrow on the Right */}
+        {history.length > 0 && (
+          <div className="mt-2 space-y-1.5 border-t border-zinc-800/80 pt-3">
+            <span className="text-[9px] uppercase tracking-widest text-zinc-500 block mb-1">
+              Previously Asked Questions ({history.length})
+            </span>
+            {history.map((item, idx) => (
+              <Collapsible
+                key={idx}
+                header={
+                  <div className="flex items-center gap-2 pr-2 min-w-0">
+                    <span className="text-[11px] text-indigo-300 font-medium truncate">{item.query}</span>
+                  </div>
+                }
+              >
+                <div className="p-2.5 bg-zinc-900/60 border border-zinc-800/80 text-[12px] text-zinc-300 leading-relaxed max-w-none mt-1">
+                  <ReactMarkdown>{item.answer}</ReactMarkdown>
+                </div>
+              </Collapsible>
+            ))}
+          </div>
         )}
       </div>
     </SectionCard>
@@ -461,7 +492,7 @@ export default function ConcallSynthesisPanel({ symbol }) {
             <ExecutionTrackerCard data={data.execution_tracker} />
             <AnalystGrillCard    data={data.analyst_grill_vault} />
             <StrategicVisionCard data={data.three_year_strategic_vision} />
-            <CustomQASection symbol={symbol} />
+            <CustomQASection symbol={symbol} initialHistory={data.qa_history || []} />
           </div>
         )}
       </div>

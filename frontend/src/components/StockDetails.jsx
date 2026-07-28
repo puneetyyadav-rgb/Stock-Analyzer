@@ -91,6 +91,20 @@ export default function StockDetails({ symbol, overview }) {
               {technicals.quantDeck.marketRegime?.available && (
                 <KV label="Market Regime (Nifty)" value={`${technicals.quantDeck.marketRegime.regime} | ${Math.round(technicals.quantDeck.marketRegime.capitalScalingFactor * 100)}% capital`} valueClass={technicals.quantDeck.marketRegime.regime === "Crash" ? "text-red-400 font-bold animate-pulse" : technicals.quantDeck.marketRegime.regime === "Choppy" ? "text-amber-400 font-semibold" : "text-emerald-400"} />
               )}
+              {technicals.quantDeck.forensics?.piotroski?.available && (
+                <KV label="Forensic F-Score" value={`${technicals.quantDeck.forensics.piotroski.score}/9 (${technicals.quantDeck.forensics.piotroski.verdict})`} valueClass={technicals.quantDeck.forensics.piotroski.score >= 7 ? "text-emerald-400 font-semibold" : technicals.quantDeck.forensics.piotroski.score >= 4 ? "text-amber-400 font-semibold" : "text-red-400 font-bold"} />
+              )}
+              {technicals.quantDeck.forensics?.beneish?.available && (
+                <KV label="Earnings Manipulation (M)" value={`${technicals.quantDeck.forensics.beneish.mScore} | ${technicals.quantDeck.forensics.beneish.manipulatorRisk ? "Manipulator Risk" : "Low Risk / Clean"}`} valueClass={technicals.quantDeck.forensics.beneish.manipulatorRisk ? "text-red-400 font-bold animate-pulse" : "text-emerald-400 font-semibold"} />
+              )}
+              {technicals.quantDeck.forensics?.roicWacc?.available && (
+                <KV label="ROIC vs WACC" value={`${technicals.quantDeck.forensics.roicWacc.roic}% vs ${technicals.quantDeck.forensics.roicWacc.wacc}% | ${technicals.quantDeck.forensics.roicWacc.category}`} valueClass={technicals.quantDeck.forensics.roicWacc.category === "Wealth Compounder" ? "text-emerald-400 font-bold" : technicals.quantDeck.forensics.roicWacc.category === "Capital Destroyer" ? "text-red-400 font-bold" : "text-amber-400 font-semibold"} />
+              )}
+              {technicals.quantDeck.forensics?.forensicAlert && (
+                <div className="col-span-2 bg-red-950/40 border border-red-500/30 rounded p-2 my-1 text-xs text-red-300 font-semibold flex items-center gap-1.5">
+                  <span>{technicals.quantDeck.forensics.forensicAlert}</span>
+                </div>
+              )}
               <KV label="Hurst Exponent (H)" value={`${technicals.quantDeck.hurstRegime?.hurst || "0.50"}${technicals.quantDeck.hurstRegime?.ci95 != null ? ` ±${technicals.quantDeck.hurstRegime.ci95}` : ""} (${technicals.quantDeck.hurstRegime?.regime?.split(" ")[0] || "-"})`} valueClass="text-fuchsia-300" />
               <KV label="1D Kalman State" value={technicals.quantDeck.kalmanState?.kalmanTrend || "-"} valueClass={technicals.quantDeck.kalmanState?.kalmanTrend?.includes("Bullish") ? "text-emerald-400" : "text-red-400"} />
               <KV label="10D Fat-Tail VaR (95%)" value={`${technicals.quantDeck.monteCarloRisk?.var95Pct || 0}%`} valueClass="text-red-400 font-mono" />

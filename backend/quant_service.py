@@ -624,7 +624,8 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
                                 delivery: Optional[Dict[str, Any]] = None, cross_sectional: Optional[Dict[str, Any]] = None,
                                 skip_montecarlo: bool = False,
                                 timeframes: Optional[Dict[str, List[float]]] = None,
-                                market_regime: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                market_regime: Optional[Dict[str, Any]] = None,
+                                forensics: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Master quantitative aggregator feeding the AI prompt and UI dashboard."""
     try:
         closes = np.array(ohlcv.get("close", []), dtype=float)   # RAW prices → levels/pivots/bands/RVOL
@@ -713,7 +714,8 @@ def compute_complete_quant_deck(symbol: str, ohlcv: Dict[str, List[float]], kota
             "deliverySignal": delivery,
             "crossSectional": cross_sectional,
             "signalBacktest": backtest,
-            "marketRegime": market_regime
+            "marketRegime": market_regime,
+            "forensics": forensics
         }
     except Exception as e:
         logger.error(f"Error computing quant deck for {symbol}: {e}")

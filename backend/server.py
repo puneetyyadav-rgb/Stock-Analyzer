@@ -254,6 +254,13 @@ async def concall_synthesis(symbol: str, force_refresh: bool = False, auto_load:
     
     cached = _cache_get(key)
     if cached and not force_refresh:
+        # ALWAYS attach latest qa_history from longitudinal store so questions never disappear
+        try:
+            store = cls._load_store()
+            if symbol in store and isinstance(store[symbol], dict):
+                cached["qa_history"] = store[symbol].get("qa_history", [])
+        except Exception:
+            pass
         return cached
         
     # If the frontend is just polling on page load, do NOT run the 120s generation.
@@ -262,6 +269,12 @@ async def concall_synthesis(symbol: str, force_refresh: bool = False, auto_load:
         
     data = await cls.generate_longitudinal_synthesis(symbol, force_refresh=force_refresh)
     if "error" not in data:
+        try:
+            store = cls._load_store()
+            if symbol in store and isinstance(store[symbol], dict):
+                data["qa_history"] = store[symbol].get("qa_history", [])
+        except Exception:
+            pass
         _cache_set(key, data)
     return data
 

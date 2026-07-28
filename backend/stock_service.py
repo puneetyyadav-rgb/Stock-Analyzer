@@ -366,6 +366,15 @@ def compute_technicals(symbol: str) -> dict:
                 logger.info(f"market regime skipped for {sym}: {e}")
                 market_regime = {"available": False, "reason": str(e)}
 
+        forensics = {"available": False, "reason": "disabled"}
+        if os.environ.get("ENABLE_FORENSICS", "true").lower() != "false":
+            try:
+                import forensic_service as fsvc
+                forensics = fsvc.analyze_forensics(sym)
+            except Exception as e:
+                logger.info(f"forensics skipped for {sym}: {e}")
+                forensics = {"available": False, "reason": str(e)}
+
         # Live order-flow (Kotak Level-2) + official NSE bhavcopy context. Best-effort: any failure
         # degrades gracefully (the deck still computes, just without that factor).
         depth = delivery = cross = integrity = None
@@ -402,7 +411,8 @@ def compute_technicals(symbol: str) -> dict:
 
         quant_deck = compute_complete_quant_deck(sym, ohlcv_dict, kotak_depth=depth,
                                                  delivery=delivery, cross_sectional=cross,
-                                                 timeframes=timeframes, market_regime=market_regime)
+                                                 timeframes=timeframes, market_regime=market_regime,
+                                                 forensics=forensics)
         if isinstance(quant_deck, dict):
             quant_deck["dataIntegrity"] = integrity
             quant_deck["newsGate"] = news_gate
