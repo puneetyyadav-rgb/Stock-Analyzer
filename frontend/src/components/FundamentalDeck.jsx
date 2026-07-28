@@ -69,9 +69,11 @@ export default function FundamentalDeck({ symbol }) {
   if (loading) {
     return (
       <div className="bg-[#0c0c0e] border border-zinc-800 rounded-lg p-12 flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mb-3" />
-        <span className="text-sm font-mono text-zinc-300">Synthesizing 10-Pillar Forensic Ratios for {symbol}...</span>
-        <span className="text-xs text-zinc-500 mt-1">Running 16-point quantitative red flags & DuPont decomposition</span>
+        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mb-4" />
+        <span className="text-sm font-mono font-semibold text-zinc-100 mb-2">Downloading & Caching 5-Year Financials for {symbol}...</span>
+        <span className="text-xs font-mono text-zinc-400">Saving Balance Sheet, P&L, and Cash Flow locally to disk</span>
+        <div className="w-48 h-px bg-zinc-800 my-3"></div>
+        <span className="text-xs font-mono text-emerald-400/80">Synthesizing 10-Pillar Ratios & 16-Point Red Flags</span>
       </div>
     );
   }
