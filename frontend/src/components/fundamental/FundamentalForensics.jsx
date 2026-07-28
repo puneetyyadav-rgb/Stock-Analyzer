@@ -8,7 +8,13 @@ export default function FundamentalForensics({ forensics, sectorBucket, gates })
   if (!forensics) return null;
 
   const redFlags = forensics.redFlags || [];
-  const phase2Stubs = forensics.phase2Stubs || [];
+  const phase2StubsRaw = forensics.phase2Stubs || {};
+  const phase2Stubs = Array.isArray(phase2StubsRaw)
+    ? phase2StubsRaw
+    : Object.entries(phase2StubsRaw).map(([key, val]) => ({
+        name: key === "rpt" ? "Related Party Transactions (RPT)" : key === "promoterPledge" ? "Promoter Pledge %" : key === "auditorChange" ? "Auditor Integrity / Switch" : key === "contingentLiabilities" ? "Contingent Liabilities" : key === "navDiscount" ? "NAV Discount %" : key,
+        ...(typeof val === "object" && val !== null ? val : { reason: String(val) })
+      }));
   const beneish = forensics.beneish || {};
   const altman = forensics.altmanZ || {};
   const sloan = forensics.sloanAccrual || {};
