@@ -19,6 +19,7 @@ import {
   AlertOctagon
 } from "lucide-react";
 import { fmtNum, fmtPct, fmtBig, gradeStyle, pillarColor, getVal0 } from "./fundamental/fundamentalUtils";
+import BFSIDeck from "./BFSIDeck";
 import FundamentalForensics from "./fundamental/FundamentalForensics";
 import FundamentalDuPont from "./fundamental/FundamentalDuPont";
 import FundamentalPeers from "./fundamental/FundamentalPeers";
@@ -94,8 +95,13 @@ export default function FundamentalDeck({ symbol }) {
   const meta = data.meta || {};
   const overall = data.overallGrade || {};
 
-  // Check BFSI or Holding Company suppression
-  if (gates.isBFSI || gates.isHoldingCompany || !overall.available) {
+  // BFSI entities get the banking-native deck instead of the industrial one.
+  if (gates.isBFSI) {
+    return <BFSIDeck symbol={symbol} />;
+  }
+
+  // Holding Company suppression
+  if (gates.isHoldingCompany || !overall.available) {
     return (
       <div className="bg-[#0c0c0e] border border-zinc-800 rounded-lg p-8">
         <div className="bg-amber-950/40 border border-amber-600/50 rounded-lg p-6 flex flex-col md:flex-row items-start gap-4">
@@ -105,15 +111,15 @@ export default function FundamentalDeck({ symbol }) {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-900/80 text-amber-200 border border-amber-700">
-                {gates.isBFSI ? "BFSI Sector Gate" : "Holding Company Gate"}
+                Holding Company Gate
               </span>
               <h3 className="text-base font-bold text-zinc-100">{meta.companyName || symbol}</h3>
             </div>
             <p className="text-sm text-amber-200/90 leading-relaxed mt-2">
-              <strong>Fundamental Synthesis Suppressed:</strong> Standard industrial accounting ratios, working capital cycles, and distress models (Altman Z-Score, Beneish M-Score, Sloan Accrual) do not apply to {gates.isBFSI ? "Banking & Financial Services (BFSI)" : "Holding Companies & Conglomerates"}.
+              <strong>Fundamental Synthesis Suppressed:</strong> Standard industrial accounting ratios, working capital cycles, and distress models (Altman Z-Score, Beneish M-Score, Sloan Accrual) do not apply to Holding Companies & Conglomerates.
             </p>
             <p className="text-xs text-zinc-400 mt-2">
-              Evaluating financial or holding structures via standard manufacturing debt-to-equity and operating cash flow metrics creates distortive false-positive red flags. Please refer to sector-specific valuation panels or quarterly disclosures.
+              Evaluating holding structures via standard manufacturing debt-to-equity and operating cash flow metrics creates distortive false-positive red flags. Please refer to sector-specific valuation panels or quarterly disclosures.
             </p>
           </div>
         </div>

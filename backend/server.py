@@ -333,6 +333,20 @@ async def fundamentals(symbol: str):
     return data
 
 
+@api_router.get("/stock/{symbol}/bfsi-analysis")
+async def bfsi_analysis(symbol: str):
+    if os.environ.get("ENABLE_BFSI_DECK", "true").lower() == "false":
+        return {"available": False, "reason": "BFSI deck is disabled via ENABLE_BFSI_DECK environment variable."}
+    key = f"bfsi:{symbol}"
+    cached = _cache_get(key, custom_ttl=3600)
+    if cached:
+        return cached
+    import bfsi_service as bsvc
+    data = await asyncio.to_thread(bsvc.analyze_bfsi, symbol)
+    _cache_set(key, data, custom_ttl=3600)
+    return data
+
+
 @api_router.get("/stock/{symbol}/corporate")
 async def corporate(symbol: str):
     key = f"corp:{symbol}"
