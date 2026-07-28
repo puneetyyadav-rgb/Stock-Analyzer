@@ -241,6 +241,15 @@ def _hydrate_peers(symbols: list, source: str) -> list:
     return out
 
 
+def _is_valid_peer_sym(sym: str) -> bool:
+    if not sym or len(sym) < 2 or any(c.isdigit() for c in sym):
+        return False
+    upper = sym.upper()
+    if upper.startswith(("CNX", "NIFT", "NFTY", "NFIN", "ALPHA", "BSE", "SENSEX", "INDEX", "S&P", "MSCI")):
+        return False
+    return True
+
+
 def _t1_screener_peers(clean_symbol: str) -> list:
     """T1: Scrape Screener.in peer comparison table using Scrapling (bypasses Cloudflare).
     Strategy:
@@ -281,8 +290,7 @@ def _t1_screener_peers(clean_symbol: str) -> list:
                         if len(parts) >= 2 and parts[0] == "company":
                             peer_sym = parts[1].upper()
                             if peer_sym and peer_sym != clean_symbol and peer_sym not in peers_found:
-                                # Filter out index/non-equity entries (they have digits or known index names)
-                                if not any(c.isdigit() for c in peer_sym) and len(peer_sym) >= 2:
+                                if _is_valid_peer_sym(peer_sym):
                                     peers_found.append(peer_sym)
 
                 if len(peers_found) >= 2:
@@ -311,7 +319,7 @@ def _t1_screener_peers(clean_symbol: str) -> list:
                             if len(parts) >= 2 and parts[0] == "company":
                                 peer_sym = parts[1].upper()
                                 if peer_sym and peer_sym != clean_symbol and peer_sym not in peers_found:
-                                    if not any(c.isdigit() for c in peer_sym) and len(peer_sym) >= 2:
+                                    if _is_valid_peer_sym(peer_sym):
                                         peers_found.append(peer_sym)
 
                     if len(peers_found) >= 2:
@@ -325,12 +333,7 @@ def _t1_screener_peers(clean_symbol: str) -> list:
                     if len(parts) >= 2 and parts[0] == "company":
                         peer_sym = parts[1].upper()
                         if peer_sym and peer_sym != clean_symbol and peer_sym not in peers_found:
-                            name_text = a.text.strip() if hasattr(a, "text") else ""
-                            # Skip index/sector entries (e.g. "BSE Fast Moving Consumer Goods", "Nifty Microcap 250")
-                            if (not any(c.isdigit() for c in peer_sym)
-                                    and len(peer_sym) >= 2
-                                    and "BSE" not in name_text.upper()[:3]
-                                    and "NIFTY" not in name_text.upper()[:5]):
+                            if _is_valid_peer_sym(peer_sym):
                                 peers_found.append(peer_sym)
 
                 if len(peers_found) >= 2:
@@ -357,7 +360,8 @@ def _t1_screener_peers(clean_symbol: str) -> list:
                     if len(parts) >= 2 and parts[0] == "company":
                         peer_sym = parts[1].upper()
                         if peer_sym and peer_sym != clean_symbol and peer_sym not in peers_found:
-                            peers_found.append(peer_sym)
+                            if _is_valid_peer_sym(peer_sym):
+                                peers_found.append(peer_sym)
                 if len(peers_found) >= 2:
                     return peers_found[:8]
             except Exception as e2:
@@ -426,8 +430,9 @@ def _t3a_yahoo_industry_peers(clean_symbol: str, t_info: dict, me_sym: str) -> l
     # Sample a broad NSE universe and find stocks sharing the exact same industry tag
     # We use yfinance search to discover similar tickers
     try:
-        results = yf.search(industry, max_results=25)
-        quotes = results.get("quotes", []) if isinstance(results, dict) else []
+        results = yf.Search(industry, max_results=25)
+        quotes = getattr(results, "quotes", []) or getattr(results, "response", {}).get("quotes", [])
+        if isinstance(quotes, dict): quotes = quotes.get("quotes", [])
         peers_found = []
         for q in quotes:
             sym = q.get("symbol", "")
@@ -486,16 +491,17 @@ def _t3b_nse_csv_peers(clean_symbol: str, t_info: dict) -> list:
         # NSE CSV columns: SYMBOL, NAME OF COMPANY, SERIES, DATE OF LISTING, PAID UP VALUE, MARKET LOT, ISIN NUMBER, FACE VALUE
         # We match peers by NAME pattern (industry keyword matching) since NSE CSV has no sector column
         # Use the company name words as industry proxy for keyword overlap scoring
-        our_name = (t_info.get("longName") or t_info.get("shortName") or "").upper()
-        name_keywords = set(w for w in re.split(r'\W+', our_name) if len(w) > 3 and w not in {"INDIA", "INDIA", "LIMITED", "LTD", "AND", "THE", "PRIVATE"})
+        our_name = f"{t_info.get('longName') or ''} {t_info.get('shortName') or ''} {t_info.get('industry') or ''} {t_info.get('sector') or ''}".upper()
+        name_keywords = set(w for w in re.split(r'\W+', our_name) if len(w) > 3 and w not in {"INDIA", "LIMITED", "LTD", "AND", "THE", "PRIVATE", "COMPANY", "CORP", "CORPORATION", "INDUSTRIES", "GENERAL", "OTHER"})
 
         candidates = []
         with open(csv_path, "r", encoding="utf-8", errors="ignore") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                sym = (row.get("SYMBOL") or "").strip().upper()
-                name = (row.get("NAME OF COMPANY") or "").upper()
-                series = (row.get("SERIES") or "").strip()
+                row_clean = {k.strip(): v for k, v in row.items() if k}
+                sym = (row_clean.get("SYMBOL") or "").strip().upper()
+                name = (row_clean.get("NAME OF COMPANY") or "").upper()
+                series = (row_clean.get("SERIES") or "").strip()
                 if series not in ("EQ", "BE", "SM", "ST"):
                     continue
                 if sym == clean_symbol:
@@ -533,28 +539,32 @@ def get_peers(symbol: str) -> list:
     # ── T1: Screener.in Live Scraper ──────────────────────────────────────────
     peer_syms = _t1_screener_peers(clean)
     source = "T1_SCREENER_INDUSTRY"
+    hydrated = _hydrate_peers(peer_syms, source) if peer_syms else []
 
     # ── T2: AI Dynamic Synthesizer (fallback) ─────────────────────────────────
-    if not peer_syms:
+    if not hydrated:
         peer_syms = _t2_ai_peers(clean, company_name, sector, industry)
         source = "T2_AI_DYNAMIC_PEERS"
+        hydrated = _hydrate_peers(peer_syms, source) if peer_syms else []
 
     # ── T3A: Yahoo Industry Tag Bucketing (fallback) ──────────────────────────
-    if not peer_syms:
+    if not hydrated:
         peer_syms = _t3a_yahoo_industry_peers(clean, t_info, clean)
         source = "T3A_YAHOO_INDUSTRY"
+        hydrated = _hydrate_peers(peer_syms, source) if peer_syms else []
 
     # ── T3B: NSE Equity CSV Classification (final fallback) ───────────────────
-    if not peer_syms:
+    if not hydrated:
         peer_syms = _t3b_nse_csv_peers(clean, t_info)
         source = "T3B_NSE_CSV"
+        hydrated = _hydrate_peers(peer_syms, source) if peer_syms else []
 
-    if not peer_syms:
+    if not hydrated:
         logger.warning(f"All peer tiers exhausted for {clean}. Returning empty peer list.")
         return []
 
-    logger.info(f"get_peers({clean}) resolved via {source}: {peer_syms}")
-    return _hydrate_peers(peer_syms, source)
+    logger.info(f"get_peers({clean}) resolved via {source}: {[p['symbol'] for p in hydrated]}")
+    return hydrated
 
 
 

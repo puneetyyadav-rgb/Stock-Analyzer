@@ -33,6 +33,7 @@ import StockMacroCouplingWidget from "../components/StockMacroCouplingWidget";
 import QlibAlphaLeaderboardPanel from "../components/QlibAlphaLeaderboardPanel";
 import CatalystRadarPanel from "../components/CatalystRadarPanel";
 import OvernightSightPanel from "../components/OvernightSightPanel";
+import FundamentalDeck from "../components/FundamentalDeck";
 import { getOverview, getRegime } from "../lib/api";
 import { fmtNum, fmtPct, fmtBigNum, colorClass } from "../lib/format";
 import { Activity, Loader2, AlertCircle, Star, StarOff, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -202,6 +203,17 @@ export default function Dashboard() {
             >
               🛰️ Catalyst Radar
             </button>
+            <button
+              onClick={() => setActiveTab("fundamentals")}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === "fundamentals"
+                  ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-900/40 border border-amber-400/30 animate-pulse"
+                  : "bg-zinc-900 text-amber-400 hover:text-white border border-amber-900/40"
+              }`}
+              data-testid="fundamental-analysis-tab-btn"
+            >
+              💎 10-Pillar Fundamental Scorecard
+            </button>
           </div>
 
           {activeTab === "pairs" && <PairsTradingPanel />}
@@ -212,6 +224,64 @@ export default function Dashboard() {
           <div style={{ display: activeTab === "catalyst-radar" ? "block" : "none" }}>
             <CatalystRadarPanel />
           </div>
+          {activeTab === "fundamentals" && (
+            <div className="space-y-4">
+              <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl p-6 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-800 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner">
+                      💎
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-black text-zinc-100 tracking-tight flex items-center gap-2">
+                        Institutional 10-Pillar Fundamental Scorecard
+                      </h2>
+                      <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                        Deep quantitative forensic accounting, DuPont return decomposition, Altman/Beneish/Sloan distress models, and peer benchmarking.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("stock")}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-lg transition-all border border-zinc-700 flex items-center gap-2 shadow-sm"
+                  >
+                    <span>← Back to Stock Terminal</span>
+                  </button>
+                </div>
+
+                {/* Quick Stock Switcher for Fundamental Scorecard */}
+                <div className="mb-6 p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-lg relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="w-full md:w-80 flex-shrink-0">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-1">🔍 Search Ticker to Score:</span>
+                    <StockSearch onSelect={setSymbol} initial={symbol} />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-1">⚡ Quick Institutional Targets:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {POPULAR.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setSymbol(s)}
+                          className={`px-2.5 py-1 text-xs font-mono tracking-wider rounded border transition-all ${
+                            (symbol || "RELIANCE").toUpperCase().includes(s)
+                              ? "bg-amber-600/20 text-amber-300 border-amber-500/50 font-bold shadow-sm"
+                              : "bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-zinc-200"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative z-10">
+                  <FundamentalDeck symbol={symbol || "RELIANCE.NS"} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {activeTab === "stock" && (
             <>
@@ -333,6 +403,39 @@ export default function Dashboard() {
               {/* Custom Ratio Analysis from Source */}
               <div className="mb-3">
                 <RatioAnalysisPanel symbol={overview.symbol} onAnalyzed={setPdfData} />
+              </div>
+
+              {/* Dedicated Institutional 10-Pillar Fundamental Scorecard Card Section */}
+              <div className="mb-4 bg-gradient-to-br from-[#0c0c0e] via-zinc-900/90 to-[#0c0c0e] border-2 border-emerald-500/30 rounded-xl p-4 sm:p-6 shadow-2xl relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-800/80 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl shadow-inner">
+                      💎
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight flex flex-wrap items-center gap-2">
+                        <span>Institutional 10-Pillar Fundamental Scorecard</span>
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-950/90 text-emerald-300 border border-emerald-800 rounded-full shadow-sm">
+                          FORENSIC AUDIT
+                        </span>
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Deep quantitative forensic accounting, Beneish M-Score, Altman Z-Score, Sloan Accrual, and DuPont return decomposition.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("fundamentals")}
+                    className="self-start sm:self-auto px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-emerald-900/30 flex items-center gap-1.5 whitespace-nowrap border border-emerald-400/30 group-hover:scale-105"
+                  >
+                    <span>Full Scorecard View</span>
+                    <span>→</span>
+                  </button>
+                </div>
+                <div className="relative z-10">
+                  <FundamentalDeck symbol={overview.symbol} />
+                </div>
               </div>
 
               {/* FII/DII + Concalls */}

@@ -76,7 +76,7 @@ def _cache_get(key: str, custom_ttl: float = None):
             return val
 
     # If key is an AI analysis or expensive query, check persistent disk cache (default 24h TTL)
-    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "concall-synthesis", "verdict", "guidance_extract")):
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "concall-synthesis", "verdict", "guidance_extract", "fund")):
         import json, os, time
         try:
             path = _disk_cache_path()
@@ -96,10 +96,10 @@ def _cache_get(key: str, custom_ttl: float = None):
     return None
 
 
-def _cache_set(key: str, val):
+def _cache_set(key: str, val, custom_ttl: float = None):
     _CACHE[key] = (datetime.now(timezone.utc), val)
     # If key is an AI analysis or expensive query, persist to disk cache
-    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "concall-synthesis", "verdict", "guidance_extract")):
+    if any(key.startswith(k) for k in ("ai_ratios", "ai_verdict", "ai_technical", "ai_news", "options_analysis", "concall_summary", "concall-synthesis", "verdict", "guidance_extract", "fund")):
         import json, os, time
         try:
             path = _disk_cache_path()
@@ -316,6 +316,20 @@ async def financials(symbol: str):
         return cached
     data = await asyncio.to_thread(ss.get_financials, symbol)
     _cache_set(key, data)
+    return data
+
+
+@api_router.get("/stock/{symbol}/fundamentals")
+async def fundamentals(symbol: str):
+    if os.environ.get("ENABLE_FUNDAMENTAL_DECK", "true").lower() == "false":
+        return {"available": False, "reason": "Fundamental deck is disabled via ENABLE_FUNDAMENTAL_DECK environment variable."}
+    key = f"fund:{symbol}"
+    cached = _cache_get(key, custom_ttl=3600)
+    if cached:
+        return cached
+    import fundamental_service as fsvc
+    data = await asyncio.to_thread(fsvc.analyze_fundamentals, symbol)
+    _cache_set(key, data, custom_ttl=3600)
     return data
 
 
