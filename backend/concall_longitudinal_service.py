@@ -118,14 +118,14 @@ async def generate_longitudinal_synthesis(symbol: str, force_refresh: bool = Fal
         combined_transcript_text += f"\n\n{'='*50}\nTRANSCRIPT FOR: {symbol} - {date_str}\n{'='*50}\n\n"
         combined_transcript_text += text
         
-    # 3. Call Gemini 3.6 Flash
-    logger.info(f"[{symbol}] Passing {len(combined_transcript_text)} characters to Gemini 3.6 Flash...")
+    # 3. Call Gemini 2.5 Flash
+    logger.info(f"[{symbol}] Passing {len(combined_transcript_text)} characters to Gemini 2.5 Flash...")
     
     global current_key_idx
     
     for attempt in range(len(all_keys)):
         model = genai.GenerativeModel(
-            model_name="gemini-3.6-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=SYSTEM_PROMPT,
             generation_config=genai.GenerationConfig(
                 response_mime_type="application/json",
@@ -265,8 +265,8 @@ async def ask_concalls(symbol: str, query: str) -> Dict[str, Any]:
     global current_key_idx
     for attempt in range(len(all_keys)):
         model = genai.GenerativeModel(
-            model_name="gemini-3.6-flash",
-            system_instruction=system_instruction,
+            model_name="gemini-2.5-flash",
+            system_instruction="You are a senior hedge fund analyst specializing in Indian equities.",
             generation_config=genai.GenerationConfig(
                 temperature=0.3
             )

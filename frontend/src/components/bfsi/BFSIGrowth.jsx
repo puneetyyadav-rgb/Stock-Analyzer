@@ -14,6 +14,8 @@ export default function BFSIGrowth({ data }) {
           <Row label="Loan Book Growth (1Y)" value={fmtNum(data.loanBookGrowth1Y_pct, 1) + "%"} valueClass={gClass(data.loanBookGrowth1Y_pct)} />
           <Row label="Loan Book CAGR (3Y)" value={fmtNum(data.loanBookCAGR3Y_pct, 1) + "%"} valueClass={gClass(data.loanBookCAGR3Y_pct)} />
           <Row label="Earning Assets / Total" value={fmtNum(data.earningAssetsToTotal_pct, 1) + "%"} />
+          {data.segmentSplit && <Row label="Segment Split" value={data.segmentSplit} valueClass="text-zinc-300 text-xs text-right max-w-[200px]" />}
+          {data.geographicConcentration && <Row label="Geographic Conc." value={data.geographicConcentration} valueClass="text-zinc-300 text-xs text-right max-w-[200px]" />}
         </Panel>
         <Panel title="Loan Book Trend (₹ Cr)" icon={TrendingUp} color="text-amber-400" note={data.note}>
           {(data.loanBookSeries_cr || []).map((l, i) => (
