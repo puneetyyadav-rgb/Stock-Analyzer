@@ -1051,7 +1051,8 @@ def analyze_bfsi(symbol, include_peers=True):
         grade = _bfsi_overall_grade(pillars, red_flags, sub_sector)
     except Exception as exc:
         logger.warning("[_bfsi_overall_grade] failed for %s: %s", symbol, exc)
-        peers = {"available": False, "reason": "include_peers=False (peer sub-call or disabled)"}
+
+    peers = {"available": False, "reason": "include_peers=False (peer sub-call or disabled)"}
     if include_peers:
         try:
             peers = _pillar_bfsi_peers(symbol, sub_sector)
@@ -1066,11 +1067,13 @@ def analyze_bfsi(symbol, include_peers=True):
     if get_latest_metrics:
         try:
             db_metrics = get_latest_metrics(symbol)
+            logger.info(f"DIAGNOSTIC - db_metrics for {symbol}: {db_metrics}")
             
             # Auto-trigger the scraper in the background if we have NO data for this symbol!
             if not db_metrics:
                 import threading
                 global _SCRAPE_TASKS
+                logger.info(f"DIAGNOSTIC - _SCRAPE_TASKS: {_SCRAPE_TASKS if '_SCRAPE_TASKS' in globals() else 'NOT DEFINED'}")
                 if "_SCRAPE_TASKS" not in globals():
                     _SCRAPE_TASKS = {}
                 
@@ -1094,7 +1097,7 @@ def analyze_bfsi(symbol, include_peers=True):
                     scraper_status = "RUNNING"
                     
             if db_metrics:
-                # GNPA / NNPA / PCR / Credit Cost / Slippage / Restructured -> assetQuality
+                # GNPA / NNPA / PCR / Credit Cost / Slippage / Restructured / Security Coverage -> assetQuality
                 if "GNPA" in db_metrics and db_metrics["GNPA"] is not None:
                     asset_q["grossNPA_pct"] = db_metrics["GNPA"]
                     if "phase2Stubs" in asset_q: asset_q["phase2Stubs"].pop("grossNPA_pct", None)
@@ -1113,16 +1116,33 @@ def analyze_bfsi(symbol, include_peers=True):
                 if "restructuredBook_pct" in db_metrics and db_metrics["restructuredBook_pct"] is not None:
                     asset_q["restructuredBook_pct"] = db_metrics["restructuredBook_pct"]
                     if "phase2Stubs" in asset_q: asset_q["phase2Stubs"].pop("restructuredBook_pct", None)
+                if "securityCoverage_pct" in db_metrics and db_metrics["securityCoverage_pct"] is not None:
+                    asset_q["securityCoverage_pct"] = db_metrics["securityCoverage_pct"]
+                    if "phase2Stubs" in asset_q: asset_q["phase2Stubs"].pop("securityCoverage_pct", None)
                 
                 # CASA -> depositFranchise
                 if "CASA" in db_metrics and db_metrics["CASA"] is not None:
                     dep_f["casaRatio_pct"] = db_metrics["CASA"]
                     if "phase2Stubs" in dep_f: dep_f["phase2Stubs"].pop("casaRatio_pct", None)
                     
-                # CRAR -> capitalAdequacy
+                # roRWA_pct -> nimProfitability
+                if "roRWA_pct" in db_metrics and db_metrics["roRWA_pct"] is not None:
+                    prof["roRWA_pct"] = db_metrics["roRWA_pct"]
+                    if "phase2Stubs" in prof: prof["phase2Stubs"].pop("roRWA_pct", None)
+                    
+                # CRAR, Tier1Capital_pct, CET1_pct, leverageRatio_pct -> capitalAdequacy
                 if "CRAR" in db_metrics and db_metrics["CRAR"] is not None:
                     cap_a["crar_pct"] = db_metrics["CRAR"]
                     if "phase2Stubs" in cap_a: cap_a["phase2Stubs"].pop("CRAR_pct", None)
+                if "Tier1Capital_pct" in db_metrics and db_metrics["Tier1Capital_pct"] is not None:
+                    cap_a["Tier1Capital_pct"] = db_metrics["Tier1Capital_pct"]
+                    if "phase2Stubs" in cap_a: cap_a["phase2Stubs"].pop("Tier1Capital_pct", None)
+                if "CET1_pct" in db_metrics and db_metrics["CET1_pct"] is not None:
+                    cap_a["CET1_pct"] = db_metrics["CET1_pct"]
+                    if "phase2Stubs" in cap_a: cap_a["phase2Stubs"].pop("CET1_pct", None)
+                if "leverageRatio_pct" in db_metrics and db_metrics["leverageRatio_pct"] is not None:
+                    cap_a["leverageRatio_pct"] = db_metrics["leverageRatio_pct"]
+                    if "phase2Stubs" in cap_a: cap_a["phase2Stubs"].pop("leverageRatio_pct", None)
                     
                 # segmentSplit / geographicConcentration -> loanBookGrowth
                 if "segmentSplit" in db_metrics and db_metrics["segmentSplit"] is not None:
@@ -1131,6 +1151,34 @@ def analyze_bfsi(symbol, include_peers=True):
                 if "geographicConcentration" in db_metrics and db_metrics["geographicConcentration"] is not None:
                     grow["geographicConcentration"] = db_metrics["geographicConcentration"]
                     if "phase2Stubs" in grow: grow["phase2Stubs"].pop("geographicConcentration", None)
+
+                # LCR_pct, NSFR_pct, ALM_mismatch -> liquidityManagement
+                if "LCR_pct" in db_metrics and db_metrics["LCR_pct"] is not None:
+                    liq["LCR_pct"] = db_metrics["LCR_pct"]
+                    if "phase2Stubs" in liq: liq["phase2Stubs"].pop("LCR_pct", None)
+                if "NSFR_pct" in db_metrics and db_metrics["NSFR_pct"] is not None:
+                    liq["NSFR_pct"] = db_metrics["NSFR_pct"]
+                    if "phase2Stubs" in liq: liq["phase2Stubs"].pop("NSFR_pct", None)
+                if "ALM_mismatch" in db_metrics and db_metrics["ALM_mismatch"] is not None:
+                    liq["ALM_mismatch"] = db_metrics["ALM_mismatch"]
+                    if "phase2Stubs" in liq: liq["phase2Stubs"].pop("ALM_mismatch", None)
+                    
+                # Calculate pToABV if possible
+                gnpa = db_metrics.get("GNPA")
+                pcr = db_metrics.get("PCR")
+                pb = val.get("pbRatio")
+                if gnpa is not None and pcr is not None and pb is not None:
+                    uncovered_npa_pct = gnpa * (1 - (pcr / 100.0))
+                    abv_factor = 1.0 - (uncovered_npa_pct / 100.0)
+                    if abv_factor > 0:
+                        val["pToABV"] = round(pb / abv_factor, 2)
+                        if "phase2Stubs" in val: val["phase2Stubs"].pop("pToABV", None)
+                        
+            # Filter non-bank metrics for Banks and NBFCs
+            if not is_insurance:
+                if "phase2Stubs" in val:
+                    val["phase2Stubs"].pop("evToAUM", None)
+                    val["phase2Stubs"].pop("vnbToEV", None)
                     
         except Exception as exc:
             logger.warning("Failed to inject DB metrics for %s: %s", symbol, exc)

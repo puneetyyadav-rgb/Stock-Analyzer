@@ -9,6 +9,7 @@ export default function BFSIDepositFranchise({ data }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Panel title="Deposit Base" icon={PiggyBank} color="text-cyan-400" note={data.note}>
+          {data.casaRatio_pct != null && <Row label="Reported CASA Ratio" value={fmtNum(data.casaRatio_pct, 1) + "%"} valueClass={data.casaRatio_pct >= 40 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"} />}
           <Row label="Total Deposits" value={fmtBig(data.totalDeposits_cr)} />
           <Row label="Deposit Growth (1Y)" value={fmtNum(data.depositGrowth1Y_pct, 1) + "%"} />
           <Row label="Deposits / Total Liabilities" value={fmtNum(data.depositsToLiabilities_pct, 1) + "%"} valueClass={data.depositsToLiabilities_pct >= 65 ? "text-emerald-400" : "text-amber-400"} />

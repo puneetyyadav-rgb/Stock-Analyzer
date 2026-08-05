@@ -15,12 +15,13 @@ export default function BFSIAssetQuality({ data }) {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Panel title="Balance-Sheet Asset Quality Proxies" icon={ShieldAlert} color="text-orange-400" note={data.note}>
-          {data.grossNPA_pct !== undefined && <Row label="Reported Gross NPA" value={fmtNum(data.grossNPA_pct, 2) + "%"} valueClass="text-red-400 font-bold" />}
-          {data.netNPA_pct !== undefined && <Row label="Reported Net NPA" value={fmtNum(data.netNPA_pct, 2) + "%"} />}
-          {data.pcr_pct !== undefined && <Row label="Provision Coverage (PCR)" value={fmtNum(data.pcr_pct, 2) + "%"} valueClass="text-emerald-400 font-bold" />}
-          {data.creditCost_pct !== undefined && <Row label="Credit Cost" value={fmtNum(data.creditCost_pct, 2) + "%"} valueClass={data.creditCost_pct > 1.5 ? "text-red-400" : "text-amber-400"} />}
-          {data.slippage_pct !== undefined && <Row label="Slippage Ratio" value={fmtNum(data.slippage_pct, 2) + "%"} valueClass={data.slippage_pct > 2 ? "text-red-400" : "text-amber-400"} />}
-          {data.restructuredBook_pct !== undefined && <Row label="Restructured Book" value={fmtNum(data.restructuredBook_pct, 2) + "%"} valueClass="text-amber-400" />}
+          {data.grossNPA_pct != null && <Row label="Reported Gross NPA" value={fmtNum(data.grossNPA_pct, 2) + "%"} valueClass="text-red-400 font-bold" />}
+          {data.netNPA_pct != null && <Row label="Reported Net NPA" value={fmtNum(data.netNPA_pct, 2) + "%"} />}
+          {data.pcr_pct != null && <Row label="Provision Coverage (PCR)" value={fmtNum(data.pcr_pct, 2) + "%"} valueClass="text-emerald-400 font-bold" />}
+          {data.creditCost_pct != null && <Row label="Credit Cost" value={fmtNum(data.creditCost_pct, 2) + "%"} valueClass={data.creditCost_pct > 1.5 ? "text-red-400" : "text-amber-400"} />}
+          {data.slippage_pct != null && <Row label="Slippage Ratio" value={fmtNum(data.slippage_pct, 2) + "%"} valueClass={data.slippage_pct > 2 ? "text-red-400" : "text-amber-400"} />}
+          {data.restructuredBook_pct != null && <Row label="Restructured Book" value={fmtNum(data.restructuredBook_pct, 2) + "%"} valueClass="text-amber-400" />}
+          {data.securityCoverage_pct != null && <Row label="Security Coverage" value={fmtNum(data.securityCoverage_pct, 1) + "%"} />}
           <Row label="Net Loans / Total Assets" value={fmtNum(data.netLoansToTotalAssets_pct, 1) + "%"} />
           <Row label="Provision Growth (1Y)" value={fmtNum(data.provisionGrowth1Y_pct, 1) + "%"} valueClass={data.provisionGrowth1Y_pct > 30 ? "text-red-400" : "text-zinc-200"} />
         </Panel>

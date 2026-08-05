@@ -20,6 +20,7 @@ export default function BFSIProfitability({ data }) {
           <Row label="Fee Income Share" value={fmtNum(data.feeIncomeShare_pct, 1) + "%"} valueClass={data.feeIncomeShare_pct > 40 ? "text-amber-400" : "text-zinc-200"} />
         </Panel>
         <Panel title="Returns & Efficiency" icon={TrendingUp} color="text-emerald-400" note="RoA > 1.5% is best-in-class; Cost-to-Income < 45% is efficient. PPOP strips out provisioning volatility.">
+          {data.roRWA_pct != null && <Row label="Return on RWA (RoRWA)" value={fmtNum(data.roRWA_pct, 2) + "%"} valueClass="text-emerald-400 font-bold" />}
           <Row label="Return on Assets (RoA)" value={fmtNum(data.roa_pct, 2) + "%"} valueClass={roaClass(data.roa_pct)} />
           <Row label="Return on Equity (RoE)" value={fmtNum(data.roe_pct, 1) + "%"} valueClass={roeClass(data.roe_pct)} />
           <Row label="Cost-to-Income" value={fmtNum(data.costToIncome_pct, 1) + "%"} valueClass={cirClass(data.costToIncome_pct)} />

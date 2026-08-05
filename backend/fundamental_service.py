@@ -1445,6 +1445,65 @@ def _beneish_m_score(frames: Dict[str, Any], p1: Dict[str, Any], p2: Dict[str, A
             depi_cwip_check_list.append(False)
             corrob_flag_list.append(False)
 
+    # Build calculation payload for most recent year (index 0) for Glass-Box UI
+    _fy0 = fy_ends[0] if fy_ends else None
+    _fy1 = fy_ends[1] if len(fy_ends) > 1 else None
+    _calc_beneish = {
+        "fiscalYear": _fy0,
+        "priorFiscalYear": _fy1,
+        "formula": "-4.84 + 0.920·DSRI + 0.528·GMI + 0.404·AQI + 0.892·SGI + 0.115·DEPI - 0.172·SGAI + 4.679·TATA - 0.327·LVGI",
+        "inputs": {
+            "revenue_t":       round(rev_list[0], 2) if rev_list and rev_list[0] is not None else None,
+            "revenue_t1":      round(rev_list[1], 2) if len(rev_list) > 1 and rev_list[1] is not None else None,
+            "receivables_t":   round(rec_list[0], 2) if rec_list and rec_list[0] is not None else None,
+            "receivables_t1":  round(rec_list[1], 2) if len(rec_list) > 1 and rec_list[1] is not None else None,
+            "grossProfit_t":   round(gp_list[0], 2) if gp_list and gp_list[0] is not None else None,
+            "grossProfit_t1":  round(gp_list[1], 2) if len(gp_list) > 1 and gp_list[1] is not None else None,
+            "netIncome_t":     round(net_list[0], 2) if net_list and net_list[0] is not None else None,
+            "ocf_t":           round(ocf_list[0], 2) if ocf_list and ocf_list[0] is not None else None,
+            "totalAssets_t":   round(ta_list[0], 2) if ta_list and ta_list[0] is not None else None,
+            "totalAssets_t1":  round(ta_list[1], 2) if len(ta_list) > 1 and ta_list[1] is not None else None,
+            "currentAssets_t": round(ca_list[0], 2) if ca_list and ca_list[0] is not None else None,
+            "currentAssets_t1":round(ca_list[1], 2) if len(ca_list) > 1 and ca_list[1] is not None else None,
+            "netPPE_t":        round(ppe_list[0], 2) if ppe_list and ppe_list[0] is not None else None,
+            "netPPE_t1":       round(ppe_list[1], 2) if len(ppe_list) > 1 and ppe_list[1] is not None else None,
+            "sga_t":           round(sga_list[0], 2) if sga_list and sga_list[0] is not None else None,
+            "sga_t1":          round(sga_list[1], 2) if len(sga_list) > 1 and sga_list[1] is not None else None,
+            "depreciation_t":  round(dep_list[0], 2) if dep_list and dep_list[0] is not None else None,
+            "depreciation_t1": round(dep_list[1], 2) if len(dep_list) > 1 and dep_list[1] is not None else None,
+            "totalDebt_t":     round(debt_list[0], 2) if debt_list and debt_list[0] is not None else None,
+            "totalDebt_t1":    round(debt_list[1], 2) if len(debt_list) > 1 and debt_list[1] is not None else None,
+        },
+        "indices": {
+            "DSRI":  dsri_list[0]  if dsri_list  else None,
+            "GMI":   gmi_list[0]   if gmi_list   else None,
+            "AQI":   aqi_list[0]   if aqi_list   else None,
+            "SGI":   sgi_list[0]   if sgi_list   else None,
+            "DEPI":  depi_list[0]  if depi_list  else None,
+            "SGAI":  sgai_list[0]  if sgai_list  else None,
+            "LVGI":  lvgi_list[0]  if lvgi_list  else None,
+            "TATA":  tata_list[0]  if tata_list  else None,
+        },
+        "indexDescriptions": {
+            "DSRI": "Days Sales Receivable Index — rising ratio flags possible fake revenue",
+            "GMI":  "Gross Margin Index — deteriorating margin precedes manipulation",
+            "AQI":  "Asset Quality Index — soft/non-productive asset buildup",
+            "SGI":  "Sales Growth Index — aggressive growth often precedes manipulation",
+            "DEPI": "Depreciation Index — slowing depreciation extends asset life on paper",
+            "SGAI": "SG&A Index — rising overhead vs revenue signals inefficiency",
+            "TATA": "Total Accruals to Total Assets — core manipulation indicator",
+            "LVGI": "Leverage Index — rapidly rising debt relative to assets",
+        },
+        "weights": {
+            "DSRI": 0.920, "GMI": 0.528, "AQI": 0.404, "SGI": 0.892,
+            "DEPI": 0.115, "SGAI": -0.172, "TATA": 4.679, "LVGI": -0.327,
+            "intercept": -4.84
+        },
+        "finalScore": m_score_list[0] if m_score_list else None,
+        "corroborated": corrob_flag_list[0] if corrob_flag_list else False,
+        "sgaiLvgiSuppressed": sgai_lvgi_supp_list[0] if sgai_lvgi_supp_list else False,
+    }
+
     return {
         "available": True,
         "dsri": dsri_list,
@@ -1461,7 +1520,8 @@ def _beneish_m_score(frames: Dict[str, Any], p1: Dict[str, Any], p2: Dict[str, A
         "sgaiLvgiSuppressedThisYear": sgai_lvgi_supp_list,
         "beneishCorroboratedFlag": corrob_flag_list,
         "corroboratingFlagCount": 0,
-        "escalatedToRed": False
+        "escalatedToRed": False,
+        "calculation": _calc_beneish,
     }
 
 
@@ -1544,6 +1604,9 @@ def _altman_z_router(frames: Dict[str, Any], sector_bucket: str = "GENERAL_OTHER
     zone_list = []
     mcap_crores = (info.get("marketCap") / 1e7) if info.get("marketCap") else None
 
+    # Glass-Box: capture year-0 raw inputs for expandable UI panel
+    _calc_altman = None
+
     for i in range(num_yrs):
         ta = _to_crores(_val(bs, fc.TOTAL_ASSETS_ALIASES, i))
         if not ta or ta <= 0:
@@ -1591,6 +1654,53 @@ def _altman_z_router(frames: Dict[str, Any], sector_bucket: str = "GENERAL_OTHER
         score_list.append(z_round)
         zone_list.append(zone)
 
+        # Capture Glass-Box payload for most recent fiscal year only
+        if i == 0:
+            _x4_used = round(x4_mcap, 4) if (model == "Z_1968" and mcap_crores) else round(x4_book, 4)
+            _x4_label = "Market Cap / Total Liabilities" if (model == "Z_1968" and mcap_crores) else "Book Equity / Total Liabilities"
+            if model == "Z_1968":
+                _formula_str = "1.2·X1 + 1.4·X2 + 3.3·X3 + 0.6·X4(mcap) + 1.0·X5"
+                _weights = {"X1": 1.2, "X2": 1.4, "X3": 3.3, "X4": 0.6, "X5": 1.0}
+                _thresholds = {"safe": 2.99, "grey_low": 1.81, "label": "Z_1968 (Original Altman)"}
+            elif model == "Z_PRIME_1983":
+                _formula_str = "0.717·X1 + 0.847·X2 + 3.107·X3 + 0.420·X4(book) + 0.998·X5"
+                _weights = {"X1": 0.717, "X2": 0.847, "X3": 3.107, "X4": 0.420, "X5": 0.998}
+                _thresholds = {"safe": 2.90, "grey_low": 1.23, "label": "Z'-Score (1983 Private Firm)"}
+            else:
+                _formula_str = "6.56·X1 + 3.26·X2 + 6.72·X3 + 1.05·X4(book)"
+                _weights = {"X1": 6.56, "X2": 3.26, "X3": 6.72, "X4": 1.05, "X5": None}
+                _thresholds = {"safe": 2.60, "grey_low": 1.10, "label": "Z''-Score (Non-Manufacturing)"}
+
+            _calc_altman = {
+                "fiscalYear": fy_ends[0] if fy_ends else None,
+                "model": model,
+                "formula": _formula_str,
+                "selectionReason": reason,
+                "weights": _weights,
+                "thresholds": _thresholds,
+                "inputs": {
+                    "currentAssets":      round(ca, 2),
+                    "currentLiabilities": round(cl, 2),
+                    "workingCapital":     round(ca - cl, 2),
+                    "retainedEarnings":   round(re, 2) if re is not None else None,
+                    "ebit":               round(ebit, 2),
+                    "revenue":            round(rev, 2),
+                    "totalAssets":        round(ta, 2),
+                    "totalLiabilities":   round(tl, 2),
+                    "bookEquity":         round(eq, 2),
+                    "marketCap":          round(mcap_crores, 2) if mcap_crores else None,
+                },
+                "variables": {
+                    "X1": {"value": round(x1, 4), "formula": "(Current Assets - Current Liabilities) / Total Assets", "label": "Working Capital / TA"},
+                    "X2": {"value": round(x2, 4), "formula": "Retained Earnings / Total Assets", "label": "Retained Earnings / TA"},
+                    "X3": {"value": round(x3, 4), "formula": "EBIT / Total Assets", "label": "EBIT / TA"},
+                    "X4": {"value": _x4_used, "formula": _x4_label, "label": "Equity / Total Liabilities"},
+                    "X5": {"value": round(x5, 4) if model != "Z_DOUBLE_PRIME_NON_MFG" else None, "formula": "Revenue / Total Assets", "label": "Asset Turnover"},
+                },
+                "finalScore": z_round,
+                "zone": zone,
+            }
+
     return {
         "available": True,
         "model": model,
@@ -1600,7 +1710,8 @@ def _altman_z_router(frames: Dict[str, Any], sector_bucket: str = "GENERAL_OTHER
         "zone": zone_list,
         "selectionReason": reason,
         "altmanModel": model,
-        "altmanModelSelectionReason": reason
+        "altmanModelSelectionReason": reason,
+        "calculation": _calc_altman,
     }
 
 
@@ -1705,6 +1816,62 @@ def _sloan_accrual(frames: Dict[str, Any], p1: Dict[str, Any], p3: Dict[str, Any
             flagged_list.append(False)
             flag_level_list.append("Normal")
 
+    # Build Glass-Box calculation payload for most recent year (index 0)
+    _fy0 = fy_ends[0] if fy_ends else None
+    _fy1 = fy_ends[1] if len(fy_ends) > 1 else None
+    _net0 = net_list[0] if net_list else None
+    _ocf0 = ocf_list[0] if ocf_list else None
+    _icf0 = icf_list[0] if icf_list else None
+    _deftax0 = def_tax_list[0] if def_tax_list else None
+    _ta0 = ta_list[0] if ta_list else None
+    _ta1 = ta_list[1] if len(ta_list) > 1 else None
+    _avg_ta0 = ((_ta0 + _ta1) / 2.0) if (_ta0 and _ta1) else _ta0
+    _ar0 = accrual_ratio_list[0] if accrual_ratio_list else None
+    _raw0 = raw_sloan_list[0] if raw_sloan_list else None
+    _dt0 = def_tax_adj_list[0] if def_tax_adj_list else None
+
+    _calc_sloan = {
+        "fiscalYear": _fy0,
+        "priorFiscalYear": _fy1,
+        "inputs": {
+            "netIncome":           round(_net0, 2) if _net0 is not None else None,
+            "operatingCashFlow":   round(_ocf0, 2) if _ocf0 is not None else None,
+            "investingCashFlow":   round(_icf0, 2) if _icf0 is not None else None,
+            "deferredTax":         round(_deftax0, 2) if _deftax0 is not None else None,
+            "totalAssets_t":       round(_ta0, 2) if _ta0 is not None else None,
+            "totalAssets_t1":      round(_ta1, 2) if _ta1 is not None else None,
+            "avgTotalAssets":      round(_avg_ta0, 2) if _avg_ta0 is not None else None,
+        },
+        "variants": {
+            "standard": {
+                "formula": "(Net Income - Operating Cash Flow) ÷ Avg Total Assets",
+                "value": _ar0,
+                "valuePct": round(_ar0 * 100, 2) if _ar0 is not None else None,
+                "description": "Primary Sloan Ratio — measures accrual earnings vs actual cash generated",
+            },
+            "rawSloan": {
+                "formula": "(Net Income - OCF - Investing Cash Flow) ÷ Avg Total Assets",
+                "value": _raw0,
+                "valuePct": round(_raw0 * 100, 2) if _raw0 is not None else None,
+                "description": "Extended Sloan — also nets out investing cash flows for a stricter measure",
+            },
+            "deferredTaxAdjusted": {
+                "formula": "(Net Income - Deferred Tax - OCF - ICF) ÷ Avg Total Assets",
+                "value": _dt0,
+                "valuePct": round(_dt0 * 100, 2) if _dt0 is not None else None,
+                "description": "Most conservative — removes deferred tax timing distortions",
+            },
+        },
+        "growthContext": {
+            "revenue3yCagr": cagr,
+            "cagrBand": band,
+            "moderateThreshold": mod_thresh,
+            "severeThreshold": sev_thresh,
+            "growthAdjusted": growth_adj,
+            "note": f"Revenue 3Y CAGR of {round(cagr, 1)}% places this stock in the '{band}' band. Moderate flag threshold is raised to {mod_thresh}% to avoid false positives for high-growth companies.",
+        },
+    }
+
     return {
         "available": True,
         "accrualRatio": accrual_ratio_list,
@@ -1715,7 +1882,8 @@ def _sloan_accrual(frames: Dict[str, Any], p1: Dict[str, Any], p3: Dict[str, Any
         "severeThresholdPct": sev_thresh,
         "growthAdjustedThresholdApplied": growth_adj,
         "flagged": flagged_list,
-        "flagLevel": flag_level_list
+        "flagLevel": flag_level_list,
+        "calculation": _calc_sloan,
     }
 
 
@@ -2139,13 +2307,27 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
             if rec_growth > 1.5 * rev_growth:
                 t1 = True
 
+    rev_series = _get_series(p1.get("revenue"))
     flags.append({
         "id": 1,
         "name": "Revenue vs Receivables Divergence",
         "severity": "WARNING",
         "triggered": t1,
         "sectorOverrideApplied": override1,
-        "alertString": f"⚠️ Sales grew {round(rev_growth or 0.0, 1)}% but uncollected bills surged {round(rec_growth or 0.0, 1)}%. Possible channel stuffing, round-tripping, or aggressive revenue recognition."
+        "alertString": f"⚠️ Sales grew {round(rev_growth or 0.0, 1)}% but uncollected bills surged {round(rec_growth or 0.0, 1)}%. Possible channel stuffing, round-tripping, or aggressive revenue recognition.",
+        "calculation": {
+            "variables": {"revenueGrowthYoY": round(rev_growth or 0.0, 2), "receivablesGrowthYoY": round(rec_growth or 0.0, 2)},
+            "rawValues": {
+                "revenue_t": round(rev_series[0], 2) if rev_series and rev_series[0] is not None else None,
+                "revenue_t1": round(rev_series[1], 2) if len(rev_series) > 1 and rev_series[1] is not None else None,
+                "receivables_t": round(rec_series[0], 2) if rec_series and rec_series[0] is not None else None,
+                "receivables_t1": round(rec_series[1], 2) if len(rec_series) > 1 and rec_series[1] is not None else None
+            },
+            "threshold": "Receivables growth > 1.5× Revenue growth (EPC: 2.5×)",
+            "formula": "Growth % = (Current - Previous) / Previous × 100",
+            "formulaSubstituted": f"Rev Growth: (({round(rev_series[0] or 0,1)} - {round(rev_series[1] or 0,1)}) / {round(rev_series[1] or 1,1)}) × 100 = {round(rev_growth or 0.0, 1)}% | Rec Growth: (({round(rec_series[0] or 0,1)} - {round(rec_series[1] or 0,1)}) / {round(rec_series[1] or 1,1)}) × 100 = {round(rec_growth or 0.0, 1)}%",
+            "result": f"{round(rec_growth or 0.0, 1)}% > {round(1.5 * (rev_growth or 0.0), 1)}% threshold",
+        }
     })
 
     # 2. Profit vs Cash Flow Divergence (CRITICAL)
@@ -2154,13 +2336,22 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
     ocf_ni_0 = _get_val0(p3.get("ocfQuality", {}).get("ocfToNi"))
     ni_pos = (ocf_0 is not None and ocf_ni_0 is not None and ocf_0 < 0 and ocf_ni_0 < 0) or (net_0 is not None and net_0 > 0 and ocf_0 is not None and ocf_0 < 0)
     t2 = (ni_pos and ocf_0 is not None and ocf_0 < 0)
+    ni_0 = _get_val0(p1.get("netIncome"))
     flags.append({
         "id": 2,
         "name": "Profit vs Cash Flow Divergence",
         "severity": "CRITICAL",
         "triggered": t2,
         "sectorOverrideApplied": False,
-        "alertString": f"Company reports profit but burned ₹{round(abs(ocf_0 or 0.0), 1)} Cr cash. Reported profit is being driven by accruals, not real cash."
+        "alertString": f"Company reports profit but burned ₹{round(abs(ocf_0 or 0.0), 1)} Cr cash. Reported profit is being driven by accruals, not real cash.",
+        "calculation": {
+            "variables": {"operatingCashFlow": round(ocf_0 or 0.0, 2), "ocfToNiRatio": round(ocf_ni_0 or 0.0, 2)},
+            "rawValues": {"netIncome": round(ni_0 or 0.0, 2), "operatingCashFlow": round(ocf_0 or 0.0, 2)},
+            "threshold": "Triggered when Net Income > 0 AND Operating Cash Flow < 0",
+            "formula": "OCF/NI Ratio = Operating Cash Flow ÷ Net Income",
+            "formulaSubstituted": f"Ratio: {round(ocf_0 or 0.0, 1)} ÷ {round(ni_0 or 0.0, 1)} = {round(ocf_ni_0 or 0.0, 2)}×",
+            "result": f"OCF = ₹{round(ocf_0 or 0.0, 1)} Cr  |  OCF/NI = {round(ocf_ni_0 or 0.0, 2)}×",
+        }
     })
 
     # 3. Rising Inventory Without Revenue Growth
@@ -2185,19 +2376,42 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "WARNING",
         "triggered": t3,
         "sectorOverrideApplied": override3,
-        "alertString": f"⚠️ Inventory piling up {round(inv_growth or 0.0, 1)}% while sales grew only {round(rev_growth or 0.0, 1)}%. Possible obsolescence risk or demand slowdown — check if gross margin is also compressing; if not, may reflect strategic supply-chain buffering, not a demand problem."
+        "alertString": f"⚠️ Inventory piling up {round(inv_growth or 0.0, 1)}% while sales grew only {round(rev_growth or 0.0, 1)}%. Possible obsolescence risk or demand slowdown — check if gross margin is also compressing; if not, may reflect strategic supply-chain buffering, not a demand problem.",
+        "calculation": {
+            "variables": {"inventoryGrowthYoY": round(inv_growth or 0.0, 2), "revenueGrowthYoY": round(rev_growth or 0.0, 2)},
+            "rawValues": {
+                "inventory_t": round(inv_series[0], 2) if inv_series and inv_series[0] is not None else None, 
+                "inventory_t1": round(inv_series[1], 2) if inv_series and len(inv_series) > 1 and inv_series[1] is not None else None,
+                "revenue_t": round(rev_series[0], 2) if rev_series and rev_series[0] is not None else None,
+                "revenue_t1": round(rev_series[1], 2) if len(rev_series) > 1 and rev_series[1] is not None else None
+            },
+            "threshold": "Inventory growth > 2× Revenue growth (Pharma: 3× AND gross margin falling)",
+            "formula": "Growth % = (Current - Previous) / Previous × 100",
+            "formulaSubstituted": f"Inv Growth: (({round(inv_series[0] or 0,1)} - {round(inv_series[1] or 0,1)}) / {round(inv_series[1] or 1,1)}) × 100 = {round(inv_growth or 0.0, 1)}%",
+            "result": f"{round(inv_growth or 0.0, 1)}% vs {round(2.0 * (rev_growth or 0.0), 1)}% threshold (2× rev growth)",
+        }
     })
 
     # 4. Other Income Dependence
     other_pct = _get_val0(p1.get("otherIncomePctOfPbt"))
     t4 = (other_pct is not None and other_pct > 20.0)
+    other_inc = _get_val0(p1.get("otherIncome"))
+    pbt = _get_val0(p1.get("pretaxIncome"))
     flags.append({
         "id": 4,
         "name": "Other Income Dependence",
         "severity": "WARNING",
         "triggered": t4,
         "sectorOverrideApplied": False,
-        "alertString": f"⚠️ Core business profitability is weak. {round(other_pct or 0.0, 1)}% of pre-tax profit comes from non-operational sources."
+        "alertString": f"⚠️ Core business profitability is weak. {round(other_pct or 0.0, 1)}% of pre-tax profit comes from non-operational sources.",
+        "calculation": {
+            "variables": {"otherIncomePctOfPBT": round(other_pct or 0.0, 2)},
+            "rawValues": {"otherIncome": round(other_inc or 0, 2), "preTaxProfit": round(pbt or 0, 2)},
+            "threshold": "Other Income / Pre-Tax Profit > 20%",
+            "formula": "Other Income % = Other Income ÷ Pre-Tax Profit × 100",
+            "formulaSubstituted": f"({round(other_inc or 0, 1)} ÷ {round(pbt or 1, 1)}) × 100 = {round(other_pct or 0.0, 1)}%",
+            "result": f"{round(other_pct or 0.0, 1)}% vs 20% threshold",
+        }
     })
 
     # 5. Debt Spiral Detection
@@ -2217,7 +2431,21 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "RED",
         "triggered": t5,
         "sectorOverrideApplied": False,
-        "alertString": f"Financial borrowings compounded at {round(debt_cagr, 1)}% annually for 3 years while OCF stagnated."
+        "alertString": f"Financial borrowings compounded at {round(debt_cagr, 1)}% annually for 3 years while OCF stagnated.",
+        "calculation": {
+            "variables": {"debtCagr3Y": round(debt_cagr, 2), "operatingCashFlow": round(ocf_0 or 0.0, 2)},
+            "rawValues": {
+                "debt_t": round(fd_series[0], 2) if fd_series and fd_series[0] is not None else None, 
+                "debt_t1": round(fd_series[1], 2) if fd_series and len(fd_series) > 1 and fd_series[1] is not None else None, 
+                "debt_t2": round(fd_series[2], 2) if fd_series and len(fd_series) > 2 and fd_series[2] is not None else None, 
+                "debt_t3": round(fd_series[3], 2) if fd_series and len(fd_series) > 3 and fd_series[3] is not None else None,
+                "ocf_t": round(ocf_0 or 0, 2), "ocf_t1": round(ocf_1 or 0, 2) if 'ocf_1' in locals() else None
+            },
+            "threshold": "Debt growing > 15% YoY for 3 consecutive years AND OCF stagnant/falling",
+            "formula": "Debt 3Y CAGR = (Debt_t / Debt_t3)^(1/3) - 1",
+            "formulaSubstituted": f"({round(fd_series[0] if fd_series and fd_series[0] else 0,1)} / {round(fd_series[3] if fd_series and len(fd_series)>3 and fd_series[3] else 1,1)})^(1/3) - 1 = {round(debt_cagr, 1)}%",
+            "result": f"Debt CAGR = {round(debt_cagr, 1)}% | Each year >15% growth confirmed",
+        }
     })
 
     # 6. Equity Dilution
@@ -2234,31 +2462,65 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "WARNING",
         "triggered": t6,
         "sectorOverrideApplied": False,
-        "alertString": f"⚠️ Shareholder dilution: {round(dilution_pct, 1)}% new shares issued. If this coincides with a QIP/rights issue, Beneish SGAI/LVGI are suppressed for this year."
+        "alertString": f"⚠️ Shareholder dilution: {round(dilution_pct, 1)}% new shares issued. If this coincides with a QIP/rights issue, Beneish SGAI/LVGI are suppressed for this year.",
+        "calculation": {
+            "variables": {"dilutionPct": round(dilution_pct, 2)},
+            "rawValues": {"shares_t": round(sh_0 or 0, 2) if 'sh_0' in locals() else None, "shares_t1": round(sh_1 or 0, 2) if 'sh_1' in locals() else None},
+            "threshold": "Share count increase > 2% YoY",
+            "formula": "Dilution % = (Shares_t - Shares_t1) / Shares_t1 × 100",
+            "formulaSubstituted": f"({round(sh_0 or 0, 2) if 'sh_0' in locals() else 0} - {round(sh_1 or 0, 2) if 'sh_1' in locals() else 0}) / {round(sh_1 or 1, 2) if 'sh_1' in locals() else 1} × 100 = {round(dilution_pct, 1)}%",
+            "result": f"{round(dilution_pct, 1)}% vs 2% threshold",
+        }
     })
 
     # 7. Goodwill / Intangible Bloat
     int_pct = _get_val0(p2.get("assets", {}).get("intangiblesPctOfAssets"))
     t7 = (int_pct is not None and int_pct > 30.0)
+    gw = _get_val0(p2.get("assets", {}).get("goodwill"))
+    intg = _get_val0(p2.get("assets", {}).get("intangibles"))
+    ta = _get_val0(p2.get("assets", {}).get("totalAssets"))
     flags.append({
         "id": 7,
         "name": "Goodwill / Intangible Bloat",
         "severity": "WARNING",
         "triggered": t7,
         "sectorOverrideApplied": False,
-        "alertString": f"⚠️ {round(int_pct or 0.0, 1)}% of the balance sheet is intangible. High impairment risk."
+        "alertString": f"⚠️ {round(int_pct or 0.0, 1)}% of the balance sheet is intangible. High impairment risk.",
+        "calculation": {
+            "variables": {"intangiblesPctOfAssets": round(int_pct or 0.0, 2)},
+            "rawValues": {"goodwill": round(gw or 0, 2), "intangibles": round(intg or 0, 2), "totalAssets": round(ta or 0, 2)},
+            "threshold": "Intangibles + Goodwill > 30% of Total Assets",
+            "formula": "Intangibles % = (Goodwill + Intangibles) ÷ Total Assets × 100",
+            "formulaSubstituted": f"({round(gw or 0, 1)} + {round(intg or 0, 1)}) ÷ {round(ta or 1, 1)} × 100 = {round(int_pct or 0.0, 1)}%",
+            "result": f"{round(int_pct or 0.0, 1)}% vs 30% threshold",
+        }
     })
 
     # 8. CapEx Collapse (Asset Milking)
     capex_dep = _get_series(p3.get("capex", {}).get("capexToDepreciation"))
     t8 = (capex_dep and len(capex_dep) >= 2 and capex_dep[0] is not None and capex_dep[0] < 0.5 and capex_dep[1] is not None and capex_dep[1] < 0.5)
+    cx_series = _get_series(p3.get("capex", {}).get("capex"))
+    dep_series = _get_series(p3.get("capex", {}).get("depreciation"))
     flags.append({
         "id": 8,
         "name": "CapEx Collapse (Asset Milking)",
         "severity": "WARNING",
         "triggered": t8,
         "sectorOverrideApplied": False,
-        "alertString": f"⚠️ CapEx is only {round(capex_dep[0] or 0.0, 2) if capex_dep else 0.0}× depreciation for 2+ years. Assets are being milked without reinvestment."
+        "alertString": f"⚠️ CapEx is only {round(capex_dep[0] or 0.0, 2) if capex_dep else 0.0}× depreciation for 2+ years. Assets are being milked without reinvestment.",
+        "calculation": {
+            "variables": {"capexToDepreciation_t": round(capex_dep[0], 2) if capex_dep and capex_dep[0] is not None else None, "capexToDepreciation_t1": round(capex_dep[1], 2) if capex_dep and len(capex_dep) > 1 and capex_dep[1] is not None else None},
+            "rawValues": {
+                "capex_t": round(abs(cx_series[0]), 2) if cx_series and cx_series[0] is not None else None,
+                "depreciation_t": round(abs(dep_series[0]), 2) if dep_series and dep_series[0] is not None else None,
+                "capex_t1": round(abs(cx_series[1]), 2) if cx_series and len(cx_series) > 1 and cx_series[1] is not None else None,
+                "depreciation_t1": round(abs(dep_series[1]), 2) if dep_series and len(dep_series) > 1 and dep_series[1] is not None else None
+            },
+            "threshold": "CapEx / Depreciation < 0.5× for 2 consecutive years",
+            "formula": "CapEx/Dep Ratio = Capital Expenditure ÷ Depreciation & Amortization",
+            "formulaSubstituted": f"Year t: {round(abs(cx_series[0] or 0), 1)} ÷ {round(abs(dep_series[0] or 1), 1)} = {round(capex_dep[0] or 0.0, 2) if capex_dep else 0}× | Year t-1: {round(abs(cx_series[1] or 0), 1) if len(cx_series)>1 else 0} ÷ {round(abs(dep_series[1] or 1), 1) if len(dep_series)>1 else 1} = {round(capex_dep[1] or 0.0, 2) if capex_dep and len(capex_dep)>1 else 0}×",
+            "result": f"Ratio = {round(capex_dep[0], 2) if capex_dep and capex_dep[0] is not None else '—'}× (both years < 0.5×)",
+        }
     })
 
     # 9. Unsustainable Dividend
@@ -2272,19 +2534,37 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "RED",
         "triggered": t9,
         "sectorOverrideApplied": False,
-        "alertString": f"Unsustainable dividend: ₹{div_val} Cr paid but only ₹{round(fcf_val or 0.0, 1)} Cr FCF generated. Funded from debt or reserves."
+        "alertString": f"Unsustainable dividend: ₹{div_val} Cr paid but only ₹{round(fcf_val or 0.0, 1)} Cr FCF generated. Funded from debt or reserves.",
+        "calculation": {
+            "variables": {"fcfDividendCoverage": round(fcf_cov or 0.0, 2), "freeCashFlow": round(fcf_val or 0.0, 2), "dividendPaid": round(div_val, 2)},
+            "rawValues": {"freeCashFlow": round(fcf_val or 0.0, 2), "dividendPaid": round(div_val, 2)},
+            "threshold": "FCF Dividend Coverage < 1.0×",
+            "formula": "FCF Coverage = Free Cash Flow ÷ Total Dividends Paid",
+            "formulaSubstituted": f"{round(fcf_val or 0.0, 1)} ÷ {round(div_val, 1)} = {round(fcf_cov or 0.0, 2)}×",
+            "result": f"Coverage = {round(fcf_cov or 0.0, 2)}× (want ≥ 1.0×)",
+        }
     })
 
     # 10. Interest Coverage Crunch
     int_cov = _get_val0(p1.get("interestBurdenExLease"))
     t10 = (int_cov is not None and int_cov < 1.5)
+    ie = _get_val0(p1.get("interestExpense"))
+    ebit_val = _get_val0(p1.get("ebit"))
     flags.append({
         "id": 10,
         "name": "Interest Coverage Crunch",
         "severity": "RED",
         "triggered": t10,
         "sectorOverrideApplied": False,
-        "alertString": f"Financial interest barely covered ({round(int_cov or 0.0, 1)}× ex-lease). One bad quarter from technical default risk."
+        "alertString": f"Financial interest barely covered ({round(int_cov or 0.0, 1)}× ex-lease). One bad quarter from technical default risk.",
+        "calculation": {
+            "variables": {"interestCoverageRatio": round(int_cov or 0.0, 2)},
+            "rawValues": {"ebit": round(ebit_val or 0.0, 2), "interestExpense": round(ie or 0.0, 2)},
+            "threshold": "EBIT / Interest ratio < 1.5× (i.e. EBIT barely covers interest)",
+            "formula": "Interest Coverage = EBIT ÷ Interest Expense",
+            "formulaSubstituted": f"{round(ebit_val or 0.0, 1)} ÷ {round(ie or 1.0, 1)} = {round(int_cov or 0.0, 2)}×",
+            "result": f"Coverage = {round(int_cov or 0.0, 2)}× (danger zone < 1.5×)",
+        }
     })
 
     # 11. Tax Rate Anomaly
@@ -2315,7 +2595,14 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": sev11,
         "triggered": t11,
         "sectorOverrideApplied": override11,
-        "alertString": alert11
+        "alertString": alert11,
+        "calculation": {
+            "variables": {"effectiveTaxRate3yAvg": round(etr_3y or 0.0, 2)},
+            "threshold": "ETR < 10% (too low) or ETR > 40% (too high) — normal range 10–40%",
+            "formula": "ETR 3Y Avg = Σ(Tax Provision) ÷ Σ(Pre-Tax Income) over last 3 fiscal years",
+            "formulaSubstituted": f"3Y Average ETR Computed = {round(etr_3y or 0.0, 1)}%",
+            "result": f"ETR = {round(etr_3y or 0.0, 1)}%",
+        }
     })
 
     # 12. Leverage-Price Divergence
@@ -2331,7 +2618,18 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "WARNING",
         "triggered": t12,
         "sectorOverrideApplied": False,
-        "alertString": f"⚠️ Leverage increasing during price decline — potential promoter margin-call or forced-selling risk."
+        "alertString": f"⚠️ Leverage increasing during price decline — potential promoter margin-call or forced-selling risk.",
+        "calculation": {
+            "variables": {"debtToEquityGrowthPct": round(de_growth, 2), "priceChange52W": round(price_change, 2)},
+            "rawValues": {
+                "debtToEquity_t": round(de_series[0], 2) if de_series and de_series[0] is not None else None,
+                "debtToEquity_t1": round(de_series[1], 2) if de_series and len(de_series) > 1 and de_series[1] is not None else None
+            },
+            "threshold": "D/E ratio growing > 20% AND 52-week price change < -20%",
+            "formula": "D/E Growth = (D/E_t - D/E_t1) / D/E_t1 × 100",
+            "formulaSubstituted": f"D/E Growth: ({round(de_series[0] if de_series and de_series[0] else 0,2)} - {round(de_series[1] if de_series and len(de_series)>1 and de_series[1] else 0,2)}) / {round(de_series[1] if de_series and len(de_series)>1 and de_series[1] else 1,2)} × 100 = {round(de_growth, 1)}%",
+            "result": f"D/E growth = {round(de_growth, 1)}% | 52W price Δ = {round(price_change, 1)}%",
+        }
     })
 
     # 13. CCC Deterioration
@@ -2354,7 +2652,14 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "WARNING",
         "triggered": t13,
         "sectorOverrideApplied": override13,
-        "alertString": f"⚠️ CCC expanded from {round(ccc_prev, 1)} to {round(ccc_curr, 1)} days ({round(((ccc_curr - ccc_prev)/ccc_prev*100.0) if ccc_prev else 0.0, 1)}% deterioration)."
+        "alertString": f"⚠️ CCC expanded from {round(ccc_prev, 1)} to {round(ccc_curr, 1)} days ({round(((ccc_curr - ccc_prev)/ccc_prev*100.0) if ccc_prev else 0.0, 1)}% deterioration).",
+        "calculation": {
+            "variables": {"ccc_t": round(ccc_curr, 1), "ccc_t1": round(ccc_prev, 1), "deteriorationPct": round(((ccc_curr - ccc_prev) / ccc_prev * 100.0) if ccc_prev else 0.0, 1)},
+            "threshold": "CCC deteriorated > 20% YoY",
+            "formula": "Deterioration % = (CCC_t - CCC_t1) / CCC_t1 × 100",
+            "formulaSubstituted": f"({round(ccc_curr, 1)} - {round(ccc_prev, 1)}) / {round(ccc_prev, 1)} × 100 = {round(((ccc_curr - ccc_prev) / ccc_prev * 100.0) if ccc_prev else 0.0, 1)}%",
+            "result": f"CCC: {round(ccc_prev, 1)} → {round(ccc_curr, 1)} days",
+        }
     })
 
     # 14. Aggressive Depreciation Policy (DEPI)
@@ -2367,7 +2672,14 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "WARNING",
         "triggered": t14,
         "sectorOverrideApplied": cwip_check,
-        "alertString": f"⚠️ Depreciation rates slowing (DEPI: {round(depi_0 or 0.0, 2)}) without a proportional asset-commissioning event. May be artificially inflating current-year profits."
+        "alertString": f"⚠️ Depreciation rates slowing (DEPI: {round(depi_0 or 0.0, 2)}) without a proportional asset-commissioning event. May be artificially inflating current-year profits.",
+        "calculation": {
+            "variables": {"DEPI": round(depi_0 or 0.0, 4), "cwipCrossCheckSuppressed": cwip_check},
+            "threshold": "DEPI > 1.30 AND no CWIP commissioning event (CWIP not rising)",
+            "formula": "DEPI = (Dep/GrossPPE)[t-1] ÷ (Dep/GrossPPE)[t] — values >1.0 mean depreciation rate is slowing",
+            "formulaSubstituted": f"Calculated DEPI = {round(depi_0 or 0.0, 4)}",
+            "result": f"DEPI = {round(depi_0 or 0.0, 2)} (threshold 1.30)",
+        }
     })
 
     # 15. Persistent Capital Destruction
@@ -2387,7 +2699,29 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "RED",
         "triggered": t15,
         "sectorOverrideApplied": False,
-        "alertString": f"Persistent capital destruction for 3+ years. ROIC ({round(roic_series[0] or 0.0, 1) if roic_series else 0.0}%) < WACC ({round(wacc_series[0] or 0.0, 1) if wacc_series else 0.0}%) - systematically destroying shareholder wealth."
+        "alertString": f"Persistent capital destruction for 3+ years. ROIC ({round(roic_series[0] or 0.0, 1) if roic_series else 0.0}%) < WACC ({round(wacc_series[0] or 0.0, 1) if wacc_series else 0.0}%) - systematically destroying shareholder wealth.",
+        "calculation": {
+            "variables": {
+                "roic_t": round(roic_series[0] or 0.0, 2) if roic_series else None,
+                "roic_t1": round(roic_series[1] or 0.0, 2) if roic_series and len(roic_series) > 1 else None,
+                "roic_t2": round(roic_series[2] or 0.0, 2) if roic_series and len(roic_series) > 2 else None,
+                "wacc_t": round(wacc_series[0] or 0.0, 2) if wacc_series else None,
+                "wacc_t1": round(wacc_series[1] or 0.0, 2) if wacc_series and len(wacc_series) > 1 else None,
+                "wacc_t2": round(wacc_series[2] or 0.0, 2) if wacc_series and len(wacc_series) > 2 else None,
+            },
+            "rawValues": {
+                "roic_t": round(roic_series[0], 2) if roic_series and roic_series[0] is not None else None,
+                "wacc_t": round(wacc_series[0], 2) if wacc_series and wacc_series[0] is not None else None,
+                "roic_t1": round(roic_series[1], 2) if roic_series and len(roic_series) > 1 and roic_series[1] is not None else None,
+                "wacc_t1": round(wacc_series[1], 2) if wacc_series and len(wacc_series) > 1 and wacc_series[1] is not None else None,
+                "roic_t2": round(roic_series[2], 2) if roic_series and len(roic_series) > 2 and roic_series[2] is not None else None,
+                "wacc_t2": round(wacc_series[2], 2) if wacc_series and len(wacc_series) > 2 and wacc_series[2] is not None else None,
+            },
+            "threshold": "ROIC < WACC for all of the last 3 fiscal years",
+            "formula": "ROIC = NOPAT ÷ Invested Capital | WACC = Ke×We + Kd×(1-t)×Wd (CAPM-based)",
+            "formulaSubstituted": f"Yr 1: ROIC {round(roic_series[0] or 0.0, 1) if roic_series else '—'}% vs WACC {round(wacc_series[0] or 0.0, 1) if wacc_series else '—'}% | Yr 2: {round(roic_series[1] or 0.0, 1) if roic_series and len(roic_series)>1 else '—'}% vs {round(wacc_series[1] or 0.0, 1) if wacc_series and len(wacc_series)>1 else '—'}% | Yr 3: {round(roic_series[2] or 0.0, 1) if roic_series and len(roic_series)>2 else '—'}% vs {round(wacc_series[2] or 0.0, 1) if wacc_series and len(wacc_series)>2 else '—'}%",
+            "result": f"ROIC < WACC confirmed for 3 consecutive years",
+        }
     })
 
     # 16. Promoter Shareholding Decline
@@ -2399,7 +2733,14 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": "WARNING",
         "triggered": t16,
         "sectorOverrideApplied": False,
-        "alertString": f"⚠️ Promoter/insider shareholding fell {round(abs(promoter_decline), 1)}pp YoY. Cross-check against pledge disclosures and open-market sale filings."
+        "alertString": f"⚠️ Promoter/insider shareholding fell {round(abs(promoter_decline), 1)}pp YoY. Cross-check against pledge disclosures and open-market sale filings.",
+        "calculation": {
+            "variables": {"promoterHoldingChange": round(promoter_decline, 2)},
+            "threshold": "Promoter shareholding fell > 3 percentage points YoY",
+            "formula": "Δ Promoter Holding = Current % - Prior Year %",
+            "formulaSubstituted": f"Δ Promoter Holding = {round(promoter_decline, 1)} percentage points",
+            "result": f"Change = {round(promoter_decline, 1)} pp",
+        }
     })
 
     custom_triggered_count = sum(1 for f in flags if f["triggered"])
@@ -2417,7 +2758,14 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
         "severity": sev17,
         "triggered": t17,
         "sectorOverrideApplied": not altman_result.get("available", True),
-        "alertString": f"Altman Z ({altman_result.get('modelUsed', 'N/A')}) of {round(_get_val0(altman_result.get('score')) or 0.0, 2)} places the company in the {alt_zone} zone for its sector-appropriate model."
+        "alertString": f"Altman Z ({altman_result.get('modelUsed', 'N/A')}) of {round(_get_val0(altman_result.get('score')) or 0.0, 2)} places the company in the {alt_zone} zone for its sector-appropriate model.",
+        "calculation": {
+            "variables": {"altmanZScore": round(_get_val0(altman_result.get('score')) or 0.0, 2), "zone": alt_zone, "model": altman_result.get('modelUsed')},
+            "threshold": "Z_1968: Distress<1.81, Grey 1.81–2.99 | Z_PRIME: Distress<1.23, Grey 1.23–2.90 | Z'': Distress<1.10, Grey 1.10–2.60",
+            "formula": "See Altman Z-Score card above for full X1–X5 variable breakdown",
+            "formulaSubstituted": f"Score Computed = {round(_get_val0(altman_result.get('score')) or 0.0, 2)}",
+            "result": f"Z = {round(_get_val0(altman_result.get('score')) or 0.0, 2)} → {alt_zone} zone",
+        }
     })
 
     # 18. Sloan Accrual Breach
@@ -2425,14 +2773,33 @@ def _red_flag_engine(pillars_dict: Dict[str, Any], sector_bucket: str, beneish: 
     sloan_level = _get_val0(sloan_result.get("flagLevel")) or "Normal"
     t18 = (sloan_flag == True)
     sev18 = "RED" if sloan_level == "Severe" else "WARNING"
+    _sloan_ar = _get_val0(sloan_result.get("accrualRatio"))
+    _sloan_calc = sloan_result.get("calculation", {})
     flags.append({
         "id": 18,
         "name": "Sloan Accrual Breach",
         "severity": sev18,
         "triggered": t18,
         "sectorOverrideApplied": not sloan_result.get("available", True),
-        "alertString": f"Accrual ratio of {round((_get_val0(sloan_result.get('accrualRatio')) or 0.0)*100.0, 1)}% exceeds the {sloan_result.get('revenue3yCagrBand', '<10%')}-growth threshold of {sloan_result.get('moderateThresholdPct', 10.0)}% — a large share of reported earnings is not yet cash."
+        "alertString": f"Accrual ratio of {round((_sloan_ar or 0.0)*100.0, 1)}% exceeds the {sloan_result.get('revenue3yCagrBand', '<10%')}-growth threshold of {sloan_result.get('moderateThresholdPct', 10.0)}% — a large share of reported earnings is not yet cash.",
+        "calculation": {
+            "variables": {
+                "accrualRatio": round(_sloan_ar * 100.0, 2) if _sloan_ar is not None else None,
+                "flagLevel": sloan_level,
+                "revenue3yCagrBand": sloan_result.get("revenue3yCagrBand"),
+            },
+            "rawValues": {
+                "netIncome": _sloan_calc.get("inputs", {}).get("netIncome"),
+                "operatingCashFlow": _sloan_calc.get("inputs", {}).get("operatingCashFlow"),
+                "avgTotalAssets": _sloan_calc.get("inputs", {}).get("avgTotalAssets"),
+            },
+            "threshold": f"Accrual Ratio > {sloan_result.get('moderateThresholdPct', 10.0)}% (Moderate) or > {sloan_result.get('severeThresholdPct', 25.0)}% (Severe) for this revenue growth band",
+            "formula": "Accrual Ratio = (Net Income - Operating Cash Flow) ÷ Avg Total Assets",
+            "formulaSubstituted": f"({round(_sloan_calc.get('inputs', {}).get('netIncome') or 0, 1)} - {round(_sloan_calc.get('inputs', {}).get('operatingCashFlow') or 0, 1)}) ÷ {round(_sloan_calc.get('inputs', {}).get('avgTotalAssets') or 1, 1)} = {round((_sloan_ar or 0.0)*100.0, 1)}%",
+            "result": f"{round((_sloan_ar or 0.0)*100.0, 1)}% — {sloan_level} level",
+        }
     })
+
 
     phase2_stubs = {
         "rpt": {"available": False, "reason": "Requires SEBI LODR BSE/NSE filing scrape — Phase 2"},

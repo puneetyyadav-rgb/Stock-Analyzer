@@ -52,6 +52,7 @@ const SUB_LABEL = {
 export default function BFSIDeck({ symbol }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isScraping, setIsScraping] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [showGap, setShowGap] = useState(false);
@@ -60,21 +61,35 @@ export default function BFSIDeck({ symbol }) {
     if (!symbol) return;
     let isMounted = true;
     setLoading(true);
+    setIsScraping(false);
     setError(null);
-    axios
-      .get(`${API}/stock/${symbol}/bfsi-analysis`)
-      .then((res) => {
-        if (isMounted) {
+    
+    const fetchBFSI = () => {
+      axios
+        .get(`${API}/stock/${symbol}/bfsi-analysis`)
+        .then((res) => {
+          if (!isMounted) return;
+          // Always set data so we can see Phase 1 immediately
           setData(res.data);
           setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (isMounted) {
+          
+          if (res.data?.meta?.scraperStatus === "RUNNING") {
+            setIsScraping(true);
+            setTimeout(fetchBFSI, 5000);
+          } else {
+            setIsScraping(false);
+          }
+        })
+        .catch((err) => {
+          if (!isMounted) return;
           setError(err?.response?.data?.detail || "Failed to fetch BFSI analysis.");
           setLoading(false);
-        }
-      });
+          setIsScraping(false);
+        });
+    };
+    
+    fetchBFSI();
+    
     return () => {
       isMounted = false;
     };
@@ -84,8 +99,12 @@ export default function BFSIDeck({ symbol }) {
     return (
       <div className="bg-[#0c0c0e] border border-zinc-800 rounded-lg p-12 flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mb-4" />
-        <span className="text-sm font-mono font-semibold text-zinc-100 mb-2">Building BFSI Scorecard for {symbol}...</span>
-        <span className="text-xs font-mono text-zinc-400">Classifying sub-sector & computing banking-native pillars</span>
+        <span className="text-sm font-mono font-semibold text-zinc-100 mb-2">
+          {isScraping ? `Scraping live Phase-2 filings for ${symbol}...` : `Building BFSI Scorecard for ${symbol}...`}
+        </span>
+        <span className="text-xs font-mono text-zinc-400">
+          {isScraping ? "Downloading and parsing massive Annual Reports via Gemini (takes 1-2 mins)" : "Classifying sub-sector & computing banking-native pillars"}
+        </span>
         <div className="w-48 h-px bg-zinc-800 my-3"></div>
         <span className="text-xs font-mono text-emerald-400/80">NIM · RoA · Capital · Liquidity · 16 Banking Red Flags</span>
       </div>
@@ -176,6 +195,16 @@ export default function BFSIDeck({ symbol }) {
           </div>
         </div>
       </div>
+
+      {/* Scraper Status Banner */}
+      {meta.scraperStatus === "RUNNING" && (
+        <div className="bg-indigo-950/40 border-b border-indigo-800/60 p-3 flex items-center justify-center gap-3">
+          <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+          <span className="text-xs font-mono text-indigo-200">
+            <strong>Autonomous Scraper Active:</strong> The AI is currently downloading and parsing the latest NSE filings in the background to fill the Phase-2 gaps. Refresh the page in ~30 seconds to see the new data!
+          </span>
+        </div>
+      )}
 
       {/* Tab Bar */}
       <div className="flex items-center gap-1 px-4 pt-3 bg-zinc-950/80 border-b border-zinc-800/80 overflow-x-auto scrollbar-none">
